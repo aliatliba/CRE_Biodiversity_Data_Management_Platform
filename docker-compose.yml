@@ -1,34 +1,29 @@
-
-
 services:
   db:
-    image: postgres:17
-
-    container_name: biodiversity_postgres
-
+    image: postgres:16
+    container_name: biodiversity_db
     restart: unless-stopped
-
-    env_file:
-      - .env
-
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     ports:
-      - "5433:5432"
-
+      # Exposed to host for local dev only.
+      # In production, remove this and let only the "api" service reach the db
+      # over the internal Docker network.
+      - "${POSTGRES_PORT}:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
-
+      # Named volume: this is where Postgres actually stores your data.
+      # It survives container restarts/removal (until you explicitly delete it).
+      - pgdata:/var/lib/postgresql/data
+      # Init scripts: Postgres runs every .sql/.sh file in this folder,
+      # in alphabetical order, but ONLY the very first time the volume is created.
+      - ./database/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d biodata"]
-      interval: 10s
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
       timeout: 5s
       retries: 5
 
-    networks:
-      - biodiversity_network
-
 volumes:
-  postgres_data:
-
-networks:
-  biodiversity_network:
-    driver: bridge
+  pgdata:
