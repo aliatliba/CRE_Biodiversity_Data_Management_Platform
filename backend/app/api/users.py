@@ -17,7 +17,7 @@ def list_users(db: DBSession, admin: AdminUser):
 @router.post("", response_model=UserResponse)
 def create_user(data: UserCreate, db: DBSession, admin: AdminUser):
     return auth_service.create_user(
-        db, data.email, data.password, data.full_name, data.role_id
+        db, data.email, data.password, data.full_name, data.role_id, data.phone
     )
 
 
