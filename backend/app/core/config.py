@@ -10,6 +10,13 @@ class Settings(BaseSettings):
     refresh_token_expire_days: int = 7
     environment: str = "development"
     log_level: str = "INFO"
+    # Comma-separated list of allowed frontend origins, e.g.
+    # "http://localhost:5173,https://app.example.org"
+    cors_origins: str = "http://localhost:5173,http://localhost:80,http://localhost"
+
+    @property
+    def cors_origin_list(self) -> list[str]:
+        return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
 
     class Config:
         env_file = ".env"

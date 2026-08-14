@@ -1,54 +1,79 @@
+version: "3.9"
+
 services:
   db:
-    image: postgres:16
-    container_name: biodiversity_db
-    restart: unless-stopped
+    image: postgres:16-alpine
     environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
-    ports:
-      # Exposed to host for local dev only.
-      # In production, remove this and let only the "api" service reach the db
-      # over the internal Docker network.
-      - "${POSTGRES_PORT}:5432"
+      POSTGRES_USER: biodiversity
+      POSTGRES_PASSWORD: biodiversity
+      POSTGRES_DB: biodiversity_db
     volumes:
-      # Named volume: this is where Postgres actually stores your data.
-      # It survives container restarts/removal (until you explicitly delete it).
-      - pgdata:/var/lib/postgresql/data
-      # Init scripts: Postgres runs every .sql/.sh file in this folder,
-      # in alphabetical order, but ONLY the very first time the volume is created.
-      - ./database/init:/docker-entrypoint-initdb.d:ro
+      - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      test: ["CMD-SHELL", "pg_isready -U biodiversity -d biodiversity_db"]
       interval: 5s
       timeout: 5s
       retries: 5
+    networks:
+      - biodiversity_network
 
   api:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    container_name: biodiversity_api
-    restart: unless-stopped
-    env_file:
-      - .env
-    environment: 
-      DATABASE_URL: ${DATABASE_URL}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_PORT: ${POSTGRES_PORT}
-      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
-      JWT_ALGORITHM: ${JWT_ALGORITHM}
-      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES}
-      REFRESH_TOKEN_EXPIRE_DAYS: ${REFRESH_TOKEN_EXPIRE_DAYS}
+    build: ./backend
+    environment:
+      DATABASE_URL: postgresql+psycopg2://biodiversity:biodiversity@db:5432/biodiversity_db
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-change-me-in-production}
+      JWT_ALGORITHM: HS256
+      IUCN_API_TOKEN: ${IUCN_API_TOKEN:-}
+      ACCESS_TOKEN_EXPIRE_MINUTES: 15
+      REFRESH_TOKEN_EXPIRE_DAYS: 7
+      ENVIRONMENT: production
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://localhost:8080}
     ports:
-      - "${API_PORT}:8000"
+      - "8000:8000"
     depends_on:
       db:
-        condition: service_healthy    
+        condition: service_healthy
+    command: >
+      sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"
+    networks:
+      - biodiversity_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
-        
+  web:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:8000}
+    ports:
+      - "8080:80"
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - biodiversity_network
+
+  migrations:
+    build: ./backend
+    environment:
+      DATABASE_URL: postgresql+psycopg2://biodiversity:biodiversity@db:5432/biodiversity_db
+    depends_on:
+      db:
+        condition: service_healthy
+    command: >
+      sh -c "alembic upgrade head"
+    networks:
+      - biodiversity_network
+    profiles:
+      - migrations
+  
+
 volumes:
-  pgdata:
+  postgres_data:
+
+networks:
+  biodiversity_network:
+    driver: bridge
