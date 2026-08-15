@@ -13,10 +13,8 @@ class User(Base):
     email = Column(String, unique=True, nullable=False)
     hashed_password = Column(String(255), nullable=False)
     full_name = Column(String(150), nullable=False)
-    phone = Column(String(30), nullable=True)
     role_id = Column(SmallInteger, ForeignKey("roles.id"), nullable=False)
     is_active = Column(Boolean, nullable=False, default=True)
-    must_change_password = Column(Boolean, nullable=False, default=True)
     created_at = Column(
         DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc)
     )

@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 from datetime import datetime, timedelta, timezone
 
-from app.core.dependencies import DBSession, ActiveUser
+from app.core.dependencies import DBSession, CurrentUser
 from app.models.species import Species
 from app.models.site import Site
 from app.models.site_species import SiteSpecies
@@ -13,7 +13,7 @@ router = APIRouter()
 
 
 @router.get("/stats")
-def dashboard_stats(db: DBSession, user: ActiveUser):
+def dashboard_stats(db: DBSession, user: CurrentUser):
     total_species = db.query(Species).count()
     total_sites = db.query(Site).count()
     total_associations = db.query(SiteSpecies).count()

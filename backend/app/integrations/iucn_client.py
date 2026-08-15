@@ -81,7 +81,7 @@ class IucnClient(ExternalProviderClient, HttpClientMixin):
             if isinstance(trend, dict):
                 trend = trend.get("description") or trend.get("code")
 
-            return ProviderResult(source="iucn", data={"category": category, "population_trend": trend})
+            return ProviderResult(source="iucn", data={"category": category, "population_trend": trend['en']})
         except Exception:
             return ProviderResult(source="iucn", data={})
         finally:

@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 from typing import List
 
-from app.core.dependencies import DBSession, ActiveUser, AdminUser
+from app.core.dependencies import DBSession, CurrentUser, AdminUser
 from app.schemas.site import SiteCreate, SiteUpdate, SiteResponse
 from app.services import site_service
 
@@ -12,7 +12,7 @@ router = APIRouter()
 @router.get("", response_model=List[SiteResponse])
 def list_sites(
     db: DBSession,
-    user: ActiveUser,
+    user: CurrentUser,
     search: str | None = Query(None),
 ):
     return site_service.list_sites(db, search)
@@ -24,7 +24,7 @@ def create_site(data: SiteCreate, db: DBSession, admin: AdminUser):
 
 
 @router.get("/{site_id}", response_model=SiteResponse)
-def get_site(site_id: int, db: DBSession, user: ActiveUser):
+def get_site(site_id: int, db: DBSession, user: CurrentUser):
     return site_service.get_site(db, site_id)
 
 
