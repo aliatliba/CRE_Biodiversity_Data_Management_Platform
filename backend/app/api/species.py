@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 from typing import List
 
-from app.core.dependencies import DBSession, ActiveUser
+from app.core.dependencies import DBSession, CurrentUser
 from app.schemas.species import (
     SpeciesCreate,
     SpeciesUpdate,
@@ -35,7 +35,7 @@ async def lookup_species(data: SpeciesLookupRequest):
 @router.get("", response_model=Page[SpeciesResponse])
 def list_species(
     db: DBSession,
-    user: ActiveUser,
+    user: CurrentUser,
     status: str | None = Query(None),
     family: str | None = Query(None),
     national_status: str | None = Query(None),
@@ -48,18 +48,18 @@ def list_species(
 
 
 @router.get("/{species_id}", response_model=SpeciesResponse)
-def get_species(species_id: int, db: DBSession, user: ActiveUser):
+def get_species(species_id: int, db: DBSession, user: CurrentUser):
     return species_service.get_species(db, species_id)
 
 
 @router.get("/{species_id}/history", response_model=List[ValidationHistoryResponse])
-def get_species_history(species_id: int, db: DBSession, user: ActiveUser):
+def get_species_history(species_id: int, db: DBSession, user: CurrentUser):
     return species_service.get_species_history(db, species_id)
 
 
 @router.post("", response_model=SpeciesResponse, status_code=201)
 def create_species(
-    data: SpeciesCreate, db: DBSession, user: ActiveUser
+    data: SpeciesCreate, db: DBSession, user: CurrentUser
 ):
     return species_service.create_species(db, data, user.id)
 
@@ -69,7 +69,7 @@ def update_species(
     species_id: int,
     data: SpeciesUpdate,
     db: DBSession,
-    user: ActiveUser,
+    user: CurrentUser,
 ):
     return species_service.update_species(db, species_id, data, user.id)
 
@@ -79,19 +79,19 @@ def associate_species(
     site_id: int,
     data: SiteSpeciesCreate,
     db: DBSession,
-    user: ActiveUser,
+    user: CurrentUser,
 ):
     return species_service.associate_species_with_site(db, site_id, data, user.id)
 
 
 @router.get("/{site_id}/species", response_model=List[SiteSpeciesResponse])
-def list_site_species(site_id: int, db: DBSession, user: ActiveUser):
+def list_site_species(site_id: int, db: DBSession, user: CurrentUser):
     return species_service.list_species_for_site(db, site_id)
 
 
 @router.delete("/{site_id}/species/{species_id}")
 def remove_site_species(
-    site_id: int, species_id: int, db: DBSession, user: ActiveUser
+    site_id: int, species_id: int, db: DBSession, user: CurrentUser
 ):
     species_service.remove_site_species(db, site_id, species_id)
     return {"detail": "Association removed"}
