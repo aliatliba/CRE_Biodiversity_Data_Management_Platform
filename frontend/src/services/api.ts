@@ -1,8 +1,8 @@
 import axios, { type AxiosError, type InternalAxiosRequestConfig } from 'axios'
-import { API_BASE_URL, ACCESS_TOKEN_KEY, REFRESH_TOKEN_KEY } from '@/lib/constants'
+import { API_BASE_URL, API_PREFIX, ACCESS_TOKEN_KEY, REFRESH_TOKEN_KEY } from '@/lib/constants'
 
 export const api = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: `${API_BASE_URL}${API_PREFIX}`,
   headers: { 'Content-Type': 'application/json' },
 })
 

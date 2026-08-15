@@ -3,10 +3,18 @@ from sqlalchemy.orm import Session
 from typing import List
 
 from app.core.dependencies import DBSession, AdminUser
-from app.schemas.user import UserCreate, UserUpdate, UserResponse
+from app.schemas.user import UserCreate, UserUpdate, UserResponse, RoleResponse
 from app.services import auth_service
+from app.models.role import Role
 
 router = APIRouter()
+
+
+@router.get("/roles", response_model=List[RoleResponse])
+def list_roles(db: DBSession, admin: AdminUser):
+    """So the frontend can populate a role picker without hardcoding IDs —
+    role IDs are assigned at seed time, not fixed constants."""
+    return db.query(Role).order_by(Role.id).all()
 
 
 @router.get("", response_model=List[UserResponse])

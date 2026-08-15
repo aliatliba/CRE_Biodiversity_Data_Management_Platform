@@ -1,6 +1,13 @@
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 
+class RoleResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    name: str
+    description: str | None = None
+
+
 class UserCreate(BaseModel):
     """Used by the admin to create a new user (e.g. a researcher).
 
