@@ -1,4 +1,5 @@
 from typing import Any
+from datetime import datetime
 from pydantic import BaseModel, ConfigDict
 
 
@@ -106,8 +107,8 @@ class SpeciesResponse(BaseModel):
     status: str
     created_by: int
     validated_by: int | None
-    validated_at: str | None
-    updated_at: str
+    validated_at: datetime | None
+    updated_at: datetime
 
 
 class ValidationHistoryResponse(BaseModel):
@@ -117,7 +118,7 @@ class ValidationHistoryResponse(BaseModel):
     action: str
     changed_fields: dict[str, Any]
     validated_by: int
-    validated_at: str
+    validated_at: datetime
 
 
 class SiteSpeciesCreate(BaseModel):

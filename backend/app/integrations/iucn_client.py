@@ -35,7 +35,8 @@ class IucnClient(ExternalProviderClient, HttpClientMixin):
     async def search(self, scientific_name: str) -> ProviderResult:
         try:
             if not self.token:
-                return ProviderResult(source="iucn", data={})
+                print("IUCN API token not set")
+                return ProviderResult(source="iucn", data={"Error": "IUCN API token not set"})
 
             parts = scientific_name.strip().split(maxsplit=1)
             genus_name = parts[0] if parts else scientific_name
