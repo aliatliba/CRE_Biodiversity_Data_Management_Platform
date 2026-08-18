@@ -126,7 +126,6 @@ export function AddSpeciesPage() {
         potential_threats: values.potential_threats || null,
         reference: values.reference || null,
       })
-      await speciesService.associateSpeciesWithSite(Number(siteId), created.id)
       navigate(`/species/${created.id}`)
     } catch (err) {
       setError(
