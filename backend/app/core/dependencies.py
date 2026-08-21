@@ -47,6 +47,23 @@ def get_current_user(
 CurrentUser = Annotated[User, Depends(get_current_user)]
 
 
+def require_password_already_set(current_user: CurrentUser) -> User:
+    """Blocks access to the main app until the user has replaced the
+    temporary password an admin gave them and confirmed their profile."""
+    if current_user.must_change_password:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Password change required before accessing this resource",
+        )
+    return current_user
+
+
+# Use this instead of CurrentUser on "main app" endpoints (sites, species, ...)
+# so a user who hasn't completed the first-login password change is blocked
+# at the API level, not just in the frontend.
+ActiveUser = Annotated[User, Depends(require_password_already_set)]
+
+
 def require_admin(current_user: CurrentUser) -> User:
     if current_user.role.name != "admin":
         raise HTTPException(

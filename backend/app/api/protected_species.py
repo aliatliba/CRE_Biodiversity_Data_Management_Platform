@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Query
 from typing import List
 
-from app.core.dependencies import DBSession, ActiveUser, AdminUser
+from app.core.dependencies import DBSession, CurrentUser, AdminUser
 from app.schemas.protected_species import ProtectedSpeciesCreate, ProtectedSpeciesResponse
 from app.services import protected_species_service
 
@@ -11,7 +11,7 @@ router = APIRouter()
 @router.get("", response_model=List[ProtectedSpeciesResponse])
 def list_protected_species(
     db: DBSession,
-    user: ActiveUser,
+    user: CurrentUser,
     search: str | None = Query(None),
 ):
     """Any active user can view the list — it's reference data used while
