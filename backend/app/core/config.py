@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     refresh_token_expire_days: int = 7
     environment: str = "development"
     log_level: str = "INFO"
-    cors_origins: str = "http://localhost:5173,https://bio-observer.lovable.app,https://id-preview--56f2ff30-c80b-4597-8982-4103f111551d.lovable.app,https://zp1v56uxy8rdx5ypatb0ockcb9tr6a-oci3--5173--017acfb7.local-credentialless.webcontainer-api.io"  # add this
+    cors_origins: str = "http://localhost:5173,http://localhost:8080"
     @property
     def cors_origins_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
