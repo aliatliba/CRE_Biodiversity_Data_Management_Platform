@@ -28,7 +28,7 @@ services:
       ACCESS_TOKEN_EXPIRE_MINUTES: 15
       REFRESH_TOKEN_EXPIRE_DAYS: 7
       ENVIRONMENT: production
-      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5174,http://localhost:8080}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://localhost:8080}
     ports:
       - "8000:8000"
     depends_on:
