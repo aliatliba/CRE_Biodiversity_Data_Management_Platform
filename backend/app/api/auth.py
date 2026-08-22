@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from app.core.dependencies import DBSession,CurrentUser, get_current_user
 from app.core.limiter import limiter
 from app.schemas.auth import LoginRequest, RefreshRequest, TokenResponse
-from app.schemas.user import CompleteProfileRequest, UserResponse
+from app.schemas.user import CompleteProfileRequest, UpdateOwnProfileRequest, UserResponse
 from app.services import auth_service
 
 router = APIRouter()
@@ -39,6 +39,24 @@ def me(current_user = Depends(get_current_user)):
         "must_change_password": current_user.must_change_password,
     }
     
+@router.patch("/me")
+def update_me(data: UpdateOwnProfileRequest, db: DBSession, current_user: CurrentUser):
+    """Lets any signed-in user view-and-edit their own profile info
+    (full name, phone) without needing admin rights or a password."""
+    user = auth_service.update_own_profile(
+        db, current_user, full_name=data.full_name, phone=data.phone
+    )
+    return {
+        "id": user.id,
+        "email": user.email,
+        "full_name": user.full_name,
+        "phone": user.phone,
+        "role": user.role.name,
+        "is_active": user.is_active,
+        "must_change_password": user.must_change_password,
+    }
+
+
 @router.post("/complete-profile", response_model=UserResponse)
 def complete_profile(data: CompleteProfileRequest, db: DBSession, current_user: CurrentUser):
     """First-login flow: the user swaps the temporary password an admin

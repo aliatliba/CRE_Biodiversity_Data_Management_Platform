@@ -8,6 +8,7 @@ from app.schemas.species import (
     SpeciesUpdate,
     SpeciesResponse,
     SpeciesLookupRequest,
+    SpeciesDraft,
     SiteSpeciesCreate,
     SiteSpeciesResponse,
     ValidationHistoryResponse,
@@ -26,9 +27,9 @@ def check_species(scientific_name: str, db: DBSession):
     return {"exists": False}
 
 
-@router.post("/lookup")
-async def lookup_species(data: SpeciesLookupRequest):
-    draft = await species_service.lookup_species(data.scientific_name)
+@router.post("/lookup", response_model=SpeciesDraft)
+async def lookup_species(data: SpeciesLookupRequest, db: DBSession):
+    draft = await species_service.lookup_species(db, data.scientific_name)
     return draft
 
 

@@ -5,6 +5,7 @@ import type {
   Species,
   SpeciesCreateInput,
   SpeciesLookupDraft,
+  SpeciesUpdateInput,
   ValidationHistoryEntry,
 } from '../types'
 
@@ -47,6 +48,11 @@ export async function lookupSpecies(scientificName: string): Promise<SpeciesLook
 
 export async function createSpecies(payload: SpeciesCreateInput): Promise<Species> {
   const { data } = await api.post<Species>('/species', payload)
+  return data
+}
+
+export async function updateSpecies(id: number, payload: SpeciesUpdateInput): Promise<Species> {
+  const { data } = await api.patch<Species>(`/species/${id}`, payload)
   return data
 }
 

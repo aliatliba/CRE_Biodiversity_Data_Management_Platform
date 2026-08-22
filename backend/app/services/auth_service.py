@@ -140,3 +140,19 @@ def complete_profile(
     db.commit()
     db.refresh(user)
     return user
+
+
+def update_own_profile(
+    db: Session,
+    user: User,
+    full_name: str | None = None,
+    phone: str | None = None,
+) -> User:
+    """Edit-your-own-profile flow: name/phone only, no password touched."""
+    if full_name is not None:
+        user.full_name = full_name
+    if phone is not None:
+        user.phone = phone
+    db.commit()
+    db.refresh(user)
+    return user

@@ -41,6 +41,7 @@ class SpeciesDraft(BaseModel):
     conservation: ConservationStatus
     traits: EcologicalTraits
     field_sources: dict[str, Any]
+    national_status: str = "Non Protected"
 
 
 class SpeciesCreate(BaseModel):
@@ -69,6 +70,15 @@ class SpeciesCreate(BaseModel):
 
 class SpeciesUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid")
+    # Taxonomy
+    kingdom: str | None = None
+    class_name: str | None = None
+    order_name: str | None = None
+    family: str | None = None
+    genus: str | None = None
+    species_epithet: str | None = None
+    common_name: str | None = None
+    # Conservation & ecological traits
     guild: str | None = None
     ecosystem_service: str | None = None
     habitat: str | None = None

@@ -61,6 +61,7 @@ export interface SpeciesLookupDraft {
     reference?: string | null
   }
   field_sources: Record<string, string | null>
+  national_status: string
 }
 
 export interface SpeciesCreateInput {
@@ -83,6 +84,26 @@ export interface SpeciesCreateInput {
   endemism?: string | null
   potential_threats?: string | null
   reference?: string | null
+}
+
+export interface SpeciesUpdateInput {
+  kingdom?: string | null
+  class_name?: string | null
+  order_name?: string | null
+  family?: string | null
+  genus?: string | null
+  species_epithet?: string | null
+  common_name?: string | null
+  guild?: string | null
+  ecosystem_service?: string | null
+  habitat?: string | null
+  typology?: string | null
+  endemism?: string | null
+  potential_threats?: string | null
+  reference?: string | null
+  iucn_status?: string | null
+  iucn_trend?: string | null
+  updated_at: string
 }
 
 export interface ValidationHistoryEntry {

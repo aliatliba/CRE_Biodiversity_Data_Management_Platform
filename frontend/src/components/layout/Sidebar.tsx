@@ -46,10 +46,18 @@ export function Sidebar() {
         ))}
       </nav>
 
-      <div className="border-t border-canopy-900/[0.08] px-6 py-5">
+      <NavLink
+        to="/profile"
+        className={({ isActive }) =>
+          cn(
+            'block border-t border-canopy-900/[0.08] px-6 py-5 transition-colors hover:bg-mist-100',
+            isActive && 'bg-mist-100'
+          )
+        }
+      >
         <p className="truncate text-sm font-semibold text-canopy-950">{user?.full_name}</p>
         <p className="truncate text-xs capitalize text-ink-950/45">{user?.role}</p>
-      </div>
+      </NavLink>
     </aside>
   )
 }

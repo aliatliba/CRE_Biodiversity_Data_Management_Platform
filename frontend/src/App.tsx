@@ -12,6 +12,7 @@ import { SpeciesDetailPage } from '@/features/species/pages/SpeciesDetailPage'
 import { ProtectedSpeciesPage } from '@/features/protected-species/pages/ProtectedSpeciesPage'
 import { UsersPage } from '@/features/users/pages/UsersPage'
 import { ExportsPage } from '@/features/exports/pages/ExportsPage'
+import { ProfilePage } from '@/features/profile/pages/ProfilePage'
 import { NotFoundPage } from '@/pages/NotFoundPage'
 import { ROUTES } from '@/lib/constants'
 
@@ -90,6 +91,14 @@ function App() {
           element={
             <ProtectedRoute>
               <ExportsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path={ROUTES.profile}
+          element={
+            <ProtectedRoute>
+              <ProfilePage />
             </ProtectedRoute>
           }
         />

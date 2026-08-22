@@ -2,10 +2,13 @@ import asyncio
 from datetime import datetime, timezone
 from typing import Any
 
+from app.models.user import User
+
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 
+from app.models.user import User
 from app.models.species import Species
 from app.models.site_species import SiteSpecies
 from app.models.validation_history import SpeciesValidationHistory
@@ -24,6 +27,15 @@ from app.integrations.inaturalist_client import InaturalistClient
 from app.integrations.mapper import normalize_provider_result
 
 PERMITTED_EDIT_FIELDS = {
+    # Taxonomy
+    "kingdom",
+    "class_name",
+    "order_name",
+    "family",
+    "genus",
+    "species_epithet",
+    "common_name",
+    # Conservation & ecological traits
     "guild",
     "ecosystem_service",
     "habitat",
@@ -36,7 +48,7 @@ PERMITTED_EDIT_FIELDS = {
 }
 
 
-async def lookup_species(scientific_name: str) -> dict[str, Any]:
+async def lookup_species(db: Session, scientific_name: str) -> dict[str, Any]:
     gbif_result = await GbifClient().search(scientific_name)
     resolved_name = gbif_result.data.get("canonicalName") or scientific_name
     is_synonym = "_resolved_from_synonym" in gbif_result.data
@@ -54,6 +66,9 @@ async def lookup_species(scientific_name: str) -> dict[str, Any]:
         "conservation": {},
         "traits": {},
         "field_sources": {},
+        # Surface protection status immediately in lookup results, so a
+        # researcher sees it before saving the record, not after.
+        "national_status": compute_national_status(db, resolved_name),
     }
 
     _merge_into_draft(merged, normalize_provider_result(gbif_result, "GbifClient"))

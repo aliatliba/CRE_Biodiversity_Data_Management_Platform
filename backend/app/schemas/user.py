@@ -49,3 +49,11 @@ class ChangePasswordRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     current_password: str
     new_password: str = Field(min_length=8)
+
+
+class UpdateOwnProfileRequest(BaseModel):
+    """Lets the signed-in user edit their own display info — no password
+    required, unlike complete-profile/change-password."""
+    model_config = ConfigDict(extra="forbid")
+    full_name: str | None = None
+    phone: str | None = None
