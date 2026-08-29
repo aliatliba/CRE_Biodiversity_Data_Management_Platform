@@ -12,10 +12,10 @@ function iucnTone(status: string | null): 'danger' | 'warning' | 'success' | 'ne
 
 export function SpeciesTable({ species }: { species: Species[] }) {
   return (
-    <div className="overflow-hidden rounded-2xl border border-canopy-900/10 bg-paper-0">
+    <div className="overflow-hidden rounded-2xl border border-mist-200/80 bg-paper-0">
       <table className="w-full text-left text-sm">
         <thead>
-          <tr className="border-b border-canopy-900/[0.08] bg-mist-100/50 text-xs font-semibold uppercase tracking-wide text-ink-950/50">
+          <tr className="border-b border-mist-200/70 bg-paper-50 text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-950/45">
             <th className="px-5 py-3">Scientific name</th>
             <th className="hidden px-5 py-3 sm:table-cell">Family</th>
             <th className="px-5 py-3">IUCN</th>
@@ -26,7 +26,7 @@ export function SpeciesTable({ species }: { species: Species[] }) {
           {species.map((sp) => (
             <tr
               key={sp.id}
-              className="border-b border-canopy-900/[0.05] transition-colors last:border-0 hover:bg-mist-100/40"
+              className="border-b border-mist-200/50 transition-colors last:border-0 hover:bg-paper-50"
             >
               <td className="px-5 py-3.5">
                 <Link to={`/species/${sp.id}`} className="font-medium italic text-canopy-900 hover:underline">

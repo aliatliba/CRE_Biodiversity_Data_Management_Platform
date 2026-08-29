@@ -30,7 +30,7 @@ export function DuplicateSpeciesDialog({
     >
       <div className="flex flex-col gap-4">
         <div className="rounded-xl border border-canopy-900/10 bg-mist-100/50 p-4">
-          <p className="font-display italic font-semibold text-canopy-950">{species.scientific_name}</p>
+          <p className="font-display italic font-medium text-ink-950">{species.scientific_name}</p>
           {species.common_name && <p className="text-sm text-ink-950/55">{species.common_name}</p>}
           <div className="mt-2 flex flex-wrap gap-2">
             {species.iucn_status && <Badge tone="warning">{species.iucn_status}</Badge>}

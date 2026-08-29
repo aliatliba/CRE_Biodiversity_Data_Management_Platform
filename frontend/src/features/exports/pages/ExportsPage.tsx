@@ -59,7 +59,7 @@ export function ExportsPage() {
       </p>
 
       <Card className="max-w-md">
-        <h2 className="font-display text-sm font-bold text-canopy-950">New export</h2>
+        <h2 className="font-display text-sm font-medium text-ink-950">New export</h2>
         <div className="mt-4 flex gap-3">
           {(['csv', 'xlsx'] as const).map((f) => (
             <button

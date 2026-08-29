@@ -12,15 +12,15 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 const variantClasses: Record<Variant, string> = {
   primary:
-    'bg-canopy-700 text-paper-0 hover:bg-canopy-800 active:bg-canopy-900 shadow-[0_1px_0_0_rgba(5,59,6,0.4)_inset]',
+    'bg-canopy-700 text-paper-0 hover:bg-canopy-800 active:bg-canopy-900 shadow-[0_1px_0_0_rgba(255,255,255,0.12)_inset]',
   secondary:
-    'bg-transparent text-canopy-900 border border-canopy-800/25 hover:border-canopy-800/60 hover:bg-mist-100',
-  ghost: 'bg-transparent text-canopy-900 hover:bg-mist-100',
+    'bg-paper-0/60 text-ink-950 border border-mist-200 hover:border-canopy-700/40 hover:bg-paper-50',
+  ghost: 'bg-transparent text-ink-950/80 hover:bg-mist-100/70 hover:text-ink-950',
 }
 
 const sizeClasses: Record<Size, string> = {
-  md: 'h-11 px-5 text-sm',
-  lg: 'h-13 px-7 text-base',
+  md: 'h-10 px-4 text-sm',
+  lg: 'h-12 px-6 text-[15px]',
 }
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
@@ -30,7 +30,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         ref={ref}
         disabled={disabled || isLoading}
         className={cn(
-          'relative inline-flex items-center justify-center gap-2 rounded-full font-semibold tracking-tight transition-all duration-200 ease-out',
+          'relative inline-flex items-center justify-center gap-2 rounded-xl font-semibold tracking-tight transition-all duration-200 ease-out',
           'disabled:cursor-not-allowed disabled:opacity-60',
           'active:scale-[0.98]',
           variantClasses[variant],

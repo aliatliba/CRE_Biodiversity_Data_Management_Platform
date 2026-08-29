@@ -42,7 +42,7 @@ export function SpecimenTag({
       transition={{ duration: 0.7, delay, ease: [0.22, 1, 0.36, 1] }}
     >
       <div
-        className="animate-drift w-44 rounded-lg border border-canopy-900/10 bg-paper-0/90 px-3.5 py-3 shadow-[0_12px_30px_-14px_rgba(5,59,6,0.35)] backdrop-blur-sm"
+        className="animate-drift w-48 rounded-xl border border-paper-0/15 bg-paper-0/90 px-3.5 py-3 shadow-[0_18px_40px_-18px_rgba(0,0,0,0.55)] backdrop-blur-md"
         style={{ ['--rot' as string]: `${rotate}deg`, animationDelay: `${delay * 1.2}s` }}
       >
         <div className="flex items-center justify-between">

@@ -82,11 +82,11 @@ export function ProfilePage() {
         <Card>
           <div className="flex items-start justify-between gap-4">
             <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-canopy-700/10 text-canopy-800">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-shell text-lichen-400">
                 <UserRound size={22} />
               </div>
               <div>
-                <h2 className="font-display text-lg font-bold text-canopy-950">
+                <h2 className="font-display text-lg font-medium text-ink-950">
                   {user?.full_name}
                 </h2>
                 <p className="text-sm text-ink-950/55">{user?.email}</p>
@@ -99,7 +99,7 @@ export function ProfilePage() {
 
           <form onSubmit={handleSaveInfo} className="mt-6 flex flex-col gap-4 border-t border-canopy-900/[0.08] pt-6">
             <div className="flex items-center justify-between">
-              <h3 className="font-display text-sm font-bold text-canopy-950">Profile information</h3>
+              <h3 className="font-display text-sm font-medium text-ink-950">Profile information</h3>
               {!isEditingInfo && (
                 <button
                   type="button"
@@ -169,7 +169,7 @@ export function ProfilePage() {
         <Card>
           <div className="mb-5 flex items-center gap-2">
             <KeyRound size={17} className="text-canopy-800" />
-            <h3 className="font-display text-sm font-bold text-canopy-950">Change password</h3>
+            <h3 className="font-display text-sm font-medium text-ink-950">Change password</h3>
           </div>
           <form onSubmit={handleChangePassword} className="flex flex-col gap-4">
             <Input
@@ -210,7 +210,7 @@ export function ProfilePage() {
         <Card>
           <div className="mb-5 flex items-center gap-2">
             <Palette size={17} className="text-canopy-800" />
-            <h3 className="font-display text-sm font-bold text-canopy-950">Appearance</h3>
+            <h3 className="font-display text-sm font-medium text-ink-950">Appearance</h3>
           </div>
           <div className="flex gap-3">
             {(['light', 'dark'] as const).map((t) => (

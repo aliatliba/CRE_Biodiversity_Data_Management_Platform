@@ -14,13 +14,13 @@ export function Header({ title }: { title: string }) {
   }
 
   return (
-    <header className="flex h-16 items-center justify-between border-b border-canopy-900/[0.08] bg-paper-0 px-6">
-      <h1 className="font-display text-lg font-bold tracking-tight text-canopy-950">{title}</h1>
-      <div className="flex items-center gap-1.5">
+    <header className="flex h-16 items-center justify-between border-b border-mist-200/60 px-6">
+      <h1 className="font-display text-[1.35rem] font-semibold tracking-tight text-ink-950">{title}</h1>
+      <div className="flex items-center gap-1">
         <ThemeToggle />
         <button
           onClick={handleSignOut}
-          className="flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-medium text-ink-950/60 transition-colors hover:bg-mist-100 hover:text-canopy-900"
+          className="flex items-center gap-2 rounded-xl px-3 py-1.5 text-sm font-medium text-ink-950/55 transition-colors hover:bg-mist-100 hover:text-ink-950"
         >
           <LogOut size={15} />
           <span className="hidden sm:inline">Sign out</span>

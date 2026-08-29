@@ -143,7 +143,7 @@ export function AddSpeciesPage() {
     <AppLayout title="Log a species">
       {step === 'search' && (
         <Card className="mx-auto max-w-lg">
-          <h2 className="font-display text-lg font-bold text-canopy-950">Start with a name</h2>
+          <h2 className="font-display text-lg font-medium text-ink-950">Start with a name</h2>
           <p className="mt-1.5 text-sm text-ink-950/60">
             We'll check the catalogue for duplicates, then pull in taxonomy and conservation data
             automatically.
@@ -204,7 +204,7 @@ export function AddSpeciesPage() {
             <div>
               <p className="font-mono text-xs uppercase tracking-[0.1em] text-canopy-700">New record</p>
               <div className="flex items-center gap-2.5">
-                <h2 className="font-display text-2xl font-bold italic text-canopy-950">
+                <h2 className="font-display text-2xl font-medium italic text-ink-950">
                   {draft.scientific_name}
                 </h2>
                 <Badge tone={draft.national_status === 'Protected' ? 'accent' : 'neutral'}>

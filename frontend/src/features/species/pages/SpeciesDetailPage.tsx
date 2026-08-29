@@ -175,7 +175,7 @@ export function SpeciesDetailPage() {
               <p className="font-mono text-xs uppercase tracking-[0.1em] text-canopy-700">
                 {species.family ?? 'Unclassified family'}
               </p>
-              <h1 className="mt-1 font-display text-2xl font-bold italic text-canopy-950">
+              <h1 className="mt-1 font-display text-2xl font-medium italic text-ink-950">
                 {species.scientific_name}
               </h1>
               {species.common_name && <p className="text-ink-950/60">{species.common_name}</p>}
@@ -191,7 +191,7 @@ export function SpeciesDetailPage() {
             </Card>
 
             <Card>
-              <h2 className="mb-4 font-display text-sm font-bold text-canopy-950">Taxonomy</h2>
+              <h2 className="mb-4 font-display text-sm font-medium text-ink-950">Taxonomy</h2>
               {!isEditing ? (
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <Field label="Kingdom" value={species.kingdom} source={sources.kingdom} />
@@ -226,7 +226,7 @@ export function SpeciesDetailPage() {
             </Card>
 
             <Card>
-              <h2 className="mb-4 font-display text-sm font-bold text-canopy-950">Conservation &amp; ecology</h2>
+              <h2 className="mb-4 font-display text-sm font-medium text-ink-950">Conservation &amp; ecology</h2>
               {!isEditing ? (
                 <>
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -294,7 +294,7 @@ export function SpeciesDetailPage() {
           </div>
 
           <Card className="h-fit">
-            <h2 className="mb-4 font-display text-sm font-bold text-canopy-950">Validation history</h2>
+            <h2 className="mb-4 font-display text-sm font-medium text-ink-950">Validation history</h2>
             <ValidationHistory entries={history} />
           </Card>
         </div>

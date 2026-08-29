@@ -72,7 +72,7 @@ export function SpeciesReviewForm({
   return (
     <div className="flex flex-col gap-8">
       <section>
-        <h3 className="mb-4 font-display text-sm font-bold text-canopy-950">
+        <h3 className="mb-4 font-display text-sm font-medium text-ink-950">
           Taxonomy
         </h3>
 
@@ -125,7 +125,7 @@ export function SpeciesReviewForm({
       </section>
 
       <section>
-        <h3 className="mb-4 font-display text-sm font-bold text-canopy-950">
+        <h3 className="mb-4 font-display text-sm font-medium text-ink-950">
           Conservation status
         </h3>
 
@@ -145,7 +145,7 @@ export function SpeciesReviewForm({
       </section>
 
       <section>
-        <h3 className="mb-4 font-display text-sm font-bold text-canopy-950">
+        <h3 className="mb-4 font-display text-sm font-medium text-ink-950">
           Ecological traits
         </h3>
 

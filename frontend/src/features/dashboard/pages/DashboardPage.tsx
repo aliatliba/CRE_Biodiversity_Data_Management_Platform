@@ -43,7 +43,7 @@ export function DashboardPage() {
 
   return (
     <AppLayout title="Dashboard">
-      <p className="mb-6 text-sm text-ink-950/55">
+      <p className="mb-7 text-sm text-ink-950/55">
         Welcome back, <span className="font-medium text-ink-950">{user?.full_name}</span>. Here's
         what's in the registry right now.
       </p>
@@ -77,7 +77,7 @@ export function DashboardPage() {
 
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.3fr_1fr]">
             <Card>
-              <h2 className="font-display text-sm font-bold text-canopy-950">
+              <h2 className="font-display text-lg font-medium text-ink-950">
                 National status breakdown
               </h2>
               <div className="mt-5 flex flex-col gap-3">
@@ -89,9 +89,9 @@ export function DashboardPage() {
                     <span className="w-32 shrink-0 truncate text-xs font-medium text-ink-950/60">
                       {status}
                     </span>
-                    <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-mist-100">
+                    <div className="h-2 flex-1 overflow-hidden rounded-full bg-mist-100">
                       <div
-                        className="h-full rounded-full bg-canopy-600"
+                        className="h-full rounded-full bg-canopy-700"
                         style={{ width: `${(count / maxCount) * 100}%` }}
                       />
                     </div>
@@ -104,24 +104,24 @@ export function DashboardPage() {
             </Card>
 
             <Card className="flex flex-col gap-3">
-              <h2 className="font-display text-sm font-bold text-canopy-950">Quick links</h2>
+              <h2 className="font-display text-lg font-medium text-ink-950">Quick links</h2>
               <Link
                 to="/species/new"
-                className="flex items-center gap-3 rounded-xl border border-canopy-900/10 px-3.5 py-3 text-sm font-medium text-ink-950/75 transition-colors hover:border-canopy-700/30 hover:bg-mist-100"
+                className="flex items-center gap-3 rounded-xl border border-mist-200/80 px-3.5 py-3 text-sm font-medium text-ink-950/75 transition-colors hover:border-canopy-700/30 hover:bg-paper-50"
               >
                 <Leaf size={16} className="text-canopy-700" />
                 Log a species observation
               </Link>
               <Link
                 to="/protected-species"
-                className="flex items-center gap-3 rounded-xl border border-canopy-900/10 px-3.5 py-3 text-sm font-medium text-ink-950/75 transition-colors hover:border-canopy-700/30 hover:bg-mist-100"
+                className="flex items-center gap-3 rounded-xl border border-mist-200/80 px-3.5 py-3 text-sm font-medium text-ink-950/75 transition-colors hover:border-canopy-700/30 hover:bg-paper-50"
               >
                 <ShieldCheck size={16} className="text-canopy-700" />
                 View protected species list
               </Link>
               <Link
                 to="/sites"
-                className="flex items-center gap-3 rounded-xl border border-canopy-900/10 px-3.5 py-3 text-sm font-medium text-ink-950/75 transition-colors hover:border-canopy-700/30 hover:bg-mist-100"
+                className="flex items-center gap-3 rounded-xl border border-mist-200/80 px-3.5 py-3 text-sm font-medium text-ink-950/75 transition-colors hover:border-canopy-700/30 hover:bg-paper-50"
               >
                 <MapPin size={16} className="text-canopy-700" />
                 Browse survey sites

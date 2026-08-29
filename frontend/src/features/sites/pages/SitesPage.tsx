@@ -140,7 +140,7 @@ export function SitesPage() {
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-center gap-2">
                   <MapPin size={16} className="shrink-0 text-canopy-700" />
-                  <h3 className="font-display text-[15px] font-bold text-canopy-950">{site.name}</h3>
+                  <h3 className="font-display text-[15px] font-medium text-ink-950">{site.name}</h3>
                 </div>
                 {isAdmin && (
                   <button
@@ -153,7 +153,7 @@ export function SitesPage() {
                 )}
               </div>
               {site.code && (
-                <span className="w-fit rounded-full bg-mist-100 px-2.5 py-0.5 font-mono text-[11px] font-medium text-canopy-800">
+                <span className="w-fit rounded-md bg-mist-100 px-2 py-0.5 font-mono text-[11px] font-medium text-ink-950/70">
                   {site.code}
                 </span>
               )}

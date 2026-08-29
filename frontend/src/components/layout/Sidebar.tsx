@@ -17,30 +17,30 @@ export function Sidebar() {
   const isAdmin = user?.role === 'admin'
 
   return (
-    <aside className="hidden w-60 shrink-0 flex-col border-r border-canopy-900/[0.08] bg-paper-0 md:flex">
-      <div className="flex items-center gap-2.5 px-6 py-6">
+    <aside className="hidden w-[15.5rem] shrink-0 flex-col bg-shell text-shell-text md:flex">
+      <div className="flex items-center gap-2.5 px-6 py-7">
         <svg width="22" height="22" viewBox="0 0 32 32" fill="none" aria-hidden="true">
-          <path d="M6 26C6 14 14 6 26 6C26 18 18 26 6 26Z" fill="var(--color-canopy-600)" />
-          <path d="M6 26C10 22 16 16 24 8" stroke="var(--color-canopy-900)" strokeWidth="1.4" strokeLinecap="round" />
+          <path d="M8 24C8 14 15 8 24 8C24 18 17 24 8 24Z" fill="var(--color-lichen-400)" />
+          <path d="M8 24C12 20 17 15 23 10" stroke="var(--color-shell-text)" strokeWidth="1.4" strokeLinecap="round" />
         </svg>
-        <span className="font-display text-[15px] font-extrabold tracking-tight text-canopy-950">Canopy</span>
+        <span className="font-display text-[18px] font-semibold tracking-tight">Canopy</span>
       </div>
 
-      <nav className="flex flex-1 flex-col gap-1 px-3">
+      <nav className="flex flex-1 flex-col gap-0.5 px-3">
         {NAV_ITEMS.filter((item) => !item.adminOnly || isAdmin).map(({ to, label, icon: Icon }) => (
           <NavLink
             key={to}
             to={to}
             className={({ isActive }) =>
               cn(
-                'flex items-center gap-3 rounded-lg px-3.5 py-2.5 text-sm font-medium transition-colors',
+                'flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium transition-colors',
                 isActive
-                  ? 'bg-canopy-700 text-paper-0'
-                  : 'text-ink-950/65 hover:bg-mist-100 hover:text-canopy-900'
+                  ? 'bg-shell-text/10 text-shell-text'
+                  : 'text-shell-text/55 hover:bg-shell-text/[0.06] hover:text-shell-text'
               )
             }
           >
-            <Icon size={17} strokeWidth={2} />
+            <Icon size={16} strokeWidth={1.75} />
             {label}
           </NavLink>
         ))}
@@ -50,13 +50,13 @@ export function Sidebar() {
         to="/profile"
         className={({ isActive }) =>
           cn(
-            'block border-t border-canopy-900/[0.08] px-6 py-5 transition-colors hover:bg-mist-100',
-            isActive && 'bg-mist-100'
+            'mx-3 mb-4 block rounded-xl px-3.5 py-3.5 transition-colors hover:bg-shell-text/[0.06]',
+            isActive && 'bg-shell-text/[0.08]'
           )
         }
       >
-        <p className="truncate text-sm font-semibold text-canopy-950">{user?.full_name}</p>
-        <p className="truncate text-xs capitalize text-ink-950/45">{user?.role}</p>
+        <p className="truncate text-sm font-semibold text-shell-text">{user?.full_name}</p>
+        <p className="truncate text-[11px] uppercase tracking-[0.12em] text-shell-text/40">{user?.role}</p>
       </NavLink>
     </aside>
   )

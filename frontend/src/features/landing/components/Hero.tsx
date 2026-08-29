@@ -6,8 +6,6 @@ import { ROUTES } from '@/lib/constants'
 import { ContourField } from './ContourField'
 import { SpecimenTag } from './SpecimenTag'
 
-const headlineWords = ['Every', 'survey,', 'site,', 'and', 'species', '—', 'one', 'living', 'registry.']
-
 export function Hero() {
   const rawX = useMotionValue(0)
   const rawY = useMotionValue(0)
@@ -25,41 +23,39 @@ export function Hero() {
   return (
     <section
       onPointerMove={handlePointerMove}
-      className="relative overflow-hidden border-b border-canopy-900/[0.06] bg-gradient-to-b from-mist-100/70 via-paper-0 to-paper-0"
+      className="relative overflow-hidden bg-shell"
     >
-      <ContourField />
+      <div className="pointer-events-none absolute -left-24 top-0 h-[480px] w-[480px] rounded-full bg-canopy-700/25 blur-[120px]" />
+      <div className="pointer-events-none absolute -right-16 bottom-0 h-[360px] w-[360px] rounded-full bg-lichen-400/15 blur-[100px]" />
+      <ContourField tone="dark" />
 
-      <div className="relative z-10 mx-auto grid w-full max-w-6xl grid-cols-1 gap-14 px-6 pb-28 pt-10 sm:px-8 lg:grid-cols-[1.05fr_0.95fr] lg:gap-8 lg:pb-36 lg:pt-16">
+      <div className="relative z-10 mx-auto grid w-full max-w-6xl grid-cols-1 gap-14 px-6 pb-28 pt-8 sm:px-8 lg:grid-cols-[1.1fr_0.9fr] lg:gap-8 lg:pb-36 lg:pt-12">
         <div>
           <motion.p
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.15 }}
-            className="mb-5 inline-flex items-center gap-2 rounded-full border border-canopy-800/15 bg-paper-0/70 px-3.5 py-1.5 font-mono text-[11px] font-medium uppercase tracking-[0.12em] text-canopy-800"
+            className="mb-6 inline-flex items-center gap-2 rounded-full border border-paper-0/10 bg-paper-0/5 px-3.5 py-1.5 font-mono text-[11px] font-medium uppercase tracking-[0.16em] text-lichen-300"
           >
             <span className="h-1.5 w-1.5 rounded-full bg-lichen-400" />
             Field biodiversity registry
           </motion.p>
 
-          <h1 className="font-display text-[2.6rem] font-extrabold leading-[1.05] tracking-tight text-canopy-950 sm:text-[3.4rem] lg:text-[3.75rem]">
-            {headlineWords.map((word, i) => (
-              <motion.span
-                key={`${word}-${i}`}
-                initial={{ opacity: 0, y: 18 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.55, delay: 0.05 * i, ease: [0.22, 1, 0.36, 1] }}
-                className="mr-[0.28em] inline-block"
-              >
-                {word}
-              </motion.span>
-            ))}
-          </h1>
+          <motion.h1
+            initial={{ opacity: 0, y: 22 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+            className="font-display text-[2.7rem] font-medium leading-[1.08] tracking-tight text-paper-0 sm:text-[3.6rem] lg:text-[4.1rem]"
+          >
+            Every survey, site, and species —{' '}
+            <em className="italic text-lichen-300">one living registry.</em>
+          </motion.h1>
 
           <motion.p
             initial={{ opacity: 0, y: 14 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.65 }}
-            className="mt-6 max-w-md text-[16px] leading-relaxed text-ink-950/65"
+            transition={{ duration: 0.6, delay: 0.35 }}
+            className="mt-6 max-w-md text-[16px] leading-relaxed text-paper-0/65"
           >
             Canopy is the internal platform field teams use to record sites, log
             species observations, and cross-check every entry against global
@@ -69,17 +65,21 @@ export function Hero() {
           <motion.div
             initial={{ opacity: 0, y: 14 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.8 }}
+            transition={{ duration: 0.6, delay: 0.5 }}
             className="mt-9 flex flex-wrap items-center gap-4"
           >
             <Link to={ROUTES.login}>
-              <Button variant="primary" size="lg">
+              <Button
+                variant="primary"
+                size="lg"
+                className="bg-lichen-400 text-ink-950 hover:bg-lichen-300"
+              >
                 Sign in to Canopy
               </Button>
             </Link>
             <a
               href="#registry"
-              className="text-sm font-semibold text-canopy-800 underline decoration-canopy-800/30 underline-offset-4 transition-colors hover:text-canopy-900"
+              className="text-sm font-semibold text-paper-0/70 underline decoration-paper-0/25 underline-offset-4 transition-colors hover:text-paper-0"
             >
               See how it works
             </a>
@@ -88,8 +88,8 @@ export function Hero() {
           <motion.p
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ duration: 0.6, delay: 1 }}
-            className="mt-8 font-mono text-xs text-ink-950/40"
+            transition={{ duration: 0.6, delay: 0.7 }}
+            className="mt-8 font-mono text-xs text-paper-0/35"
           >
             Access is provisioned by your administrator — no public sign-up.
           </motion.p>
@@ -101,7 +101,7 @@ export function Hero() {
             label="Chréa foothills, mixed oak"
             status="verified"
             rotate={-4}
-            delay={0.9}
+            delay={0.6}
             pointerX={pointerX}
             pointerY={pointerY}
             depth={0.6}
@@ -112,7 +112,7 @@ export function Hero() {
             label="Quercus afares — pending review"
             status="pending"
             rotate={3}
-            delay={1.05}
+            delay={0.75}
             pointerX={pointerX}
             pointerY={pointerY}
             depth={1}
@@ -123,7 +123,7 @@ export function Hero() {
             label="Matched to IUCN Red List"
             status="verified"
             rotate={-2}
-            delay={1.2}
+            delay={0.9}
             pointerX={pointerX}
             pointerY={pointerY}
             depth={0.8}

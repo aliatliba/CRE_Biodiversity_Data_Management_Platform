@@ -8,8 +8,10 @@ import { LandingFooter } from '../components/LandingFooter'
 export function LandingPage() {
   return (
     <div className="min-h-screen bg-paper-0">
-      <LandingNav />
-      <Hero />
+      <div className="bg-shell">
+        <LandingNav />
+        <Hero />
+      </div>
       <IntegrationsStrip />
       <RoleSplit />
       <ValidationFeature />

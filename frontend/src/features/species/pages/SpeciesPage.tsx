@@ -99,14 +99,14 @@ export function SpeciesPage() {
               <button
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page <= 1}
-                className="flex h-8 w-8 items-center justify-center rounded-full border border-canopy-900/10 text-ink-950/60 transition-colors hover:bg-mist-100 disabled:opacity-30"
+                className="flex h-8 w-8 items-center justify-center rounded-lg border border-mist-200 text-ink-950/60 transition-colors hover:bg-paper-50 disabled:opacity-30"
               >
                 <ChevronLeft size={16} />
               </button>
               <button
                 onClick={() => setPage((p) => Math.min(pages, p + 1))}
                 disabled={page >= pages}
-                className="flex h-8 w-8 items-center justify-center rounded-full border border-canopy-900/10 text-ink-950/60 transition-colors hover:bg-mist-100 disabled:opacity-30"
+                className="flex h-8 w-8 items-center justify-center rounded-lg border border-mist-200 text-ink-950/60 transition-colors hover:bg-paper-50 disabled:opacity-30"
               >
                 <ChevronRight size={16} />
               </button>
