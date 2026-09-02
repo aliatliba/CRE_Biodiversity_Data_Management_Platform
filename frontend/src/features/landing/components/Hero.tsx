@@ -61,7 +61,7 @@ export function Hero() {
             transition={{ duration: 0.6, delay: 0.65 }}
             className="mt-6 max-w-md text-[16px] leading-relaxed text-ink-950/65"
           >
-            Canopy is the internal platform field teams use to record sites, log
+            BioData is the internal platform field teams use to record sites, log
             species observations, and cross-check every entry against global
             taxonomy databases before it's added to the record.
           </motion.p>
@@ -74,7 +74,7 @@ export function Hero() {
           >
             <Link to={ROUTES.login}>
               <Button variant="primary" size="lg">
-                Sign in to Canopy
+                Sign in to BioData
               </Button>
             </Link>
             <a

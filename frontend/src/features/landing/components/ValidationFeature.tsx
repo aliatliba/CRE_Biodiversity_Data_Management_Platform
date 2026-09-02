@@ -10,7 +10,7 @@ export function ValidationFeature() {
             No duplicate entries. No unverified names.
           </h2>
           <p className="mt-5 max-w-md text-[15px] leading-relaxed text-ink-950/65">
-            Type a scientific name and Canopy checks it against the existing
+            Type a scientific name and BioData checks it against the existing
             catalogue first. If it's new, taxonomy, conservation status, and
             common names are pulled in automatically — every field stays
             traceable to the source that supplied it.

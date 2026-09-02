@@ -73,7 +73,7 @@ export function LoginPage() {
               <path d="M6 26C6 14 14 6 26 6C26 18 18 26 6 26Z" fill="var(--color-lichen-400)" />
               <path d="M6 26C10 22 16 16 24 8" stroke="var(--color-paper-0)" strokeWidth="1.4" strokeLinecap="round" />
             </svg>
-            <span className="font-display text-[17px] font-extrabold tracking-tight text-paper-0">Canopy</span>
+            <span className="font-display text-[17px] font-extrabold tracking-tight text-paper-0">BioData</span>
           </Link>
         </div>
         <motion.div
@@ -104,7 +104,7 @@ export function LoginPage() {
               <path d="M6 26C6 14 14 6 26 6C26 18 18 26 6 26Z" fill="var(--color-canopy-600)" />
               <path d="M6 26C10 22 16 16 24 8" stroke="var(--color-canopy-900)" strokeWidth="1.4" strokeLinecap="round" />
             </svg>
-            <span className="font-display text-[16px] font-extrabold tracking-tight text-canopy-950">Canopy</span>
+            <span className="font-display text-[16px] font-extrabold tracking-tight text-canopy-950">BioData</span>
           </Link>
 
           <h1 className="font-display text-[1.7rem] font-bold tracking-tight text-canopy-950">

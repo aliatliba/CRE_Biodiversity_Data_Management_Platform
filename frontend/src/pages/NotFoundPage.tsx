@@ -7,7 +7,7 @@ export function NotFoundPage() {
       <p className="font-mono text-sm text-canopy-700">404</p>
       <h1 className="font-display text-2xl font-bold text-canopy-950">This page doesn't exist</h1>
       <Link to={ROUTES.landing} className="mt-2 text-sm font-semibold text-canopy-800 underline underline-offset-4">
-        Back to Canopy
+        Back to BioData
       </Link>
     </div>
   )
