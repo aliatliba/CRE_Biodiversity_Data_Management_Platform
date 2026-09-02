@@ -1,6 +1,6 @@
 from typing import Any
 from datetime import datetime
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class Taxonomy(BaseModel):
@@ -144,3 +144,35 @@ class SiteSpeciesResponse(BaseModel):
     species_id: int
     recorded_by: int
     notes: str | None
+    
+class BulkImportRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    scientific_names: list[str] = Field(..., min_length=1, max_length=300)
+    site_id: int
+    delay_seconds: float = Field(
+        1.5, ge=0.2, le=10, description="Seconds to wait between species lookups."
+    )
+    dry_run: bool = False
+
+
+class BulkImportItemResponse(BaseModel):
+    input_name: str
+    resolved_name: str | None = None
+    status: str
+    species_id: int | None = None
+    error: str | None = None
+
+
+class BulkImportJobResponse(BaseModel):
+    job_id: str
+    status: str
+    total: int
+    processed: int
+    created: int
+    skipped: int
+    failed: int
+    invalid: int
+    items: list[BulkImportItemResponse]
+    started_at: datetime | None = None
+    finished_at: datetime | None = None
+    error: str | None = None

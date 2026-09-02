@@ -19,6 +19,8 @@ services:
 
   api:
     build: ./backend
+    volumes:
+      - ./data:/data
 
     environment:
       DATABASE_URL: postgresql+psycopg2://biodiversity:biodiversity@db:5432/biodiversity_db
