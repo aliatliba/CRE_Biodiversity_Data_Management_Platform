@@ -5,7 +5,7 @@ import { ROUTES } from '@/lib/constants'
 
 export function LandingFooter() {
   return (
-    <footer className="bg-canopy-950 text-paper-0">
+    <footer className="bg-grain bg-canopy-950 text-paper-0">
       <div className="mx-auto w-full max-w-6xl px-6 py-20 sm:px-8">
         <Reveal className="flex flex-col items-start justify-between gap-8 border-b border-paper-0/10 pb-14 md:flex-row md:items-end">
           <div>
@@ -19,9 +19,9 @@ export function LandingFooter() {
           </div>
           <Link to={ROUTES.login}>
             <Button
-              variant="primary"
+              variant="ghost"
               size="lg"
-              className="bg-lichen-400 text-canopy-950 hover:bg-lichen-300"
+              className="border border-paper-0/25 bg-transparent text-paper-0 hover:border-paper-0/50 hover:bg-paper-0/10 hover:text-paper-0"
             >
               Sign in to BioData
             </Button>

@@ -5,7 +5,7 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
-  /* ---- BioData palette ---- */
+  /* ---- BioData palette (unchanged) ---- */
   --color-canopy-950: #052707;
   --color-canopy-900: #053b06;
   --color-canopy-800: #0b5d1e;
@@ -25,7 +25,7 @@
   --color-mist-100: #e7efe4;
   --color-mist-200: #d7e5d3;
 
-  /* ---- Type ---- */
+  /* ---- Type (unchanged) ---- */
   --font-display: "Montserrat", ui-sans-serif, system-ui, sans-serif;
   --font-body: "Montserrat", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace;
@@ -34,12 +34,11 @@
   --animate-drift-slow: drift 22s ease-in-out infinite;
   --animate-draw: draw 2.4s ease forwards;
   --animate-blink: blink 2.6s ease-in-out infinite;
+
+  /* New — used by the map markers and ecosystem diagram */
+  --animate-pulse-ring: pulse-ring 2.6s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
-/* Dark palette — overrides the same CSS custom properties the @theme block
-   defines above. Since every component is built on `bg-paper-0`,
-   `text-ink-950`, `border-mist-200`, etc. (never raw hex), swapping these
-   variables re-themes the entire app without touching component code. */
 .dark {
   --color-canopy-950: #eaf7ec;
   --color-canopy-900: #d8f0dc;
@@ -78,6 +77,13 @@
   50% { opacity: 1; }
 }
 
+/* New — soft expanding ring behind an active map marker / ecosystem node */
+@keyframes pulse-ring {
+  0% { transform: scale(0.9); opacity: 0.55; }
+  70% { transform: scale(1.9); opacity: 0; }
+  100% { transform: scale(1.9); opacity: 0; }
+}
+
 @layer base {
   html {
     scroll-behavior: smooth;
@@ -100,6 +106,24 @@
   ::selection {
     background: var(--color-lichen-400);
     color: var(--color-ink-950);
+  }
+}
+
+@layer utilities {
+  /* New — a very faint paper grain, used behind the hero and footer only.
+     Pure CSS (no image asset), so it never breaks in production. Kept at
+     low opacity so it reads as texture, not noise. */
+  .bg-grain {
+    position: relative;
+  }
+  .bg-grain::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.5;
+    mix-blend-mode: multiply;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.35'/%3E%3C/svg%3E");
   }
 }
 

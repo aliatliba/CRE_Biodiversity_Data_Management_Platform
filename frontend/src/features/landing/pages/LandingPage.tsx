@@ -1,8 +1,12 @@
 import { LandingNav } from '../components/LandingNav'
 import { Hero } from '../components/Hero'
-import { IntegrationsStrip } from '../components/IntegrationsStrip'
+import { LandscapeGallery } from '../components/LandscapeGallery'
+import { ResearchSitesMap } from '../components/ResearchSitesMap'
+import { ProtectedSpeciesShowcase } from '../components/ProtectedSpeciesShowcase'
+import { ValidationPipeline } from '../components/ValidationPipeline'
+import { DashboardPreview } from '../components/DashboardPreview'
+import { EcosystemIntegrations } from '../components/EcosystemIntegrations'
 import { RoleSplit } from '../components/RoleSplit'
-import { ValidationFeature } from '../components/ValidationFeature'
 import { LandingFooter } from '../components/LandingFooter'
 
 export function LandingPage() {
@@ -10,9 +14,13 @@ export function LandingPage() {
     <div className="min-h-screen bg-paper-0">
       <LandingNav />
       <Hero />
-      <IntegrationsStrip />
+      <LandscapeGallery />
+      <ResearchSitesMap />
+      <ProtectedSpeciesShowcase />
+      <ValidationPipeline />
+      <DashboardPreview />
+      <EcosystemIntegrations />
       <RoleSplit />
-      <ValidationFeature />
       <LandingFooter />
     </div>
   )
