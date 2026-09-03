@@ -11,3 +11,9 @@ export interface SiteCreateInput {
   code?: string
   description?: string
 }
+
+export interface SiteUpdateInput {
+  name?: string
+  code?: string
+  description?: string
+}

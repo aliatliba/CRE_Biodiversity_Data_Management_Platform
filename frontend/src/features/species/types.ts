@@ -85,6 +85,41 @@ export interface SpeciesCreateInput {
   reference?: string | null
 }
 
+export interface SpeciesUpdateInput {
+  guild?: string | null
+  ecosystem_service?: string | null
+  habitat?: string | null
+  typology?: string | null
+  endemism?: string | null
+  potential_threats?: string | null
+  reference?: string | null
+  iucn_status?: string | null
+  iucn_trend?: string | null
+  updated_at: string
+}
+
+export interface SpeciesFilters {
+  search: string
+  kingdom: string
+  class_name: string
+  order_name: string
+  family: string
+  genus: string
+  national_status: string
+  site_id: string
+}
+
+export const EMPTY_SPECIES_FILTERS: SpeciesFilters = {
+  search: '',
+  kingdom: '',
+  class_name: '',
+  order_name: '',
+  family: '',
+  genus: '',
+  national_status: '',
+  site_id: '',
+}
+
 export interface ValidationHistoryEntry {
   id: number
   species_id: number

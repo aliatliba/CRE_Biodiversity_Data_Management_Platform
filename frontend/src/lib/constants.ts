@@ -15,6 +15,7 @@ export const ROUTES = {
   sites: '/sites',
   species: '/species',
   addSpecies: '/species/new',
+  editSpecies: '/species/:id/edit',
   protectedSpecies: '/protected-species',
   users: '/users',
   exports: '/exports',
