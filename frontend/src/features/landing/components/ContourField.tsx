@@ -30,10 +30,10 @@ export function ContourField({ tone = 'light' }: ContourFieldProps) {
           <stop offset="100%" stopColor={gradientColor} stopOpacity={maxOpacity * 0.2} />
         </linearGradient>
       </defs>
-      {CONTOURS.map((d, i) => (
+      {CONTOURS.map((line, i) => (
         <motion.path
-          key={d}
-          d={d}
+          key={line}
+          d={line}
           fill="none"
           stroke={`url(#contour-fade-${tone})`}
           strokeWidth={1.5}
