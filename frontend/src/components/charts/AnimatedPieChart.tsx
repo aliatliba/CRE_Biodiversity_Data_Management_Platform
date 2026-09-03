@@ -66,7 +66,7 @@ export function AnimatedPieChart({ data, size = 160, delay = 0 }: AnimatedPieCha
             transition={{ duration: 0.4, delay: delay + index * 0.08 }}
           />
         ))}
-        <circle cx={center} cy={center} r={radius * 0.55} fill="white" />
+        <circle cx={center} cy={center} r={radius * 0.55} fill="var(--color-paper-0)" />
         <text
           x={center}
           y={center}
