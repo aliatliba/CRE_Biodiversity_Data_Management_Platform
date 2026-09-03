@@ -213,24 +213,101 @@ def get_species(db: Session, species_id: int) -> Species:
     return species
 
 
+CRITICAL_TAXONOMY_FIELDS = ("kingdom", "class_name", "order_name", "family", "genus")
+
+
+def _apply_species_filters(
+    query,
+    *,
+    status: str | None = None,
+    search: str | None = None,
+    kingdom: str | None = None,
+    class_name: str | None = None,
+    order_name: str | None = None,
+    family: str | None = None,
+    genus: str | None = None,
+    national_status: str | None = None,
+    site_id: int | None = None,
+):
+    if site_id is not None:
+        query = query.join(SiteSpecies, SiteSpecies.species_id == Species.id).filter(
+            SiteSpecies.site_id == site_id
+        )
+    if status:
+        query = query.filter(Species.status == status)
+    if search:
+        pattern = f"%{search}%"
+        query = query.filter(
+            (Species.scientific_name.ilike(pattern))
+            | (Species.common_name.ilike(pattern))
+        )
+    if kingdom:
+        query = query.filter(Species.kingdom.ilike(f"%{kingdom}%"))
+    if class_name:
+        query = query.filter(Species.class_name.ilike(f"%{class_name}%"))
+    if order_name:
+        query = query.filter(Species.order_name.ilike(f"%{order_name}%"))
+    if family:
+        query = query.filter(Species.family.ilike(f"%{family}%"))
+    if genus:
+        query = query.filter(Species.genus.ilike(f"%{genus}%"))
+    if national_status:
+        query = query.filter(Species.national_status == national_status)
+    return query
+
+
 def list_species(
     db: Session,
     status: str | None = None,
+    search: str | None = None,
+    kingdom: str | None = None,
+    class_name: str | None = None,
+    order_name: str | None = None,
     family: str | None = None,
+    genus: str | None = None,
     national_status: str | None = None,
+    site_id: int | None = None,
     page: int = 1,
     page_size: int = 20,
 ) -> tuple[list[Species], int]:
     query = db.query(Species)
-    if status:
-        query = query.filter(Species.status == status)
-    if family:
-        query = query.filter(Species.family.ilike(f"%{family}%"))
-    if national_status:
-        query = query.filter(Species.national_status == national_status)
+    query = _apply_species_filters(
+        query,
+        status=status,
+        search=search,
+        kingdom=kingdom,
+        class_name=class_name,
+        order_name=order_name,
+        family=family,
+        genus=genus,
+        national_status=national_status,
+        site_id=site_id,
+    )
     total = query.count()
-    items = query.offset((page - 1) * page_size).limit(page_size).all()
+    items = (
+        query.order_by(Species.scientific_name.asc())
+        .offset((page - 1) * page_size)
+        .limit(page_size)
+        .all()
+    )
     return items, total
+
+
+def delete_species(db: Session, species_id: int) -> None:
+    species = db.query(Species).filter(Species.id == species_id).first()
+    if not species:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Species not found",
+        )
+    db.query(SiteSpecies).filter(SiteSpecies.species_id == species_id).delete(
+        synchronize_session=False
+    )
+    db.query(SpeciesValidationHistory).filter(
+        SpeciesValidationHistory.species_id == species_id
+    ).delete(synchronize_session=False)
+    db.delete(species)
+    db.commit()
 
 
 def get_species_history(db: Session, species_id: int) -> list[SpeciesValidationHistory]:
