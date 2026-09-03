@@ -106,6 +106,28 @@ export interface SpeciesUpdateInput {
   updated_at: string
 }
 
+export interface SpeciesFilters {
+  search: string
+  kingdom: string
+  class_name: string
+  order_name: string
+  family: string
+  genus: string
+  national_status: string
+  site_id: string
+}
+
+export const EMPTY_SPECIES_FILTERS: SpeciesFilters = {
+  search: '',
+  kingdom: '',
+  class_name: '',
+  order_name: '',
+  family: '',
+  genus: '',
+  national_status: '',
+  site_id: '',
+}
+
 export interface ValidationHistoryEntry {
   id: number
   species_id: number

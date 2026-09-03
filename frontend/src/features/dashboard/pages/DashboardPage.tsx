@@ -1,12 +1,24 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Leaf, MapPin, Link2, History, ShieldCheck } from 'lucide-react'
+import { motion } from 'framer-motion'
+import {
+  Leaf,
+  MapPin,
+  Link2,
+  History,
+  ShieldCheck,
+  BarChart3,
+  AlertTriangle,
+  CheckCircle2,
+} from 'lucide-react'
 import axios from 'axios'
 import { useAuth } from '@/hooks/useAuth'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { Card } from '@/components/ui/Card'
 import { LoadingSpinner } from '@/components/common/LoadingSpinner'
 import { ErrorState } from '@/components/common/ErrorState'
+import { AnimatedBarChart } from '@/components/charts/AnimatedBarChart'
+import { AnimatedPieChart } from '@/components/charts/AnimatedPieChart'
 import * as dashboardService from '../services/dashboardService'
 import type { DashboardStats } from '../types'
 import { StatCard } from '../components/StatCard'
@@ -38,8 +50,27 @@ export function DashboardPage() {
     load()
   }, [])
 
-  const statusEntries = stats ? Object.entries(stats.status_breakdown) : []
-  const maxCount = Math.max(1, ...statusEntries.map(([, count]) => count))
+  const completenessData = stats
+    ? [
+        { label: 'Complete', value: stats.completeness_breakdown.complete },
+        { label: 'Missing taxonomy', value: stats.completeness_breakdown.missing_taxonomy },
+        { label: 'Missing conservation', value: stats.completeness_breakdown.missing_conservation },
+      ]
+    : []
+
+  const iucnData = stats
+    ? Object.entries(stats.iucn_breakdown).map(([label, value]) => ({ label, value }))
+    : []
+
+  const statusData = stats
+    ? Object.entries(stats.status_breakdown).map(([label, value]) => ({ label, value }))
+    : []
+
+  const familyData =
+    stats?.top_families.map((f) => ({ label: f.family, value: f.count })) ?? []
+
+  const siteChartData =
+    stats?.site_stats.map((s) => ({ label: s.site_name, value: s.species_count })) ?? []
 
   return (
     <AppLayout title="Dashboard">
@@ -75,59 +106,205 @@ export function DashboardPage() {
             />
           </div>
 
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.3fr_1fr]">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.4, delay: 0.1 }}
+            >
+              <Card className="flex items-center gap-4">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-green-100 text-green-700">
+                  <CheckCircle2 size={20} />
+                </div>
+                <div>
+                  <p className="font-display text-2xl font-bold tabular-nums text-canopy-950">
+                    {stats.completeness_breakdown.complete}
+                  </p>
+                  <p className="text-xs font-medium text-ink-950/50">Complete records</p>
+                </div>
+              </Card>
+            </motion.div>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.4, delay: 0.15 }}
+            >
+              <Card className="flex items-center gap-4">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-red-100 text-red-600">
+                  <AlertTriangle size={20} />
+                </div>
+                <div>
+                  <p className="font-display text-2xl font-bold tabular-nums text-canopy-950">
+                    {stats.completeness_breakdown.missing_taxonomy}
+                  </p>
+                  <p className="text-xs font-medium text-ink-950/50">Missing taxonomy</p>
+                </div>
+              </Card>
+            </motion.div>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.4, delay: 0.2 }}
+            >
+              <Card className="flex items-center gap-4">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-amber-100 text-amber-700">
+                  <BarChart3 size={20} />
+                </div>
+                <div>
+                  <p className="font-display text-2xl font-bold tabular-nums text-canopy-950">
+                    {stats.completeness_breakdown.missing_conservation}
+                  </p>
+                  <p className="text-xs font-medium text-ink-950/50">Missing conservation</p>
+                </div>
+              </Card>
+            </motion.div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.1 }}
+            >
+              <Card>
+                <h2 className="font-display text-sm font-bold text-canopy-950">Data completeness</h2>
+                <div className="mt-5">
+                  <AnimatedPieChart data={completenessData} delay={0.15} />
+                </div>
+              </Card>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.15 }}
+            >
+              <Card>
+                <h2 className="font-display text-sm font-bold text-canopy-950">IUCN status breakdown</h2>
+                <div className="mt-5">
+                  <AnimatedPieChart data={iucnData} delay={0.2} />
+                </div>
+              </Card>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+            >
+              <Card>
+                <h2 className="font-display text-sm font-bold text-canopy-950">
+                  National status breakdown
+                </h2>
+                <div className="mt-5">
+                  <AnimatedPieChart data={statusData} delay={0.25} />
+                </div>
+              </Card>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.25 }}
+            >
+              <Card>
+                <h2 className="font-display text-sm font-bold text-canopy-950">Top families</h2>
+                <div className="mt-5">
+                  <AnimatedBarChart data={familyData} delay={0.3} />
+                </div>
+              </Card>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.3 }}
+              className="lg:col-span-2"
+            >
+              <Card>
+                <h2 className="font-display text-sm font-bold text-canopy-950">
+                  Species count per site
+                </h2>
+                <div className="mt-5">
+                  <AnimatedBarChart data={siteChartData} delay={0.35} />
+                </div>
+              </Card>
+            </motion.div>
+          </div>
+
+          {stats.site_stats.length > 0 && (
             <Card>
-              <h2 className="font-display text-sm font-bold text-canopy-950">
-                National status breakdown
+              <h2 className="mb-4 font-display text-sm font-bold text-canopy-950">
+                Per-site statistics
               </h2>
-              <div className="mt-5 flex flex-col gap-3">
-                {statusEntries.length === 0 && (
-                  <p className="text-sm text-ink-950/50">No species logged yet.</p>
-                )}
-                {statusEntries.map(([status, count]) => (
-                  <div key={status} className="flex items-center gap-3">
-                    <span className="w-32 shrink-0 truncate text-xs font-medium text-ink-950/60">
-                      {status}
-                    </span>
-                    <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-mist-100">
-                      <div
-                        className="h-full rounded-full bg-canopy-600"
-                        style={{ width: `${(count / maxCount) * 100}%` }}
-                      />
-                    </div>
-                    <span className="w-8 shrink-0 text-right text-xs font-semibold tabular-nums text-canopy-800">
-                      {count}
-                    </span>
-                  </div>
-                ))}
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm">
+                  <thead>
+                    <tr className="border-b border-canopy-900/[0.08] text-xs font-semibold uppercase tracking-wide text-ink-950/50">
+                      <th className="px-4 py-3">Site</th>
+                      <th className="px-4 py-3">Species</th>
+                      <th className="px-4 py-3">Protected</th>
+                      <th className="px-4 py-3">Complete</th>
+                      <th className="px-4 py-3">Incomplete</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {stats.site_stats.map((site, index) => (
+                      <motion.tr
+                        key={site.site_id}
+                        initial={{ opacity: 0, x: -8 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ duration: 0.35, delay: 0.05 * index }}
+                        className="border-b border-canopy-900/[0.05] last:border-0 hover:bg-mist-100/40"
+                      >
+                        <td className="px-4 py-3">
+                          <Link
+                            to={`/sites/${site.site_id}`}
+                            className="font-medium text-canopy-900 hover:underline"
+                          >
+                            {site.site_name}
+                          </Link>
+                        </td>
+                        <td className="px-4 py-3 tabular-nums">{site.species_count}</td>
+                        <td className="px-4 py-3 tabular-nums">{site.protected_count}</td>
+                        <td className="px-4 py-3 tabular-nums text-green-700">
+                          {site.complete_count}
+                        </td>
+                        <td className="px-4 py-3 tabular-nums text-amber-700">
+                          {site.incomplete_count}
+                        </td>
+                      </motion.tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </Card>
+          )}
 
-            <Card className="flex flex-col gap-3">
-              <h2 className="font-display text-sm font-bold text-canopy-950">Quick links</h2>
-              <Link
-                to="/species/new"
-                className="flex items-center gap-3 rounded-xl border border-canopy-900/10 px-3.5 py-3 text-sm font-medium text-ink-950/75 transition-colors hover:border-canopy-700/30 hover:bg-mist-100"
-              >
-                <Leaf size={16} className="text-canopy-700" />
-                Log a species observation
-              </Link>
-              <Link
-                to="/protected-species"
-                className="flex items-center gap-3 rounded-xl border border-canopy-900/10 px-3.5 py-3 text-sm font-medium text-ink-950/75 transition-colors hover:border-canopy-700/30 hover:bg-mist-100"
-              >
-                <ShieldCheck size={16} className="text-canopy-700" />
-                View protected species list
-              </Link>
-              <Link
-                to="/sites"
-                className="flex items-center gap-3 rounded-xl border border-canopy-900/10 px-3.5 py-3 text-sm font-medium text-ink-950/75 transition-colors hover:border-canopy-700/30 hover:bg-mist-100"
-              >
-                <MapPin size={16} className="text-canopy-700" />
-                Browse survey sites
-              </Link>
-            </Card>
-          </div>
+          <Card className="flex flex-col gap-3">
+            <h2 className="font-display text-sm font-bold text-canopy-950">Quick links</h2>
+            <Link
+              to="/species/new"
+              className="flex items-center gap-3 rounded-xl border border-canopy-900/10 px-3.5 py-3 text-sm font-medium text-ink-950/75 transition-colors hover:border-canopy-700/30 hover:bg-mist-100"
+            >
+              <Leaf size={16} className="text-canopy-700" />
+              Log a species observation
+            </Link>
+            <Link
+              to="/protected-species"
+              className="flex items-center gap-3 rounded-xl border border-canopy-900/10 px-3.5 py-3 text-sm font-medium text-ink-950/75 transition-colors hover:border-canopy-700/30 hover:bg-mist-100"
+            >
+              <ShieldCheck size={16} className="text-canopy-700" />
+              View protected species list
+            </Link>
+            <Link
+              to="/sites"
+              className="flex items-center gap-3 rounded-xl border border-canopy-900/10 px-3.5 py-3 text-sm font-medium text-ink-950/75 transition-colors hover:border-canopy-700/30 hover:bg-mist-100"
+            >
+              <MapPin size={16} className="text-canopy-700" />
+              Browse survey sites
+            </Link>
+          </Card>
         </div>
       )}
     </AppLayout>

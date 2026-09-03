@@ -1,5 +1,7 @@
-import { Route, Routes } from 'react-router-dom'
+import { useEffect } from 'react'
+import { Route, Routes, useLocation } from 'react-router-dom'
 import { AuthProvider } from '@/hooks/useAuth'
+import { useTheme } from '@/hooks/useTheme'
 import { ProtectedRoute } from '@/components/common/ProtectedRoute'
 import { LandingPage } from '@/features/landing/pages/LandingPage'
 import { LoginPage } from '@/features/auth/pages/LoginPage'
@@ -9,6 +11,8 @@ import { SitesPage } from '@/features/sites/pages/SitesPage'
 import { SpeciesPage } from '@/features/species/pages/SpeciesPage'
 import { AddSpeciesPage } from '@/features/species/pages/AddSpeciesPage'
 import { SpeciesDetailPage } from '@/features/species/pages/SpeciesDetailPage'
+import { EditSpeciesPage } from '@/features/species/pages/EditSpeciesPage'
+import { SiteDetailPage } from '@/features/sites/pages/SiteDetailPage'
 import { ProtectedSpeciesPage } from '@/features/protected-species/pages/ProtectedSpeciesPage'
 import { UsersPage } from '@/features/users/pages/UsersPage'
 import { ExportsPage } from '@/features/exports/pages/ExportsPage'
@@ -16,9 +20,23 @@ import { ProfilePage } from '@/features/profile/pages/ProfilePage'
 import { NotFoundPage } from '@/pages/NotFoundPage'
 import { ROUTES } from '@/lib/constants'
 
+function PublicThemeGuard() {
+  const { pathname } = useLocation()
+  const { setTheme } = useTheme()
+
+  useEffect(() => {
+    if (pathname === ROUTES.landing || pathname === ROUTES.login) {
+      setTheme('light')
+    }
+  }, [pathname, setTheme])
+
+  return null
+}
+
 function App() {
   return (
     <AuthProvider>
+      <PublicThemeGuard />
       <Routes>
         <Route path={ROUTES.landing} element={<LandingPage />} />
         <Route path={ROUTES.login} element={<LoginPage />} />
@@ -63,10 +81,26 @@ function App() {
           }
         />
         <Route
+          path="/species/:id/edit"
+          element={
+            <ProtectedRoute>
+              <EditSpeciesPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/species/:id"
           element={
             <ProtectedRoute>
               <SpeciesDetailPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/sites/:id"
+          element={
+            <ProtectedRoute>
+              <SiteDetailPage />
             </ProtectedRoute>
           }
         />

@@ -14,6 +14,12 @@ import type { Species, SpeciesLookupDraft } from '../types'
 import { DuplicateSpeciesDialog } from '../components/DuplicateSpeciesDialog'
 import { SpeciesReviewForm, type ReviewFormValues } from '../components/SpeciesReviewForm'
 
+import {
+  getCompletenessLabel,
+  getDraftCompletenessStatus,
+  getCompletenessTone,
+} from '@/lib/speciesCompleteness'
+
 type Step = 'search' | 'review'
 
 const EMPTY_VALUES: ReviewFormValues = {
@@ -229,6 +235,14 @@ export function AddSpeciesPage() {
           </div>
 
           <Card>
+            <div className="mb-4 flex items-center justify-between">
+              <p className="text-sm text-ink-950/60">
+                Review auto-fetched data before saving. Missing fields are highlighted below.
+              </p>
+              <Badge tone={getCompletenessTone(getDraftCompletenessStatus(draft))}>
+                {getCompletenessLabel(getDraftCompletenessStatus(draft))}
+              </Badge>
+            </div>
             <SpeciesReviewForm draft={draft} values={values} onChange={setValues} />
           </Card>
 

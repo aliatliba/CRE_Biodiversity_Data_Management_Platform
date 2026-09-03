@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
+import { Link } from 'react-router-dom'
 import axios from 'axios'
 import { MapPin, Plus, Trash2, Search } from 'lucide-react'
 import { AppLayout } from '@/components/layout/AppLayout'
@@ -136,31 +137,37 @@ export function SitesPage() {
       {!isLoading && !error && sites.length > 0 && (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {sites.map((site) => (
-            <Card key={site.id} className="flex flex-col gap-2">
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex items-center gap-2">
-                  <MapPin size={16} className="shrink-0 text-canopy-700" />
-                  <h3 className="font-display text-[15px] font-bold text-canopy-950">{site.name}</h3>
+            <Link key={site.id} to={`/sites/${site.id}`}>
+              <Card className="flex h-full flex-col gap-2 transition-colors hover:border-canopy-700/30 hover:bg-mist-100/40">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <MapPin size={16} className="shrink-0 text-canopy-700" />
+                    <h3 className="font-display text-[15px] font-bold text-canopy-950">{site.name}</h3>
+                  </div>
+                  {isAdmin && (
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        handleDelete(site)
+                      }}
+                      aria-label={`Delete ${site.name}`}
+                      className="rounded-full p-1.5 text-ink-950/30 transition-colors hover:bg-red-50 hover:text-red-600"
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  )}
                 </div>
-                {isAdmin && (
-                  <button
-                    onClick={() => handleDelete(site)}
-                    aria-label={`Delete ${site.name}`}
-                    className="rounded-full p-1.5 text-ink-950/30 transition-colors hover:bg-red-50 hover:text-red-600"
-                  >
-                    <Trash2 size={15} />
-                  </button>
+                {site.code && (
+                  <span className="w-fit rounded-full bg-mist-100 px-2.5 py-0.5 font-mono text-[11px] font-medium text-canopy-800">
+                    {site.code}
+                  </span>
                 )}
-              </div>
-              {site.code && (
-                <span className="w-fit rounded-full bg-mist-100 px-2.5 py-0.5 font-mono text-[11px] font-medium text-canopy-800">
-                  {site.code}
-                </span>
-              )}
-              <p className="text-sm leading-relaxed text-ink-950/60">
-                {site.description || 'No description provided.'}
-              </p>
-            </Card>
+                <p className="text-sm leading-relaxed text-ink-950/60">
+                  {site.description || 'No description provided.'}
+                </p>
+              </Card>
+            </Link>
           ))}
         </div>
       )}

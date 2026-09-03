@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import axios from 'axios'
-import { ArrowLeft, Pencil } from 'lucide-react'
+import { ArrowLeft,Trash2, Pencil } from 'lucide-react'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
@@ -9,19 +9,59 @@ import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { LoadingSpinner } from '@/components/common/LoadingSpinner'
 import { ErrorState } from '@/components/common/ErrorState'
+import { useAuth } from '@/hooks/useAuth'
+import {
+  getCompletenessLabel,
+  getCompletenessStatus,
+  getCompletenessTone,
+} from '@/lib/speciesCompleteness'
 import * as speciesService from '../services/speciesService'
 import type { Species, SpeciesUpdateInput, ValidationHistoryEntry } from '../types'
 import { ValidationHistory } from '../components/ValidationHistory'
 import { SourceBadge } from '../components/SourceBadge'
 
-function Field({ label, value, source }: { label: string; value?: string | null; source?: string | null }) {
+const CRITICAL_TAXONOMY_LABELS: Record<string, string> = {
+  kingdom: 'Kingdom',
+  class_name: 'Class',
+  order_name: 'Order',
+  family: 'Family',
+  genus: 'Genus',
+}
+
+function Field({
+  label,
+  value,
+  source,
+  critical = false,
+  warnIfMissing = false,
+}: {
+  label: string
+  value?: string | null
+  source?: string | null
+  critical?: boolean
+  warnIfMissing?: boolean
+}) {
+  const isMissing = !value || value.trim() === ''
+  const showWarning = isMissing && (critical || warnIfMissing)
+  const missingClass = critical
+    ? 'border-red-200 bg-red-50 text-red-700'
+    : 'border-amber-200 bg-amber-50 text-amber-800'
+
   return (
     <div>
       <div className="flex items-center justify-between">
-        <span className="text-xs font-semibold uppercase tracking-[0.08em] text-canopy-900/60">{label}</span>
+        <span className="text-xs font-semibold uppercase tracking-[0.08em] text-canopy-900/60">
+          {label}
+        </span>
         <SourceBadge source={source} />
       </div>
-      <p className="mt-1 text-[15px] text-ink-950/85">{value || '—'}</p>
+      {showWarning ? (
+        <p className={`mt-1 rounded-lg border px-3 py-2 text-[15px] font-medium ${missingClass}`}>
+          {critical ? 'Missing — critical taxonomy data' : 'Missing — conservation data'}
+        </p>
+      ) : (
+        <p className="mt-1 text-[15px] text-ink-950/85">{value || '—'}</p>
+      )}
     </div>
   )
 }
@@ -54,10 +94,15 @@ function toEditableFields(species: Species): EditableFields {
 
 export function SpeciesDetailPage() {
   const { id } = useParams<{ id: string }>()
+  const navigate = useNavigate()
+  const { user } = useAuth()
+  const isAdmin = user?.role === 'admin'
+
   const [species, setSpecies] = useState<Species | null>(null)
   const [history, setHistory] = useState<ValidationHistoryEntry[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   const [isEditing, setIsEditing] = useState(false)
   const [form, setForm] = useState<EditableFields | null>(null)
@@ -87,6 +132,22 @@ export function SpeciesDetailPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id])
 
+  async function handleDelete() {
+    if (!species) return
+    if (!confirm(`Delete "${species.scientific_name}" permanently? This can't be undone.`)) return
+
+    setIsDeleting(true)
+
+    try {
+      await speciesService.deleteSpecies(species.id)
+      navigate('/species')
+    } catch {
+      alert('Could not delete species.')
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
   function startEditing() {
     if (!species) return
     setForm(toEditableFields(species))
@@ -106,28 +167,38 @@ export function SpeciesDetailPage() {
 
   async function handleSave() {
     if (!species || !form) return
+
     setIsSaving(true)
     setSaveError(null)
+
     try {
-      // Only send fields that actually changed, plus the concurrency token.
-      const payload: SpeciesUpdateInput = { updated_at: species.updated_at }
+      const payload: SpeciesUpdateInput = {
+        updated_at: species.updated_at,
+      }
+
       let changedAny = false
+
       ;(Object.keys(form) as Array<keyof EditableFields>).forEach((key) => {
         const original = (species[key as keyof Species] ?? '') as string
         const next = form[key] ?? ''
+
         if (next !== original) {
           payload[key] = next || null
           changedAny = true
         }
       })
+
       if (!changedAny) {
         setIsEditing(false)
         return
       }
+
       const updated = await speciesService.updateSpecies(species.id, payload)
       setSpecies(updated)
+
       const hist = await speciesService.getSpeciesHistory(species.id)
       setHistory(hist)
+
       setIsEditing(false)
       setForm(null)
     } catch (err) {
@@ -144,19 +215,43 @@ export function SpeciesDetailPage() {
   }
 
   const sources = species?.field_sources ?? {}
+  const completeness = species ? getCompletenessStatus(species) : null
 
   return (
     <AppLayout title="Species record">
-      <div className="mb-5 flex items-center justify-between">
-        <Link to="/species" className="inline-flex items-center gap-1.5 text-sm font-medium text-canopy-700 hover:underline">
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+        <Link
+          to="/species"
+          className="inline-flex items-center gap-1.5 text-sm font-medium text-canopy-700 hover:underline"
+        >
           <ArrowLeft size={15} />
           Back to species
         </Link>
+
         {species && !isEditing && (
-          <Button size="md" variant="secondary" onClick={startEditing} className="gap-2">
-            <Pencil size={14} />
-            Edit record
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              size="md"
+              variant="secondary"
+              onClick={startEditing}
+              className="gap-2"
+            >
+              <Pencil size={14} />
+              Edit record
+            </Button>
+
+            {isAdmin && (
+              <Button
+                variant="ghost"
+                className="gap-2 text-red-600 hover:bg-red-50"
+                onClick={handleDelete}
+                isLoading={isDeleting}
+              >
+                <Trash2 size={15} />
+                Delete
+              </Button>
+            )}
+          </div>
         )}
       </div>
 
@@ -168,7 +263,7 @@ export function SpeciesDetailPage() {
 
       {!isLoading && error && <ErrorState message={error} onRetry={load} />}
 
-      {!isLoading && !error && species && (
+      {!isLoading && !error && species && completeness && (
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1.4fr_1fr]">
           <div className="flex flex-col gap-6">
             <Card>
@@ -180,12 +275,19 @@ export function SpeciesDetailPage() {
               </h1>
               {species.common_name && <p className="text-ink-950/60">{species.common_name}</p>}
               <div className="mt-3 flex flex-wrap gap-2">
-                {species.iucn_status && <Badge tone="warning">{species.iucn_status}</Badge>}
+                {species.iucn_status ? (
+                  <Badge tone="warning">{species.iucn_status}</Badge>
+                ) : (
+                  <Badge tone="warning">No IUCN status</Badge>
+                )}
                 <Badge tone={species.national_status === 'Protected' ? 'accent' : 'neutral'}>
                   {species.national_status}
                 </Badge>
                 <Badge tone="neutral" className="capitalize">
                   {species.status}
+                </Badge>
+                <Badge tone={getCompletenessTone(completeness)}>
+                  {getCompletenessLabel(completeness)}
                 </Badge>
               </div>
             </Card>
@@ -194,12 +296,20 @@ export function SpeciesDetailPage() {
               <h2 className="mb-4 font-display text-sm font-bold text-canopy-950">Taxonomy</h2>
               {!isEditing ? (
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <Field label="Kingdom" value={species.kingdom} source={sources.kingdom} />
-                  <Field label="Class" value={species.class_name} source={sources.class_name} />
-                  <Field label="Order" value={species.order_name} source={sources.order_name} />
-                  <Field label="Family" value={species.family} source={sources.family} />
-                  <Field label="Genus" value={species.genus} source={sources.genus} />
-                  <Field label="Species epithet" value={species.species_epithet} source={sources.species_epithet} />
+                  {Object.entries(CRITICAL_TAXONOMY_LABELS).map(([key, label]) => (
+                    <Field
+                      key={key}
+                      label={label}
+                      value={species[key as keyof Species] as string | null}
+                      source={sources[key]}
+                      critical
+                    />
+                  ))}
+                  <Field
+                    label="Species epithet"
+                    value={species.species_epithet}
+                    source={sources.species_epithet}
+                  />
                   <Field label="Common name" value={species.common_name} />
                 </div>
               ) : (
@@ -226,11 +336,18 @@ export function SpeciesDetailPage() {
             </Card>
 
             <Card>
-              <h2 className="mb-4 font-display text-sm font-bold text-canopy-950">Conservation &amp; ecology</h2>
+              <h2 className="mb-4 font-display text-sm font-bold text-canopy-950">
+                Conservation &amp; ecology
+              </h2>
               {!isEditing ? (
                 <>
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                    <Field label="IUCN status" value={species.iucn_status} source={sources.iucn_status} />
+                    <Field
+                      label="IUCN status"
+                      value={species.iucn_status}
+                      source={sources.iucn_status}
+                      warnIfMissing
+                    />
                     <Field label="IUCN trend" value={species.iucn_trend} source={sources.iucn_trend} />
                     <Field label="Guild" value={species.guild} />
                     <Field label="Ecosystem service" value={species.ecosystem_service} />
