@@ -9,10 +9,16 @@ import type {
   ValidationHistoryEntry,
 } from '../types'
 
-interface ListParams {
+export interface ListParams {
   status?: string
+  search?: string
+  kingdom?: string
+  class_name?: string
+  order_name?: string
   family?: string
+  genus?: string
   national_status?: string
+  site_id?: number
   page?: number
   page_size?: number
 }
@@ -25,6 +31,15 @@ export async function listSpecies(params: ListParams = {}): Promise<Page<Species
 export async function getSpecies(id: number): Promise<Species> {
   const { data } = await api.get<Species>(`/species/${id}`)
   return data
+}
+
+export async function updateSpecies(id: number, payload: SpeciesUpdateInput): Promise<Species> {
+  const { data } = await api.patch<Species>(`/species/${id}`, payload)
+  return data
+}
+
+export async function deleteSpecies(id: number): Promise<void> {
+  await api.delete(`/species/${id}`)
 }
 
 export async function getSpeciesHistory(id: number): Promise<ValidationHistoryEntry[]> {
@@ -59,4 +74,8 @@ export async function updateSpecies(id: number, payload: SpeciesUpdateInput): Pr
 export async function associateSpeciesWithSite(siteId: number, speciesId: number, notes?: string) {
   const { data } = await api.post(`/species/${siteId}/species`, { species_id: speciesId, notes })
   return data
+}
+
+export async function removeSpeciesFromSite(siteId: number, speciesId: number): Promise<void> {
+  await api.delete(`/species/${siteId}/species/${speciesId}`)
 }

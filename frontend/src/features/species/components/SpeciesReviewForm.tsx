@@ -35,19 +35,36 @@ function ReadOnlyField({
   label,
   value,
   source,
-}: ReadOnlyFieldProps): React.ReactNode {
+  critical = false,
+  warnIfMissing = false,
+}: ReadOnlyFieldProps & { critical?: boolean; warnIfMissing?: boolean }) {
+  const isMissing = !value || value.trim() === ''
+  const showWarning = isMissing && (critical || warnIfMissing)
+  const missingStyles = critical
+    ? 'border-red-300 bg-red-50 text-red-700'
+    : 'border-amber-300 bg-amber-50 text-amber-800'
+
   return (
     <div className="flex flex-col gap-1.5">
       <div className="flex items-center justify-between">
         <span className="text-xs font-semibold uppercase tracking-[0.08em] text-canopy-900/70">
           {label}
         </span>
-
         <SourceBadge source={source} />
       </div>
 
-      <p className="rounded-xl border border-mist-200 bg-mist-100/40 px-4 py-2.5 text-[15px] text-ink-950/80">
-        {value || '—'}
+      <p
+        className={`rounded-xl border px-4 py-2.5 text-[15px] ${
+          showWarning
+            ? `${missingStyles} font-medium`
+            : 'border-mist-200 bg-mist-100/40 text-ink-950/80'
+        }`}
+      >
+        {showWarning
+          ? critical
+            ? 'Missing — critical taxonomy data'
+            : 'Missing — conservation data'
+          : value || '—'}
       </p>
     </div>
   )
@@ -81,30 +98,35 @@ export function SpeciesReviewForm({
             label="Kingdom"
             value={t.kingdom}
             source={sources.kingdom}
+            critical
           />
 
           <ReadOnlyField
             label="Class"
             value={t.class_name}
             source={sources.class_name}
+            critical
           />
 
           <ReadOnlyField
             label="Order"
             value={t.order_name}
             source={sources.order_name}
+            critical
           />
 
           <ReadOnlyField
             label="Family"
             value={t.family}
             source={sources.family}
+            critical
           />
 
           <ReadOnlyField
             label="Genus"
             value={t.genus}
             source={sources.genus}
+            critical
           />
 
           <ReadOnlyField
@@ -134,6 +156,7 @@ export function SpeciesReviewForm({
             label="IUCN status"
             value={c.iucn_status}
             source={sources.iucn_status}
+            warnIfMissing
           />
 
           <ReadOnlyField
