@@ -5,6 +5,7 @@ import { Search } from 'lucide-react'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
+import { Badge } from '@/components/ui/Badge'
 import { LoadingSpinner } from '@/components/common/LoadingSpinner'
 import * as speciesService from '../services/speciesService'
 import * as siteService from '@/features/sites/services/siteService'
@@ -208,9 +209,14 @@ export function AddSpeciesPage() {
           <div className="mb-6 flex items-baseline justify-between">
             <div>
               <p className="font-mono text-xs uppercase tracking-[0.1em] text-canopy-700">New record</p>
-              <h2 className="font-display text-2xl font-bold italic text-canopy-950">
-                {draft.scientific_name}
-              </h2>
+              <div className="flex items-center gap-2.5">
+                <h2 className="font-display text-2xl font-bold italic text-canopy-950">
+                  {draft.scientific_name}
+                </h2>
+                <Badge tone={draft.national_status === 'Protected' ? 'accent' : 'neutral'}>
+                  {draft.national_status}
+                </Badge>
+              </div>
               {draft.input_scientific_name && (
                 <p className="text-xs text-ink-950/45">
                   Resolved from synonym "{draft.input_scientific_name}"

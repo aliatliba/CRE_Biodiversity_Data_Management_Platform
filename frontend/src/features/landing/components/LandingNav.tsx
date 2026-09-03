@@ -17,7 +17,7 @@ export function LandingNav() {
           <path d="M6 26C10 22 16 16 24 8" stroke="var(--color-canopy-900)" strokeWidth="1.4" strokeLinecap="round" />
         </svg>
         <span className="font-display text-[17px] font-extrabold tracking-tight text-canopy-950">
-          Canopy
+          BioData
         </span>
       </div>
       <nav className="hidden items-center gap-8 md:flex">

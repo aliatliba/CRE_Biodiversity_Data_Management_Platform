@@ -66,6 +66,11 @@ export async function createSpecies(payload: SpeciesCreateInput): Promise<Specie
   return data
 }
 
+export async function updateSpecies(id: number, payload: SpeciesUpdateInput): Promise<Species> {
+  const { data } = await api.patch<Species>(`/species/${id}`, payload)
+  return data
+}
+
 export async function associateSpeciesWithSite(siteId: number, speciesId: number, notes?: string) {
   const { data } = await api.post(`/species/${siteId}/species`, { species_id: speciesId, notes })
   return data

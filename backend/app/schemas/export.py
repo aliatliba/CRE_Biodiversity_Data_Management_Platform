@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Any
 from pydantic import BaseModel, ConfigDict
 
@@ -15,5 +16,5 @@ class ExportResponse(BaseModel):
     filters: dict[str, Any] | None
     status: str
     file_path: str | None
-    created_at: str
-    completed_at: str | None
+    created_at: datetime
+    completed_at: datetime | None

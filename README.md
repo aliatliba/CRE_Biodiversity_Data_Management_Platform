@@ -7,7 +7,7 @@ against GBIF, IUCN Red List, POWO, iNaturalist, and Wikidata.
 ```
 biodiversity-platform/
 ├── backend/    FastAPI + PostgreSQL API
-├── frontend/   React + Vite web app ("Canopy")
+├── frontend/   React + Vite web app ("BioData")
 └── docker-compose.yml
 ```
 

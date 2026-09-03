@@ -1,4 +1,6 @@
+import json
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
 from slowapi.errors import RateLimitExceeded
@@ -18,7 +20,12 @@ from app.core.exceptions import (
 from app.core.limiter import limiter
 from app.models.role import Role
 from app.models.user import User
+from app.models.protected_species import ProtectedSpeciesList
 from app.core.security import get_password_hash
+
+PROTECTED_SPECIES_SEED_FILE = (
+    Path(__file__).resolve().parent / "data" / "protected_species_dz.json"
+)
 
 
 @asynccontextmanager
@@ -81,8 +88,60 @@ def seed_database() -> None:
                 hashed_password=get_password_hash("admin123"),
                 full_name="Default Admin",
                 role_id=admin_role.id,
+                must_change_password=False,
             )
             db.add(admin_user)
             db.commit()
+            db.refresh(admin_user)
+
+        seed_protected_species(db, admin_user)
     finally:
         db.close()
+
+
+def seed_protected_species(db, admin_user: User) -> None:
+    """Populate protected_species_list with Algeria's nationally protected
+    animal and plant species, sourced from:
+      - Décret exécutif n° 12-235 du 24 mai 2012 (JO n° 35 du 10 juin 2012)
+        - protected non-domestic animal species
+      - Décret exécutif n° 12-03 du 4 janvier 2012 (JO n° 03 du 18 janvier 2012)
+        - protected non-cultivated plant species
+
+    Mirrors the admin-account seeding above: runs on every startup, but only
+    inserts species that are not already present (matched case-insensitively
+    on scientific_name, which is a CITEXT column).
+    """
+    if not PROTECTED_SPECIES_SEED_FILE.exists():
+        return
+
+    already_seeded = db.query(ProtectedSpeciesList.id).first() is not None
+    if already_seeded:
+        return
+
+    with open(PROTECTED_SPECIES_SEED_FILE, encoding="utf-8") as f:
+        species_data = json.load(f)
+
+    existing_names = {
+        name.lower()
+        for (name,) in db.query(ProtectedSpeciesList.scientific_name).all()
+    }
+
+    new_rows = []
+    for item in species_data:
+        scientific_name = (item.get("scientific_name") or "").strip()
+        if not scientific_name:
+            continue
+        if scientific_name.lower() in existing_names:
+            continue
+        existing_names.add(scientific_name.lower())
+        new_rows.append(
+            ProtectedSpeciesList(
+                scientific_name=scientific_name,
+                source_reference=item.get("source_reference"),
+                added_by=admin_user.id,
+            )
+        )
+
+    if new_rows:
+        db.bulk_save_objects(new_rows)
+        db.commit()

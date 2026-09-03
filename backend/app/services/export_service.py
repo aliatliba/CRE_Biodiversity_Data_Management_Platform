@@ -64,7 +64,7 @@ def generate_csv(db: Session, filters: dict[str, Any] | None) -> str:
             species.national_status, species.guild, species.ecosystem_service,
             species.habitat, species.typology, species.endemism,
             species.potential_threats, species.reference, site_name,
-            species.validated_by, species.validated_at.isoformat() if species.validated_at else "",
+            species.validator.full_name if species.validator else "", species.validated_at.isoformat() if species.validated_at else "",
         ])
     return output.getvalue()
 
@@ -101,7 +101,7 @@ def generate_xlsx(db: Session, filters: dict[str, Any] | None) -> bytes:
             species.national_status, species.guild, species.ecosystem_service,
             species.habitat, species.typology, species.endemism,
             species.potential_threats, species.reference, site_name,
-            species.validated_by, species.validated_at.isoformat() if species.validated_at else "",
+            species.validator.full_name if species.validator else "", species.validated_at.isoformat() if species.validated_at else "",
         ])
     buffer = io.BytesIO()
     wb.save(buffer)

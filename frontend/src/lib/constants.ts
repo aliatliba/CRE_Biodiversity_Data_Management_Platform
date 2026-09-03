@@ -19,4 +19,5 @@ export const ROUTES = {
   protectedSpecies: '/protected-species',
   users: '/users',
   exports: '/exports',
+  profile: '/profile',
 } as const

@@ -1,5 +1,12 @@
 import { api, setTokens, clearTokens } from '@/services/api'
-import type { CompleteProfileRequest, LoginRequest, TokenResponse, UserProfile } from '../types'
+import type {
+  ChangePasswordRequest,
+  CompleteProfileRequest,
+  LoginRequest,
+  TokenResponse,
+  UpdateOwnProfileRequest,
+  UserProfile,
+} from '../types'
 
 export async function login(payload: LoginRequest): Promise<TokenResponse> {
   const { data } = await api.post<TokenResponse>('/auth/login', payload)
@@ -10,6 +17,17 @@ export async function login(payload: LoginRequest): Promise<TokenResponse> {
 export async function fetchCurrentUser(): Promise<UserProfile> {
   const { data } = await api.get<UserProfile>('/auth/me')
   return data
+}
+
+export async function updateOwnProfile(payload: UpdateOwnProfileRequest): Promise<UserProfile> {
+  const { data } = await api.patch<UserProfile>('/auth/me', payload)
+  return data
+}
+
+export async function changePassword(payload: ChangePasswordRequest): Promise<void> {
+  // The complete-profile endpoint doubles as a general password-change
+  // endpoint once must_change_password is already false.
+  await api.post('/auth/complete-profile', payload)
 }
 
 export async function completeProfile(payload: CompleteProfileRequest): Promise<void> {

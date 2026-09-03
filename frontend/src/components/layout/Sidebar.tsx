@@ -17,16 +17,16 @@ export function Sidebar() {
   const isAdmin = user?.role === 'admin'
 
   return (
-    <aside className="hidden w-60 shrink-0 flex-col border-r border-canopy-900/[0.08] bg-paper-0 md:flex">
+    <aside className="fixed left-0 top-0 z-40 hidden h-screen w-60 shrink-0 flex-col overflow-hidden border-r border-canopy-900/[0.08] bg-paper-0 md:flex">
       <div className="flex items-center gap-2.5 px-6 py-6">
         <svg width="22" height="22" viewBox="0 0 32 32" fill="none" aria-hidden="true">
           <path d="M6 26C6 14 14 6 26 6C26 18 18 26 6 26Z" fill="var(--color-canopy-600)" />
           <path d="M6 26C10 22 16 16 24 8" stroke="var(--color-canopy-900)" strokeWidth="1.4" strokeLinecap="round" />
         </svg>
-        <span className="font-display text-[15px] font-extrabold tracking-tight text-canopy-950">Canopy</span>
+        <span className="font-display text-[15px] font-extrabold tracking-tight text-canopy-950">BioData</span>
       </div>
 
-      <nav className="flex flex-1 flex-col gap-1 px-3">
+      <nav className="flex flex-1 flex-col gap-1 overflow-hidden px-3">
         {NAV_ITEMS.filter((item) => !item.adminOnly || isAdmin).map(({ to, label, icon: Icon }) => (
           <NavLink
             key={to}
@@ -46,10 +46,18 @@ export function Sidebar() {
         ))}
       </nav>
 
-      <div className="border-t border-canopy-900/[0.08] px-6 py-5">
+      <NavLink
+        to="/profile"
+        className={({ isActive }) =>
+          cn(
+            'mt-auto block border-t border-canopy-900/[0.08] px-6 py-5 transition-colors hover:bg-mist-100',
+            isActive && 'bg-mist-100'
+          )
+        }
+      >
         <p className="truncate text-sm font-semibold text-canopy-950">{user?.full_name}</p>
         <p className="truncate text-xs capitalize text-ink-950/45">{user?.role}</p>
-      </div>
+      </NavLink>
     </aside>
   )
 }

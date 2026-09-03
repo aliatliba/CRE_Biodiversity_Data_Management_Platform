@@ -3,13 +3,53 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func, or_
 from datetime import datetime, timedelta, timezone
 
-from app.core.dependencies import DBSession, CurrentUser
+from app.core.dependencies import DBSession, ActiveUser
 from app.models.species import Species
 from app.models.site import Site
 from app.models.site_species import SiteSpecies
 from app.models.validation_history import SpeciesValidationHistory
 
 router = APIRouter()
+
+CRITICAL_TAXONOMY_FIELDS = (
+    Species.kingdom,
+    Species.class_name,
+    Species.order_name,
+    Species.family,
+    Species.genus,
+)
+
+
+def _taxonomy_incomplete_filter():
+    return or_(
+        Species.kingdom.is_(None),
+        Species.kingdom == "",
+        Species.class_name.is_(None),
+        Species.class_name == "",
+        Species.order_name.is_(None),
+        Species.order_name == "",
+        Species.family.is_(None),
+        Species.family == "",
+        Species.genus.is_(None),
+        Species.genus == "",
+    )
+
+
+def _taxonomy_complete_filter():
+    return ~_taxonomy_incomplete_filter()
+
+
+def _conservation_missing_filter():
+    return or_(Species.iucn_status.is_(None), Species.iucn_status == "")
+
+
+def _species_query_for_scope(db: Session, site_id: int | None):
+    query = db.query(Species)
+    if site_id is not None:
+        query = query.join(SiteSpecies, SiteSpecies.species_id == Species.id).filter(
+            SiteSpecies.site_id == site_id
+        )
+    return query
 
 
 def _taxonomy_incomplete_filter():
@@ -47,7 +87,7 @@ def _species_query_for_scope(db: Session, site_id: int | None):
 @router.get("/stats")
 def dashboard_stats(
     db: DBSession,
-    user: CurrentUser,
+    user: ActiveUser,
     site_id: int | None = Query(None),
 ):
     if site_id is not None:
@@ -104,6 +144,7 @@ def dashboard_stats(
             Species.iucn_status != "",
         ).count()
     )
+    iucn_breakdown = {(s or "Unknown"): c for s, c in iucn_counts}
 
     completeness_breakdown = {
         "complete": complete_records,

@@ -28,3 +28,13 @@ export interface CompleteProfileRequest {
   full_name?: string
   phone?: string
 }
+
+export interface UpdateOwnProfileRequest {
+  full_name?: string
+  phone?: string
+}
+
+export interface ChangePasswordRequest {
+  current_password: string
+  new_password: string
+}
