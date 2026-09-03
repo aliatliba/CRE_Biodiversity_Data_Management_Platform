@@ -20,6 +20,12 @@ import {
   getCompletenessTone,
 } from '@/lib/speciesCompleteness'
 
+import {
+  getCompletenessLabel,
+  getDraftCompletenessStatus,
+  getCompletenessTone,
+} from '@/lib/speciesCompleteness'
+
 type Step = 'search' | 'review'
 
 const EMPTY_VALUES: ReviewFormValues = {

@@ -1,5 +1,7 @@
-import { Route, Routes } from 'react-router-dom'
+import { useEffect } from 'react'
+import { Route, Routes, useLocation } from 'react-router-dom'
 import { AuthProvider } from '@/hooks/useAuth'
+import { useTheme } from '@/hooks/useTheme'
 import { ProtectedRoute } from '@/components/common/ProtectedRoute'
 import { LandingPage } from '@/features/landing/pages/LandingPage'
 import { LoginPage } from '@/features/auth/pages/LoginPage'
@@ -18,9 +20,23 @@ import { ProfilePage } from '@/features/profile/pages/ProfilePage'
 import { NotFoundPage } from '@/pages/NotFoundPage'
 import { ROUTES } from '@/lib/constants'
 
+function PublicThemeGuard() {
+  const { pathname } = useLocation()
+  const { setTheme } = useTheme()
+
+  useEffect(() => {
+    if (pathname === ROUTES.landing || pathname === ROUTES.login) {
+      setTheme('light')
+    }
+  }, [pathname, setTheme])
+
+  return null
+}
+
 function App() {
   return (
     <AuthProvider>
+      <PublicThemeGuard />
       <Routes>
         <Route path={ROUTES.landing} element={<LandingPage />} />
         <Route path={ROUTES.login} element={<LoginPage />} />
