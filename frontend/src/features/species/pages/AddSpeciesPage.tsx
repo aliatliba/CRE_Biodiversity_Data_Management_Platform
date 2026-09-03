@@ -13,6 +13,12 @@ import type { Site } from '@/features/sites/types'
 import type { Species, SpeciesLookupDraft } from '../types'
 import { DuplicateSpeciesDialog } from '../components/DuplicateSpeciesDialog'
 import { SpeciesReviewForm, type ReviewFormValues } from '../components/SpeciesReviewForm'
+import { Badge } from '@/components/ui/Badge'
+import {
+  getCompletenessLabel,
+  getDraftCompletenessStatus,
+  getCompletenessTone,
+} from '@/lib/speciesCompleteness'
 
 import {
   getCompletenessLabel,
