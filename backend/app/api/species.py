@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 from typing import List
 
-from app.core.dependencies import DBSession, CurrentUser
+from app.core.dependencies import DBSession, CurrentUser, AdminUser
 from app.schemas.species import (
     SpeciesCreate,
     SpeciesUpdate,
@@ -37,13 +37,32 @@ def list_species(
     db: DBSession,
     user: CurrentUser,
     status: str | None = Query(None),
+    search: str | None = Query(None),
+    kingdom: str | None = Query(None),
+    class_name: str | None = Query(None),
+    order_name: str | None = Query(None),
     family: str | None = Query(None),
+    genus: str | None = Query(None),
     national_status: str | None = Query(None),
+    site_id: int | None = Query(None),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
 ):
     params = PaginationParams(page=page, page_size=page_size)
-    items, total = species_service.list_species(db, status, family, national_status, page, page_size)
+    items, total = species_service.list_species(
+        db,
+        status=status,
+        search=search,
+        kingdom=kingdom,
+        class_name=class_name,
+        order_name=order_name,
+        family=family,
+        genus=genus,
+        national_status=national_status,
+        site_id=site_id,
+        page=page,
+        page_size=page_size,
+    )
     return paginate(items, total, params)
 
 
@@ -72,6 +91,12 @@ def update_species(
     user: CurrentUser,
 ):
     return species_service.update_species(db, species_id, data, user.id)
+
+
+@router.delete("/{species_id}")
+def delete_species(species_id: int, db: DBSession, user: AdminUser):
+    species_service.delete_species(db, species_id)
+    return {"detail": "Species deleted"}
 
 
 @router.post("/{site_id}/species", response_model=SiteSpeciesResponse, status_code=201)
