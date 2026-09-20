@@ -79,6 +79,93 @@ async def lookup_species(db: Session, scientific_name: str) -> dict[str, Any]:
 
     return merged
 
+async def lookup_species_batch(
+    db: Session,
+    scientific_names: list[str],
+    delay_seconds: float = 1.0,
+) -> list[dict[str, Any]]:
+    """
+    Review-only batch lookup.
+
+    Looks up multiple scientific names without creating any Species records.
+    Each item can independently be reviewed and saved later by the frontend.
+    """
+
+    if not scientific_names:
+        return []
+
+    # Clean and deduplicate while preserving order.
+    unique_names: list[str] = []
+    seen: set[str] = set()
+
+    for raw_name in scientific_names:
+        name = (raw_name or "").strip()
+
+        if not name:
+            continue
+
+        key = name.casefold()
+
+        if key in seen:
+            continue
+
+        seen.add(key)
+        unique_names.append(name)
+
+    results: list[dict[str, Any]] = []
+
+    for index, scientific_name in enumerate(unique_names):
+        item: dict[str, Any] = {
+            "input_scientific_name": scientific_name,
+            "draft": None,
+            "duplicate": False,
+            "existing_species": None,
+            "error": None,
+        }
+
+        try:
+            # First check the exact name already in the database.
+            existing = check_duplicate(db, scientific_name)
+
+            if existing:
+                item["duplicate"] = True
+                item["existing_species"] = existing
+                results.append(item)
+
+            else:
+                # Perform the normal external-provider lookup.
+                draft = await lookup_species(db, scientific_name)
+
+                # GBIF may resolve a synonym to another canonical name.
+                # Check that resolved name as well.
+                resolved_name = draft.get("scientific_name")
+
+                resolved_existing = None
+
+                if resolved_name:
+                    resolved_existing = check_duplicate(
+                        db,
+                        resolved_name,
+                    )
+
+                if resolved_existing:
+                    item["duplicate"] = True
+                    item["existing_species"] = resolved_existing
+                    item["draft"] = draft
+                else:
+                    item["draft"] = draft
+
+                results.append(item)
+
+        except Exception as exc:
+            item["error"] = str(exc)
+            results.append(item)
+
+        # Rate-limit between species, not between providers.
+        if index < len(unique_names) - 1 and delay_seconds > 0:
+            await asyncio.sleep(delay_seconds)
+
+    return results
 
 def _merge_into_draft(merged: dict[str, Any], normalized: dict[str, Any]) -> None:
     for section in ("taxonomy", "conservation", "traits"):

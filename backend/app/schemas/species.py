@@ -53,6 +53,16 @@ class SpeciesDraft(BaseModel):
     national_status: str = "Non Protected"
 
 
+class BatchSpeciesLookupRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    scientific_names: list[str] = Field(
+        ...,
+        min_length=1,
+        max_length=50,
+    )
+
+
 class SpeciesCreate(BaseModel):
     model_config = ConfigDict(extra="forbid")
     scientific_name: str
@@ -129,6 +139,16 @@ class SpeciesResponse(BaseModel):
     validated_at: datetime | None
     updated_at: datetime
 
+class BatchSpeciesLookupItem(BaseModel):
+    input_scientific_name: str
+    draft: SpeciesDraft | None = None
+    duplicate: bool = False
+    existing_species: SpeciesResponse | None = None
+    error: str | None = None
+
+
+class BatchSpeciesLookupResponse(BaseModel):
+    items: list[BatchSpeciesLookupItem]
 
 class ValidationHistoryResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
