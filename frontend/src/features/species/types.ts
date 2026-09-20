@@ -1,3 +1,10 @@
+export interface FieldSource {
+  source: string
+  reference?: string | null
+  retrieved_at?: string | null
+  [key: string]: unknown
+}
+
 export interface Species {
   id: number
   scientific_name: string
@@ -9,7 +16,7 @@ export interface Species {
   species_epithet: string | null
   common_name: string | null
   raw_taxonomy_extra: Record<string, unknown> | null
-  field_sources: Record<string, string | null> | null
+  field_sources: Record<string, string | FieldSource | null> | null
   iucn_status: string | null
   iucn_trend: string | null
   national_status: string
@@ -38,8 +45,10 @@ export interface Page<T> {
 export interface SpeciesLookupDraft {
   scientific_name: string
   input_scientific_name: string | null
+
   taxonomy: {
     kingdom?: string | null
+    phylum?: string | null
     class_name?: string | null
     order_name?: string | null
     family?: string | null
@@ -47,10 +56,13 @@ export interface SpeciesLookupDraft {
     species_epithet?: string | null
     common_name?: string | null
   }
+
   conservation: {
     iucn_status?: string | null
     iucn_trend?: string | null
+    iucn_assessments?: IucnAssessment[]
   }
+
   traits: {
     guild?: string | null
     ecosystem_service?: string | null
@@ -60,7 +72,8 @@ export interface SpeciesLookupDraft {
     potential_threats?: string | null
     reference?: string | null
   }
-  field_sources: Record<string, string | null>
+
+  field_sources: Record<string, string | FieldSource | null>
   national_status: string
 }
 
@@ -74,7 +87,7 @@ export interface SpeciesCreateInput {
   genus?: string | null
   species_epithet?: string | null
   common_name?: string | null
-  field_sources?: Record<string, string | null> | null
+  field_sources?: Record<string, string | FieldSource | null> | null
   iucn_status?: string | null
   iucn_trend?: string | null
   guild?: string | null
@@ -140,4 +153,13 @@ export interface ValidationHistoryEntry {
 export interface DuplicateCheckResult {
   exists: boolean
   species?: Species
+}
+
+export interface IucnAssessment {
+  assessment_id: number | string
+  scope: 'Global' | 'Europe' | 'Mediterranean'
+  scope_code?: string | null
+  year: number | null
+  category: string | null
+  population_trend: string | null
 }

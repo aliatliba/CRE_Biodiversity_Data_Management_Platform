@@ -10,9 +10,16 @@ import { LoadingSpinner } from '@/components/common/LoadingSpinner'
 import * as speciesService from '../services/speciesService'
 import * as siteService from '@/features/sites/services/siteService'
 import type { Site } from '@/features/sites/types'
-import type { Species, SpeciesLookupDraft } from '../types'
+import type {
+  Species,
+  SpeciesLookupDraft,
+  IucnAssessment,
+} from '../types'
 import { DuplicateSpeciesDialog } from '../components/DuplicateSpeciesDialog'
-import { SpeciesReviewForm, type ReviewFormValues } from '../components/SpeciesReviewForm'
+import {
+  SpeciesReviewForm,
+  type ReviewFormValues,
+} from '../components/SpeciesReviewForm'
 
 import {
   getCompletenessLabel,
@@ -51,43 +58,84 @@ export function AddSpeciesPage() {
   const [values, setValues] = useState<ReviewFormValues>(EMPTY_VALUES)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
+  const [selectedIucnAssessment, setSelectedIucnAssessment] =
+    useState<IucnAssessment | null>(null)
+
   useEffect(() => {
-    siteService.listSites().then(setSites).catch(() => setSites([]))
+    siteService
+      .listSites()
+      .then(setSites)
+      .catch(() => setSites([]))
   }, [])
 
   async function handleSearch() {
     setError(null)
+
     if (!scientificName.trim()) {
       setError('Enter a scientific name.')
       return
     }
+
     if (!siteId) {
       setError('Choose a site first.')
       return
     }
+
     setIsChecking(true)
+
     try {
-      const result = await speciesService.checkDuplicate(scientificName.trim())
+      const result = await speciesService.checkDuplicate(
+        scientificName.trim()
+      )
+
       if (result.exists && result.species) {
         setDuplicate(result.species)
         return
       }
-      const lookupDraft = await speciesService.lookupSpecies(scientificName.trim())
+
+      const lookupDraft = await speciesService.lookupSpecies(
+        scientificName.trim()
+      )
+
       setDraft(lookupDraft)
+
+      /*
+       * Default IUCN selection:
+       *
+       * If a Global assessment exists, select it automatically.
+       * The researcher can change this on the review screen.
+       *
+       * We intentionally do NOT copy the Global category/trend into
+       * draft.conservation.iucn_status / iucn_trend here.
+       *
+       * The selected assessment remains the single source of truth.
+       */
+      const globalAssessment =
+        lookupDraft.conservation.iucn_assessments?.find(
+          (assessment) => assessment.scope === 'Global'
+        )
+
+      setSelectedIucnAssessment(globalAssessment ?? null)
+
       setValues({
         ...EMPTY_VALUES,
         common_name: lookupDraft.taxonomy.common_name ?? '',
         guild: lookupDraft.traits.guild ?? '',
-        ecosystem_service: lookupDraft.traits.ecosystem_service ?? '',
+        ecosystem_service:
+          lookupDraft.traits.ecosystem_service ?? '',
         habitat: lookupDraft.traits.habitat ?? '',
         typology: lookupDraft.traits.typology ?? '',
         endemism: lookupDraft.traits.endemism ?? '',
-        potential_threats: lookupDraft.traits.potential_threats ?? '',
+        potential_threats:
+          lookupDraft.traits.potential_threats ?? '',
         reference: lookupDraft.traits.reference ?? '',
       })
+
       setStep('review')
     } catch {
-      setError('Could not look up that name. Check the spelling and try again.')
+      setError(
+        'Could not look up that name. Check the spelling and try again.'
+      )
     } finally {
       setIsChecking(false)
     }
@@ -95,9 +143,15 @@ export function AddSpeciesPage() {
 
   async function handleAssociateDuplicate() {
     if (!duplicate || !siteId) return
+
     setIsAssociating(true)
+
     try {
-      await speciesService.associateSpeciesWithSite(Number(siteId), duplicate.id)
+      await speciesService.associateSpeciesWithSite(
+        Number(siteId),
+        duplicate.id
+      )
+
       navigate(`/species/${duplicate.id}`)
     } catch {
       setError('Could not link this species to the site.')
@@ -109,35 +163,92 @@ export function AddSpeciesPage() {
 
   async function handleSubmit() {
     if (!draft || !siteId) return
+
     setIsSubmitting(true)
     setError(null)
+
     try {
+      /*
+       * Keep the provenance of the selected IUCN assessment.
+       *
+       * Both iucn_status and iucn_trend will point to the same
+       * assessment, guaranteeing that the two values cannot come
+       * from different assessments.
+       */
+      const selectedIucnSource = selectedIucnAssessment
+        ? {
+            source: 'iucn',
+            reference: `assessment:${selectedIucnAssessment.assessment_id}`,
+            assessment_id: selectedIucnAssessment.assessment_id,
+            scope: selectedIucnAssessment.scope,
+            scope_code:
+              selectedIucnAssessment.scope_code ?? null,
+            year: selectedIucnAssessment.year,
+            retrieved_at: null,
+          }
+        : null
+
       const created = await speciesService.createSpecies({
         scientific_name: draft.scientific_name,
         site_id: Number(siteId),
+
         kingdom: draft.taxonomy.kingdom,
         class_name: draft.taxonomy.class_name,
         order_name: draft.taxonomy.order_name,
         family: draft.taxonomy.family,
         genus: draft.taxonomy.genus,
         species_epithet: draft.taxonomy.species_epithet,
-        common_name: values.common_name || draft.taxonomy.common_name,
-        field_sources: draft.field_sources,
-        iucn_status: draft.conservation.iucn_status,
-        iucn_trend: draft.conservation.iucn_trend,
+
+        common_name:
+          values.common_name || draft.taxonomy.common_name,
+
+        /*
+         * Preserve all existing field sources and replace the
+         * IUCN source information with the assessment actually
+         * selected by the researcher.
+         */
+        field_sources: {
+          ...draft.field_sources,
+
+          ...(selectedIucnSource
+            ? {
+                iucn_status: selectedIucnSource,
+                iucn_trend: selectedIucnSource,
+              }
+            : {}),
+        },
+
+        /*
+         * These two values ALWAYS come from the same selected
+         * assessment.
+         *
+         * Because Global is automatically selected after lookup,
+         * Global is saved if the researcher simply clicks Save
+         * without changing the selection.
+         */
+        iucn_status:
+          selectedIucnAssessment?.category ?? null,
+
+        iucn_trend:
+          selectedIucnAssessment?.population_trend ?? null,
+
         guild: values.guild || null,
-        ecosystem_service: values.ecosystem_service || null,
+        ecosystem_service:
+          values.ecosystem_service || null,
         habitat: values.habitat || null,
         typology: values.typology || null,
         endemism: values.endemism || null,
-        potential_threats: values.potential_threats || null,
+        potential_threats:
+          values.potential_threats || null,
         reference: values.reference || null,
       })
+
       navigate(`/species/${created.id}`)
     } catch (err) {
       setError(
         axios.isAxiosError(err)
-          ? (err.response?.data?.detail ?? 'Could not save this species.')
+          ? (err.response?.data?.detail ??
+              'Could not save this species.')
           : 'Could not save this species.'
       )
     } finally {
@@ -149,10 +260,13 @@ export function AddSpeciesPage() {
     <AppLayout title="Log a species">
       {step === 'search' && (
         <Card className="mx-auto max-w-lg">
-          <h2 className="font-display text-lg font-bold text-canopy-950">Start with a name</h2>
+          <h2 className="font-display text-lg font-bold text-canopy-950">
+            Start with a name
+          </h2>
+
           <p className="mt-1.5 text-sm text-ink-950/60">
-            We'll check the catalogue for duplicates, then pull in taxonomy and conservation data
-            automatically.
+            We'll check the catalogue for duplicates, then pull in
+            taxonomy and conservation data automatically.
           </p>
 
           <div className="mt-6 flex flex-col gap-4">
@@ -160,12 +274,20 @@ export function AddSpeciesPage() {
               <label className="text-xs font-semibold uppercase tracking-[0.08em] text-canopy-900/70">
                 Site
               </label>
+
               <select
                 value={siteId}
-                onChange={(e) => setSiteId(e.target.value ? Number(e.target.value) : '')}
+                onChange={(e) =>
+                  setSiteId(
+                    e.target.value
+                      ? Number(e.target.value)
+                      : ''
+                  )
+                }
                 className="h-12 rounded-xl border border-mist-200 bg-paper-0 px-4 text-[15px] outline-none transition-colors focus:border-canopy-600"
               >
                 <option value="">Select a site…</option>
+
                 {sites.map((site) => (
                   <option key={site.id} value={site.id}>
                     {site.name}
@@ -179,12 +301,21 @@ export function AddSpeciesPage() {
               <label className="text-xs font-semibold uppercase tracking-[0.08em] text-canopy-900/70">
                 Scientific name
               </label>
+
               <div className="relative">
-                <Search size={16} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-ink-950/35" />
+                <Search
+                  size={16}
+                  className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-ink-950/35"
+                />
+
                 <input
                   value={scientificName}
-                  onChange={(e) => setScientificName(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                  onChange={(e) =>
+                    setScientificName(e.target.value)
+                  }
+                  onKeyDown={(e) =>
+                    e.key === 'Enter' && handleSearch()
+                  }
                   placeholder="Quercus afares"
                   className="h-12 w-full rounded-xl border border-mist-200 bg-paper-0 pl-11 pr-4 text-[15px] italic outline-none transition-colors focus:border-canopy-600"
                 />
@@ -192,12 +323,20 @@ export function AddSpeciesPage() {
             </div>
 
             {error && (
-              <div role="alert" className="rounded-lg border border-red-200 bg-red-50 px-3.5 py-2.5 text-sm font-medium text-red-700">
+              <div
+                role="alert"
+                className="rounded-lg border border-red-200 bg-red-50 px-3.5 py-2.5 text-sm font-medium text-red-700"
+              >
                 {error}
               </div>
             )}
 
-            <Button onClick={handleSearch} isLoading={isChecking} size="lg" className="mt-1 w-full">
+            <Button
+              onClick={handleSearch}
+              isLoading={isChecking}
+              size="lg"
+              className="mt-1 w-full"
+            >
               Check &amp; look up
             </Button>
           </div>
@@ -205,28 +344,43 @@ export function AddSpeciesPage() {
       )}
 
       {step === 'review' && draft && (
-        <div className="mx-auto max-w-3xl">
+        <div className="mx-auto max-w-4xl">
           <div className="mb-6 flex items-baseline justify-between">
             <div>
-              <p className="font-mono text-xs uppercase tracking-[0.1em] text-canopy-700">New record</p>
+              <p className="font-mono text-xs uppercase tracking-[0.1em] text-canopy-700">
+                New record
+              </p>
+
               <div className="flex items-center gap-2.5">
                 <h2 className="font-display text-2xl font-bold italic text-canopy-950">
                   {draft.scientific_name}
                 </h2>
-                <Badge tone={draft.national_status === 'Protected' ? 'accent' : 'neutral'}>
+
+                <Badge
+                  tone={
+                    draft.national_status === 'Protected'
+                      ? 'accent'
+                      : 'neutral'
+                  }
+                >
                   {draft.national_status}
                 </Badge>
               </div>
+
               {draft.input_scientific_name && (
                 <p className="text-xs text-ink-950/45">
-                  Resolved from synonym "{draft.input_scientific_name}"
+                  Resolved from synonym "
+                  {draft.input_scientific_name}"
                 </p>
               )}
             </div>
+
             <button
               onClick={() => {
                 setStep('search')
                 setDraft(null)
+                setSelectedIucnAssessment(null)
+                setError(null)
               }}
               className="text-sm font-medium text-canopy-700 underline underline-offset-4"
             >
@@ -237,23 +391,49 @@ export function AddSpeciesPage() {
           <Card>
             <div className="mb-4 flex items-center justify-between">
               <p className="text-sm text-ink-950/60">
-                Review auto-fetched data before saving. Missing fields are highlighted below.
+                Review auto-fetched data before saving. Missing
+                fields are highlighted below.
               </p>
-              <Badge tone={getCompletenessTone(getDraftCompletenessStatus(draft))}>
-                {getCompletenessLabel(getDraftCompletenessStatus(draft))}
+
+              <Badge
+                tone={getCompletenessTone(
+                  getDraftCompletenessStatus(draft)
+                )}
+              >
+                {getCompletenessLabel(
+                  getDraftCompletenessStatus(draft)
+                )}
               </Badge>
             </div>
-            <SpeciesReviewForm draft={draft} values={values} onChange={setValues} />
+
+            <SpeciesReviewForm
+              draft={draft}
+              values={values}
+              onChange={setValues}
+              selectedIucnAssessment={
+                selectedIucnAssessment
+              }
+              onIucnAssessmentChange={
+                setSelectedIucnAssessment
+              }
+            />
           </Card>
 
           {error && (
-            <div role="alert" className="mt-4 rounded-lg border border-red-200 bg-red-50 px-3.5 py-2.5 text-sm font-medium text-red-700">
+            <div
+              role="alert"
+              className="mt-4 rounded-lg border border-red-200 bg-red-50 px-3.5 py-2.5 text-sm font-medium text-red-700"
+            >
               {error}
             </div>
           )}
 
           <div className="mt-6 flex justify-end">
-            <Button onClick={handleSubmit} isLoading={isSubmitting} size="lg">
+            <Button
+              onClick={handleSubmit}
+              isLoading={isSubmitting}
+              size="lg"
+            >
               Save to catalogue
             </Button>
           </div>
