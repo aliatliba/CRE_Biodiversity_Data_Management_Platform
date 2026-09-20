@@ -49,6 +49,7 @@ def _job_to_response(job: Job) -> BulkImportJobResponse:
         total=job.total,
         processed=job.processed,
         created=job.created,
+        linked=job.linked,
         skipped=job.skipped,
         failed=job.failed,
         invalid=job.invalid,
@@ -67,6 +68,7 @@ async def _execute_bulk_import(job_id: str, data: BulkImportRequest, user_id: in
     async def on_progress(summary: ImportSummary) -> None:
         job.processed = len(summary.items)
         job.created = summary.created
+        job.linked = summary.linked
         job.skipped = summary.skipped
         job.failed = summary.failed
         job.invalid = summary.invalid

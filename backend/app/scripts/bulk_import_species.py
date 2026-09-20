@@ -107,7 +107,7 @@ async def _amain(args: argparse.Namespace) -> int:
         db.close()
 
     print(
-        f"\nDone. created={summary.created} skipped={summary.skipped} "
+        f"\nDone. created={summary.created} linked={summary.linked} skipped={summary.skipped} "
         f"failed={summary.failed} invalid={summary.invalid} total_input={summary.total}"
     )
 

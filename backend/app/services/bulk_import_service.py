@@ -28,6 +28,7 @@ from typing import Any, Awaitable, Callable
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
+from app.models.site_species import SiteSpecies
 from app.schemas.species import SpeciesCreate
 from app.services import site_service, species_service
 
@@ -41,8 +42,9 @@ ProgressCallback = Callable[["ImportSummary"], Awaitable[None]]
 class ImportItemResult:
     input_name: str
     resolved_name: str | None = None
-    # pending | created | looked_up | skipped_duplicate |
-    # skipped_duplicate_in_batch | invalid | failed
+    # pending | created | linked_existing | would_link_existing | looked_up |
+    # skipped_duplicate (already at this site) | skipped_duplicate_in_batch |
+    # invalid | failed
     status: str = "pending"
     species_id: int | None = None
     error: str | None = None
@@ -52,6 +54,7 @@ class ImportItemResult:
 class ImportSummary:
     total: int
     created: int = 0
+    linked: int = 0
     skipped: int = 0
     failed: int = 0
     invalid: int = 0
@@ -100,6 +103,40 @@ def dedupe_names(names: list[str]) -> tuple[list[str], list[ImportItemResult]]:
     return unique, extras
 
 
+def _handle_existing(
+    db: Session,
+    species,
+    site_id: int,
+    user_id: int,
+    dry_run: bool,
+    result: ImportItemResult,
+    summary: ImportSummary,
+) -> None:
+    """Species already exists globally: link it to `site_id` if it isn't yet.
+
+    A species is a global record; "already in the DB" only means "already
+    at *this* site" when a site_species row exists for (site_id, species.id).
+    """
+    result.species_id = species.id
+    result.resolved_name = species.scientific_name
+
+    already_linked = (
+        db.query(SiteSpecies)
+        .filter(SiteSpecies.site_id == site_id, SiteSpecies.species_id == species.id)
+        .first()
+        is not None
+    )
+    if already_linked:
+        result.status = "skipped_duplicate"
+        summary.skipped += 1
+    elif dry_run:
+        result.status = "would_link_existing"
+    else:
+        species_service.ensure_site_association(db, site_id, species.id, user_id)
+        result.status = "linked_existing"
+        summary.linked += 1
+
+
 async def run_bulk_import(
     db: Session,
     names: list[str],
@@ -111,9 +148,10 @@ async def run_bulk_import(
 ) -> ImportSummary:
     """Process `names` sequentially, spacing out external calls.
 
-    Safe to re-run: species that already exist in the DB (matched either
-    on the input name or the name GBIF resolves it to) are skipped, not
-    re-inserted or errored on, so a failed batch can just be re-submitted.
+    Safe to re-run. A species that already exists in the DB (matched on the
+    input name or the name GBIF resolves it to) is never re-created: if it
+    isn't yet associated with `site_id` it is linked to it
+    (status "linked_existing"); if it already is, it's skipped.
     """
     if len(names) > MAX_BATCH_SIZE:
         raise ValueError(f"Cannot import more than {MAX_BATCH_SIZE} species in one batch.")
@@ -132,30 +170,26 @@ async def run_bulk_import(
         try:
             existing = species_service.check_duplicate(db, name)
             if existing:
-                result.status = "skipped_duplicate"
-                result.species_id = existing.id
-                result.resolved_name = existing.scientific_name
-                summary.skipped += 1
+                _handle_existing(db, existing, site_id, user_id, dry_run, result, summary)
             else:
-                draft = await species_service.lookup_species(name)
+                draft = await species_service.lookup_species(db, name)
                 result.resolved_name = draft.get("scientific_name")
 
-                if dry_run:
+                # The name GBIF resolves a synonym to may already exist
+                # even though the raw input name didn't.
+                resolved_existing = species_service.check_duplicate(db, result.resolved_name)
+                if resolved_existing:
+                    _handle_existing(
+                        db, resolved_existing, site_id, user_id, dry_run, result, summary
+                    )
+                elif dry_run:
                     result.status = "looked_up"
                 else:
-                    # The name GBIF resolves a synonym to may already exist
-                    # even though the raw input name didn't.
-                    resolved_existing = species_service.check_duplicate(db, result.resolved_name)
-                    if resolved_existing:
-                        result.status = "skipped_duplicate"
-                        result.species_id = resolved_existing.id
-                        summary.skipped += 1
-                    else:
-                        create_data = _draft_to_species_create(draft, site_id)
-                        species = species_service.create_species(db, create_data, user_id)
-                        result.status = "created"
-                        result.species_id = species.id
-                        summary.created += 1
+                    create_data = _draft_to_species_create(draft, site_id)
+                    species = species_service.create_species(db, create_data, user_id)
+                    result.status = "created"
+                    result.species_id = species.id
+                    summary.created += 1
         except HTTPException as exc:
             db.rollback()
             if exc.status_code == 409:

@@ -96,6 +96,26 @@ def check_duplicate(db: Session, scientific_name: str) -> Species | None:
     )
 
 
+def ensure_site_association(
+    db: Session, site_id: int, species_id: int, user_id: int
+) -> bool:
+    """Link an existing species to a site. Idempotent.
+
+    Returns True if a new site_species row was created, False if the
+    species was already associated with that site.
+    """
+    already = (
+        db.query(SiteSpecies)
+        .filter(SiteSpecies.site_id == site_id, SiteSpecies.species_id == species_id)
+        .first()
+    )
+    if already:
+        return False
+    db.add(SiteSpecies(site_id=site_id, species_id=species_id, recorded_by=user_id))
+    db.commit()
+    return True
+
+
 def compute_national_status(db: Session, scientific_name: str) -> str:
     protected = (
         db.query(ProtectedSpeciesList)
