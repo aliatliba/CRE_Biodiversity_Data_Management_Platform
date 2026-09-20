@@ -169,6 +169,7 @@ class BulkImportJobResponse(BaseModel):
     total: int
     processed: int
     created: int
+    linked: int = 0
     skipped: int
     failed: int
     invalid: int

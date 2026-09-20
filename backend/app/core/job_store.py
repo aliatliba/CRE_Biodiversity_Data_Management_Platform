@@ -31,6 +31,7 @@ class Job:
     total: int = 0
     processed: int = 0
     created: int = 0
+    linked: int = 0
     skipped: int = 0
     failed: int = 0
     invalid: int = 0
