@@ -24,6 +24,22 @@ from app.schemas.species import (
 from app.services import species_service, site_service
 from app.services.bulk_import_service import ImportSummary, run_bulk_import
 from app.core.pagination import PaginationParams, paginate,Page
+from app.schemas.species import (
+    SpeciesCreate,
+    SpeciesUpdate,
+    SpeciesResponse,
+    SpeciesLookupRequest,
+    SpeciesDraft,
+    BatchSpeciesLookupRequest,
+    BatchSpeciesLookupItem,
+    BatchSpeciesLookupResponse,
+    SiteSpeciesCreate,
+    SiteSpeciesResponse,
+    ValidationHistoryResponse,
+    BulkImportRequest,
+    BulkImportJobResponse,
+    BulkImportItemResponse,
+)
 
 router = APIRouter()
 
@@ -40,6 +56,62 @@ def check_species(scientific_name: str, db: DBSession):
 async def lookup_species(data: SpeciesLookupRequest, db: DBSession):
     draft = await species_service.lookup_species(db, data.scientific_name)
     return draft
+
+@router.post(
+    "/lookup-batch",
+    response_model=BatchSpeciesLookupResponse,
+)
+async def lookup_species_batch(
+    data: BatchSpeciesLookupRequest,
+    db: DBSession,
+    user: ActiveUser,
+):
+    """
+    Review-only batch lookup.
+
+    Looks up multiple species without creating database records.
+    Each returned draft can later be saved individually or through
+    the frontend's Save All action.
+    """
+
+    names: list[str] = []
+
+    seen: set[str] = set()
+
+    for raw_name in data.scientific_names:
+        name = (raw_name or "").strip()
+
+        if not name:
+            continue
+
+        key = name.casefold()
+
+        if key in seen:
+            continue
+
+        seen.add(key)
+        names.append(name)
+
+    if not names:
+        raise HTTPException(
+            status_code=400,
+            detail="At least one scientific name is required.",
+        )
+
+    results = await species_service.lookup_species_batch(
+        db=db,
+        scientific_names=names,
+        delay_seconds=1.0,
+    )
+
+    return BatchSpeciesLookupResponse(
+        items=[
+            BatchSpeciesLookupItem(
+                **item
+            )
+            for item in results
+        ]
+    )
 
 
 def _job_to_response(job: Job) -> BulkImportJobResponse:

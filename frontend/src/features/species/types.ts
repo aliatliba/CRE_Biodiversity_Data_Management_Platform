@@ -163,3 +163,15 @@ export interface IucnAssessment {
   category: string | null
   population_trend: string | null
 }
+
+export interface BatchSpeciesLookupItem {
+  input_scientific_name: string
+  draft: SpeciesLookupDraft | null
+  duplicate: boolean
+  existing_species?: Species | null
+  error?: string | null
+}
+
+export interface BatchSpeciesLookupResponse {
+  items: BatchSpeciesLookupItem[]
+}

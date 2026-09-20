@@ -7,6 +7,7 @@ import type {
   SpeciesLookupDraft,
   SpeciesUpdateInput,
   ValidationHistoryEntry,
+  BatchSpeciesLookupResponse,
 } from '../types'
 
 export interface ListParams {
@@ -73,4 +74,17 @@ export async function associateSpeciesWithSite(siteId: number, speciesId: number
 
 export async function removeSpeciesFromSite(siteId: number, speciesId: number): Promise<void> {
   await api.delete(`/species/${siteId}/species/${speciesId}`)
+}
+
+export async function lookupSpeciesBatch(
+  scientificNames: string[],
+): Promise<BatchSpeciesLookupResponse> {
+  const { data } = await api.post<BatchSpeciesLookupResponse>(
+    '/species/lookup-batch',
+    {
+      scientific_names: scientificNames,
+    },
+  )
+
+  return data
 }
