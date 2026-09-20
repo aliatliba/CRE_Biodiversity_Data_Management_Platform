@@ -14,9 +14,18 @@ class Taxonomy(BaseModel):
     raw_extra: dict[str, Any] | None = None
 
 
+class IucnAssessment(BaseModel):
+    scope: str
+    scope_code: str | None = None
+    assessment_id: int | None = None
+    year: int | None = None
+    category: str | None = None
+    population_trend: str | None = None
+
 class ConservationStatus(BaseModel):
     iucn_status: str | None = None
     iucn_trend: str | None = None
+    iucn_assessments: list[IucnAssessment] = Field(default_factory=list)
     national_status: str = "Non Protected"
 
 

@@ -16,7 +16,12 @@ import {
   getCompletenessTone,
 } from '@/lib/speciesCompleteness'
 import * as speciesService from '../services/speciesService'
-import type { Species, SpeciesUpdateInput, ValidationHistoryEntry } from '../types'
+import type {
+  FieldSource,
+  Species,
+  SpeciesUpdateInput,
+  ValidationHistoryEntry,
+} from '../types'
 import { ValidationHistory } from '../components/ValidationHistory'
 import { SourceBadge } from '../components/SourceBadge'
 
@@ -37,7 +42,7 @@ function Field({
 }: {
   label: string
   value?: string | null
-  source?: string | null
+  source?: string | FieldSource | null
   critical?: boolean
   warnIfMissing?: boolean
 }) {

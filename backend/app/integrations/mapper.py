@@ -30,15 +30,23 @@ def normalize_provider_result(result: ProviderResult, provider_name: str) -> dic
         _set("taxonomy", "genus", data.get("genus"))
         _set("taxonomy", "species_epithet", data.get("specificEpithet"))
         _set("taxonomy", "common_name", data.get("vernacularName"))
-        _set("conservation", "iucn_status", data.get("iucnRedListCategory"))
+        
 
     elif "wikidata" in source_key:
         _set("taxonomy", "common_name", data.get("common_name"))
         _set("taxonomy", "kingdom", data.get("kingdom"))
 
     elif "iucn" in source_key:
-        _set("conservation", "iucn_status", data.get("category"))
-        _set("conservation", "iucn_trend", data.get("population_trend"))
+        mapped["conservation"]["iucn_assessments"] = data.get(
+            "assessments",
+            []
+        )
+
+        mapped["field_sources"]["iucn_assessments"] = {
+            "source": "iucn",
+            "reference": "IUCN Red List assessments",
+            "retrieved_at": None,
+        }
 
     elif "powo" in source_key:
         _set("taxonomy", "family", data.get("family"))
