@@ -1,50 +1,60 @@
-import { forwardRef, type ButtonHTMLAttributes } from 'react'
+import type { ButtonHTMLAttributes } from 'react'
 import { cn } from '@/lib/utils'
 
-type Variant = 'primary' | 'secondary' | 'ghost'
-type Size = 'md' | 'lg'
+type ButtonVariant = 'primary' | 'secondary' | 'ghost'
+type ButtonSize = 'md' | 'lg'
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: Variant
-  size?: Size
+  variant?: ButtonVariant
+  size?: ButtonSize
   isLoading?: boolean
 }
 
-const variantClasses: Record<Variant, string> = {
-  primary:
-    'bg-canopy-700 text-paper-0 hover:bg-canopy-800 active:bg-canopy-900 shadow-[0_1px_0_0_rgba(5,59,6,0.4)_inset]',
-  secondary:
-    'bg-transparent text-canopy-900 border border-canopy-800/25 hover:border-canopy-800/60 hover:bg-mist-100',
-  ghost: 'bg-transparent text-canopy-900 hover:bg-mist-100',
-}
+export function Button({
+  variant = 'primary',
+  size = 'md',
+  isLoading = false,
+  disabled,
+  className,
+  children,
+  ...props
+}: ButtonProps) {
+  const variantClasses =
+    variant === 'primary'
+      ? 'bg-canopy-900 text-white shadow-sm hover:bg-canopy-800'
+      : variant === 'secondary'
+        ? 'border border-canopy-900/15 bg-paper-0 text-canopy-900 hover:bg-mist-100'
+        : 'text-ink-950/65 hover:bg-mist-100 hover:text-canopy-900'
 
-const sizeClasses: Record<Size, string> = {
-  md: 'h-11 px-5 text-sm',
-  lg: 'h-13 px-7 text-base',
-}
+  const sizeClasses =
+    size === 'lg'
+      ? 'h-13 px-7 text-base'
+      : 'h-11 px-5 text-sm'
 
-export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant = 'primary', size = 'md', isLoading, disabled, children, ...props }, ref) => {
-    return (
-      <button
-        ref={ref}
-        disabled={disabled || isLoading}
-        className={cn(
-          'relative inline-flex items-center justify-center gap-2 rounded-full font-semibold tracking-tight transition-all duration-200 ease-out',
-          'disabled:cursor-not-allowed disabled:opacity-60',
-          'active:scale-[0.98]',
-          variantClasses[variant],
-          sizeClasses[size],
-          className
-        )}
-        {...props}
-      >
-        {isLoading && (
-          <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-        )}
-        {children}
-      </button>
-    )
-  }
-)
-Button.displayName = 'Button'
+  return (
+    <button
+      disabled={disabled || isLoading}
+      className={cn(
+        'relative inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full font-semibold tracking-tight transition-all duration-200 ease-out',
+        'disabled:pointer-events-none disabled:opacity-50',
+        'active:scale-[0.98]',
+        variantClasses,
+        sizeClasses,
+        className,
+      )}
+      {...props}
+    >
+      {isLoading ? (
+        <>
+          <span
+            className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"
+            aria-hidden="true"
+          />
+          <span>Loading...</span>
+        </>
+      ) : (
+        children
+      )}
+    </button>
+  )
+}

@@ -166,9 +166,9 @@ export function DashboardPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.1 }}
             >
-              <Card>
+              <Card className="min-w-0 overflow-hidden">
                 <h2 className="font-display text-sm font-bold text-canopy-950">Data completeness</h2>
-                <div className="mt-5">
+                <div className="mt-5 min-w-0 overflow-hidden">
                   <AnimatedPieChart data={completenessData} delay={0.15} />
                 </div>
               </Card>
@@ -179,9 +179,9 @@ export function DashboardPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.15 }}
             >
-              <Card>
+              <Card className="min-w-0 overflow-hidden">
                 <h2 className="font-display text-sm font-bold text-canopy-950">IUCN status breakdown</h2>
-                <div className="mt-5">
+                <div className="mt-5 min-w-0 overflow-hidden">
                   <AnimatedPieChart data={iucnData} delay={0.2} />
                 </div>
               </Card>
@@ -192,11 +192,11 @@ export function DashboardPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.2 }}
             >
-              <Card>
+              <Card className="min-w-0 overflow-hidden">
                 <h2 className="font-display text-sm font-bold text-canopy-950">
                   National status breakdown
                 </h2>
-                <div className="mt-5">
+                <div className="mt-5 min-w-0 overflow-hidden">
                   <AnimatedPieChart data={statusData} delay={0.25} />
                 </div>
               </Card>
@@ -207,9 +207,9 @@ export function DashboardPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.25 }}
             >
-              <Card>
+              <Card className="min-w-0 overflow-hidden">
                 <h2 className="font-display text-sm font-bold text-canopy-950">Top families</h2>
-                <div className="mt-5">
+                <div className="mt-5 min-w-0 overflow-hidden">
                   <AnimatedBarChart data={familyData} delay={0.3} />
                 </div>
               </Card>
@@ -221,11 +221,11 @@ export function DashboardPage() {
               transition={{ duration: 0.5, delay: 0.3 }}
               className="lg:col-span-2"
             >
-              <Card>
+              <Card className="min-w-0 overflow-hidden">
                 <h2 className="font-display text-sm font-bold text-canopy-950">
                   Species count per site
                 </h2>
-                <div className="mt-5">
+                <div className="mt-5 min-w-0 overflow-hidden">
                   <AnimatedBarChart data={siteChartData} delay={0.35} />
                 </div>
               </Card>
@@ -233,11 +233,11 @@ export function DashboardPage() {
           </div>
 
           {stats.site_stats.length > 0 && (
-            <Card>
+            <Card className="min-w-0 overflow-hidden">
               <h2 className="mb-4 font-display text-sm font-bold text-canopy-950">
                 Per-site statistics
               </h2>
-              <div className="overflow-x-auto">
+              <div className="mt-5 min-w-0 overflow-hidden">
                 <table className="w-full text-left text-sm">
                   <thead>
                     <tr className="border-b border-canopy-900/[0.08] text-xs font-semibold uppercase tracking-wide text-ink-950/50">

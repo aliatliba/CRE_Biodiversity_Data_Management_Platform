@@ -84,17 +84,37 @@
   100% { transform: scale(1.9); opacity: 0; }
 }
 
+
 @layer base {
   html {
     scroll-behavior: smooth;
+    width: 100%;
+    min-width: 320px;
   }
 
   body {
+    width: 100%;
+    min-width: 320px;
+    min-height: 100vh;
+    margin: 0;
+    overflow-x: hidden;
     font-family: var(--font-body);
     background-color: var(--color-paper-0);
     color: var(--color-ink-950);
     -webkit-font-smoothing: antialiased;
     transition: background-color 0.15s ease, color 0.15s ease;
+  }
+
+  #root {
+    width: 100%;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  img,
+  video,
+  canvas {
+    max-width: 100%;
   }
 
   :focus-visible {
