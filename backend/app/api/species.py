@@ -91,10 +91,11 @@ async def lookup_species_batch(
 
         seen.add(key)
         names.append(name)
+        
 
     if not names:
         raise HTTPException(
-            status_code=400,
+  status_code=400,
             detail="At least one scientific name is required.",
         )
 

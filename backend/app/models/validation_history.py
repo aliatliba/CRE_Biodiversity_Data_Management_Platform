@@ -14,7 +14,7 @@ class SpeciesValidationHistory(Base):
     species_id = Column(BigInteger, ForeignKey("species.id"), nullable=False)
     action = Column(String(20), nullable=False)
     changed_fields = Column(JSONB, nullable=False)
-    validated_by = Column(BigInteger, ForeignKey("users.id"), nullable=False)
+    validated_by = Column(BigInteger, ForeignKey("users.id"), nullable=True)
     validated_at = Column(
         DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc)
     )

@@ -45,7 +45,7 @@ class Species(Base):
     status = Column(
         String(20), nullable=False, default="draft"
     )
-    created_by = Column(BigInteger, ForeignKey("users.id"), nullable=False)
+    created_by = Column(BigInteger, ForeignKey("users.id"), nullable=True)
     validated_by = Column(BigInteger, ForeignKey("users.id"), nullable=True)
     validated_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(

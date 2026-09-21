@@ -32,6 +32,7 @@ class UserResponse(BaseModel):
     phone: str | None = None
     role_id: int
     is_active: bool
+    must_change_password: bool
     
 
 class CompleteProfileRequest(BaseModel):

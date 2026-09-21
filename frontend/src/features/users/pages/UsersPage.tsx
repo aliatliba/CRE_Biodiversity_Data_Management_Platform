@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Navigate } from 'react-router-dom'
 import axios from 'axios'
-import { Users as UsersIcon, Plus, Copy, Check, UserX } from 'lucide-react'
+import { Users as UsersIcon, Plus, Copy, Check, UserX, Trash2 } from 'lucide-react'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
@@ -95,15 +95,63 @@ export function UsersPage() {
     }
   }
 
-  async function handleDeactivate(user: AppUser) {
-    if (!confirm(`Deactivate ${user.full_name}? They'll no longer be able to sign in.`)) return
-    try {
-      await userService.deactivateUser(user.id)
-      setUsers((prev) => prev.map((u) => (u.id === user.id ? { ...u, is_active: false } : u)))
-    } catch {
-      alert('Could not deactivate this user.')
-    }
+async function handleDeactivate(user: AppUser) {
+  if (
+    !confirm(
+      `Deactivate ${user.full_name}? They'll no longer be able to sign in.`
+    )
+  ) {
+    return
   }
+
+  try {
+    await userService.deactivateUser(user.id)
+
+    setUsers((prev) =>
+      prev.map((u) =>
+        u.id === user.id
+          ? { ...u, is_active: false }
+          : u
+      )
+    )
+  } catch (err) {
+    alert(
+      axios.isAxiosError(err)
+        ? (err.response?.data?.detail ?? 'Could not deactivate this user.')
+        : 'Could not deactivate this user.'
+    )
+  }
+}
+
+async function handleDelete(user: AppUser) {
+  if (user.is_active) {
+    alert('The user must be deactivated before they can be deleted.')
+    return
+  }
+
+  const confirmed = confirm(
+    `Permanently delete ${user.full_name}?\n\n` +
+    `This will permanently remove their account. ` +
+    `Their biodiversity records will be preserved, but the user will no longer be associated with them.\n\n` +
+    `This action cannot be undone.`
+  )
+
+  if (!confirmed) return
+
+  try {
+    await userService.deleteUser(user.id)
+
+    setUsers((prev) =>
+      prev.filter((u) => u.id !== user.id)
+    )
+  } catch (err) {
+    alert(
+      axios.isAxiosError(err)
+        ? (err.response?.data?.detail ?? 'Could not delete this user.')
+        : 'Could not delete this user.'
+    )
+  }
+}
 
   function copyCredentials() {
     if (!createdCredentials) return
@@ -173,16 +221,30 @@ export function UsersPage() {
                     )}
                   </td>
                   <td className="px-5 py-3.5 text-right">
-                    {u.is_active && u.id !== currentUser?.id && (
-                      <button
-                        onClick={() => handleDeactivate(u)}
-                        className="inline-flex h-8 w-8 items-center justify-center rounded-full text-ink-950/45 transition-colors hover:bg-red-50 hover:text-red-600 sm:h-auto sm:w-auto sm:gap-1.5 sm:px-2.5 sm:py-1"
-                        aria-label={`Deactivate ${u.full_name}`}
-                        title={`Deactivate ${u.full_name}`}
-                      >
-                        <UserX size={13} />
-                        <span className="hidden sm:inline">Deactivate</span>
-                      </button>
+                    {u.id !== currentUser?.id && (
+                      <>
+                        {u.is_active ? (
+                          <button
+                            onClick={() => handleDeactivate(u)}
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-full text-ink-950/45 transition-colors hover:bg-red-50 hover:text-red-600 sm:h-auto sm:w-auto sm:gap-1.5 sm:px-2.5 sm:py-1"
+                            aria-label={`Deactivate ${u.full_name}`}
+                            title={`Deactivate ${u.full_name}`}
+                          >
+                            <UserX size={13} />
+                            <span className="hidden sm:inline">Deactivate</span>
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => handleDelete(u)}
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-full text-ink-950/45 transition-colors hover:bg-red-50 hover:text-red-600 sm:h-auto sm:w-auto sm:gap-1.5 sm:px-2.5 sm:py-1"
+                            aria-label={`Delete ${u.full_name}`}
+                            title={`Permanently delete ${u.full_name}`}
+                          >
+                            <Trash2 size={13} />
+                            <span className="hidden sm:inline">Delete</span>
+                          </button>
+                        )}
+                      </>
                     )}
                   </td>
                 </tr>

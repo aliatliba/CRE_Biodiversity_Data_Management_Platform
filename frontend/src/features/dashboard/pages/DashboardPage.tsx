@@ -232,6 +232,7 @@ export function DashboardPage() {
               transition={{
                 duration: 0.5,
                 delay: 0.25,
+                
               }}
             >
               <Card className="h-full min-w-0 overflow-hidden">
@@ -250,6 +251,7 @@ export function DashboardPage() {
                       '#95D5B3'
                     ]}
                     delay={0.3}
+                    
                   />
                 </div>
               </Card>

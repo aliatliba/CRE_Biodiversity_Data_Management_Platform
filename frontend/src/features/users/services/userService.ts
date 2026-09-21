@@ -11,11 +11,20 @@ export async function listRoles(): Promise<Role[]> {
   return data
 }
 
-export async function createUser(payload: UserCreateInput): Promise<AppUser> {
+export async function createUser(
+  payload: UserCreateInput
+): Promise<AppUser> {
   const { data } = await api.post<AppUser>('/users', payload)
   return data
 }
 
-export async function deactivateUser(userId: number): Promise<void> {
+export async function deactivateUser(userId: number): Promise<AppUser> {
+  const { data } = await api.patch<AppUser>(`/users/${userId}`, {
+    is_active: false,
+  })
+  return data
+}
+
+export async function deleteUser(userId: number): Promise<void> {
   await api.delete(`/users/${userId}`)
 }
