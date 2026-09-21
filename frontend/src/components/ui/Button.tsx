@@ -21,10 +21,22 @@ export function Button({
 }: ButtonProps) {
   const variantClasses =
     variant === 'primary'
-      ? 'bg-canopy-900 text-white shadow-sm hover:bg-canopy-800'
+      ? [
+          'bg-canopy-900 text-white shadow-sm',
+          'hover:bg-canopy-800',
+          'dark:bg-canopy-700 dark:text-white dark:hover:bg-canopy-600',
+        ].join(' ')
       : variant === 'secondary'
-        ? 'border border-canopy-900/15 bg-paper-0 text-canopy-900 hover:bg-mist-100'
-        : 'text-ink-950/65 hover:bg-mist-100 hover:text-canopy-900'
+        ? [
+            'border border-canopy-900/15 bg-paper-0 text-canopy-900',
+            'hover:bg-mist-100',
+            'dark:border-canopy-400/20 dark:bg-paper-50 dark:text-canopy-800',
+            'dark:hover:bg-mist-100',
+          ].join(' ')
+        : [
+            'text-ink-950/65 hover:bg-mist-100 hover:text-canopy-900',
+            'dark:text-ink-950/70 dark:hover:bg-mist-100 dark:hover:text-canopy-700',
+          ].join(' ')
 
   const sizeClasses =
     size === 'lg'
