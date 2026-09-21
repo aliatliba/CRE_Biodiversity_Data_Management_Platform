@@ -12,7 +12,7 @@ class SiteSpecies(Base):
     id = Column(BigInteger, primary_key=True)
     site_id = Column(BigInteger, ForeignKey("sites.id"), nullable=False)
     species_id = Column(BigInteger, ForeignKey("species.id"), nullable=False)
-    recorded_by = Column(BigInteger, ForeignKey("users.id"), nullable=False)
+    recorded_by = Column(BigInteger, ForeignKey("users.id"), nullable=True)
     notes = Column(Text, nullable=True)
     created_at = Column(
         DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc)

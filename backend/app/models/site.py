@@ -13,7 +13,7 @@ class Site(Base):
     name = Column(String(255), nullable=False)
     code = Column(String(50), unique=True, nullable=True)
     description = Column(Text, nullable=True)
-    created_by = Column(BigInteger, ForeignKey("users.id"), nullable=False)
+    created_by = Column(BigInteger, ForeignKey("users.id"), nullable=True)
     created_at = Column(
         DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc)
     )

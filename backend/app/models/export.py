@@ -11,7 +11,7 @@ class Export(Base):
     __tablename__ = "exports"
 
     id = Column(BigInteger, primary_key=True)
-    requested_by = Column(BigInteger, ForeignKey("users.id"), nullable=False)
+    requested_by = Column(BigInteger, ForeignKey("users.id"), nullable=True)
     format = Column(String(10), nullable=False)
     filters = Column(JSONB, nullable=True)
     status = Column(String(20), nullable=False, default="pending")
