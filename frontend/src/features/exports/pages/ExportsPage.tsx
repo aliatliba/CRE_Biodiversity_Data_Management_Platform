@@ -199,9 +199,10 @@ export function ExportsPage() {
 
   return (
     <AppLayout title="Exports">
+      {/* PAGE HEADER */}
       <div className="mb-7 flex flex-col gap-2">
         <div className="flex items-center gap-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-canopy-700/10 text-canopy-700">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-canopy-700/10 text-canopy-700 dark:bg-canopy-700/15 dark:text-canopy-700">
             <Download size={18} />
           </div>
 
@@ -209,6 +210,7 @@ export function ExportsPage() {
             <h1 className="font-display text-lg font-bold text-canopy-950">
               Export catalogue
             </h1>
+
             <p className="text-sm text-ink-950/50">
               Create a filtered snapshot of the validated species catalogue.
             </p>
@@ -217,11 +219,13 @@ export function ExportsPage() {
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
-        {/* FILTERS */}
+        {/* ============================================================
+            FILTERS
+        ============================================================ */}
         <Card className="overflow-visible">
           <div className="flex flex-col gap-4 border-b border-mist-200 pb-5 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-start gap-3">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-canopy-700/10 text-canopy-700">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-canopy-700/10 text-canopy-700 dark:bg-canopy-700/15 dark:text-canopy-700">
                 <Filter size={17} />
               </div>
 
@@ -229,6 +233,7 @@ export function ExportsPage() {
                 <h2 className="font-display text-sm font-bold text-canopy-950">
                   Filter species
                 </h2>
+
                 <p className="mt-0.5 text-xs text-ink-950/50">
                   Choose the records you want to include.
                 </p>
@@ -239,7 +244,7 @@ export function ExportsPage() {
               <button
                 type="button"
                 onClick={clearFilters}
-                className="self-start rounded-lg px-2.5 py-1.5 text-xs font-semibold text-canopy-700 transition hover:bg-canopy-700/10 hover:text-canopy-900"
+                className="self-start rounded-lg px-2.5 py-1.5 text-xs font-semibold text-canopy-700 transition hover:bg-canopy-700/10 hover:text-canopy-900 dark:hover:bg-canopy-700/15"
               >
                 Clear all
               </button>
@@ -247,7 +252,9 @@ export function ExportsPage() {
           </div>
 
           <div className="space-y-7 pt-6">
-            {/* SPECIES */}
+            {/* ========================================================
+                SPECIES
+            ======================================================== */}
             <FilterSection
               title="Species"
               description="Search by scientific or common name."
@@ -274,14 +281,15 @@ export function ExportsPage() {
                       )
                     }
                     placeholder="Search scientific or common name..."
-                    className="h-11 w-full rounded-xl border border-mist-200 bg-white pl-10 pr-4 text-sm text-ink-950 outline-none transition placeholder:text-ink-950/35 hover:border-mist-300 focus:border-canopy-600 focus:ring-4 focus:ring-canopy-600/10"
+                    className="h-11 w-full rounded-xl border border-mist-200 bg-white pl-10 pr-10 text-sm text-ink-950 outline-none transition placeholder:text-ink-950/35 hover:border-mist-300 focus:border-canopy-600 focus:ring-4 focus:ring-canopy-600/10 dark:bg-paper-50 dark:hover:border-canopy-400/40"
                   />
 
                   {filters.search && (
                     <button
                       type="button"
                       onClick={() => updateFilter('search', undefined)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-1 text-ink-950/35 hover:bg-mist-100 hover:text-ink-950"
+                      aria-label="Clear species search"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-1 text-ink-950/35 transition hover:bg-mist-100 hover:text-ink-950"
                     >
                       <X size={15} />
                     </button>
@@ -290,7 +298,9 @@ export function ExportsPage() {
               </div>
             </FilterSection>
 
-            {/* LOCATION */}
+            {/* ========================================================
+                LOCATION
+            ======================================================== */}
             <FilterSection
               title="Location"
               description="Select one or multiple research sites."
@@ -301,10 +311,10 @@ export function ExportsPage() {
                 <button
                   type="button"
                   onClick={() => setSitesOpen((open) => !open)}
-                  className={`flex min-h-11 w-full items-center justify-between gap-3 rounded-xl border bg-white px-3.5 py-2.5 text-left text-sm transition ${
+                  className={`flex min-h-11 w-full items-center justify-between gap-3 rounded-xl border px-3.5 py-2.5 text-left text-sm text-ink-950 transition dark:bg-paper-50 ${
                     sitesOpen
-                      ? 'border-canopy-600 ring-4 ring-canopy-600/10'
-                      : 'border-mist-200 hover:border-mist-300'
+                      ? 'border-canopy-600 bg-white ring-4 ring-canopy-600/10 dark:border-canopy-600 dark:ring-canopy-600/10'
+                      : 'border-mist-200 bg-white hover:border-mist-300 dark:hover:border-canopy-400/40'
                   }`}
                 >
                   <div className="flex min-w-0 flex-1 flex-wrap gap-1.5">
@@ -312,7 +322,7 @@ export function ExportsPage() {
                       selectedSites.slice(0, 3).map((site) => (
                         <span
                           key={site.id}
-                          className="inline-flex items-center gap-1 rounded-lg bg-canopy-700/10 px-2.5 py-1 text-xs font-semibold text-canopy-800"
+                          className="inline-flex items-center gap-1 rounded-lg bg-canopy-700/10 px-2.5 py-1 text-xs font-semibold text-canopy-800 dark:bg-canopy-700/15 dark:text-canopy-700"
                         >
                           {site.name}
 
@@ -333,7 +343,7 @@ export function ExportsPage() {
                                 removeSite(site.id)
                               }
                             }}
-                            className="rounded-full p-0.5 hover:bg-canopy-700/15"
+                            className="rounded-full p-0.5 transition hover:bg-canopy-700/15"
                           >
                             <X size={12} />
                           </span>
@@ -361,7 +371,7 @@ export function ExportsPage() {
                 </button>
 
                 {sitesOpen && (
-                  <div className="absolute z-30 mt-2 w-full overflow-hidden rounded-2xl border border-mist-200 bg-white shadow-xl shadow-ink-950/10">
+                  <div className="absolute z-30 mt-2 w-full overflow-hidden rounded-2xl border border-mist-200 bg-white shadow-xl shadow-ink-950/10 dark:bg-paper-0 dark:shadow-black/30">
                     <div className="border-b border-mist-200 p-3">
                       <div className="relative">
                         <Search
@@ -377,7 +387,7 @@ export function ExportsPage() {
                           }
                           placeholder="Search sites..."
                           autoFocus
-                          className="h-10 w-full rounded-lg border border-mist-200 bg-mist-50 pl-9 pr-3 text-sm outline-none transition focus:border-canopy-600 focus:bg-white focus:ring-2 focus:ring-canopy-600/10"
+                          className="h-10 w-full rounded-lg border border-mist-200 bg-mist-50 pl-9 pr-3 text-sm text-ink-950 outline-none transition placeholder:text-ink-950/35 focus:border-canopy-600 focus:bg-white focus:ring-2 focus:ring-canopy-600/10 dark:focus:bg-paper-50"
                         />
                       </div>
 
@@ -385,7 +395,7 @@ export function ExportsPage() {
                         <button
                           type="button"
                           onClick={selectAllSites}
-                          className="text-xs font-semibold text-canopy-700 hover:text-canopy-900"
+                          className="text-xs font-semibold text-canopy-700 transition hover:text-canopy-900 dark:hover:text-canopy-800"
                         >
                           Select all
                         </button>
@@ -394,7 +404,7 @@ export function ExportsPage() {
                           <button
                             type="button"
                             onClick={clearSites}
-                            className="text-xs font-semibold text-ink-950/45 hover:text-ink-950"
+                            className="text-xs font-semibold text-ink-950/45 transition hover:text-ink-950"
                           >
                             Clear
                           </button>
@@ -415,7 +425,7 @@ export function ExportsPage() {
                               onClick={() => toggleSite(site.id)}
                               className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition ${
                                 selected
-                                  ? 'bg-canopy-700/8'
+                                  ? 'bg-canopy-700/8 dark:bg-canopy-700/12'
                                   : 'hover:bg-mist-100'
                               }`}
                             >
@@ -423,10 +433,12 @@ export function ExportsPage() {
                                 className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition ${
                                   selected
                                     ? 'border-canopy-700 bg-canopy-700 text-white'
-                                    : 'border-mist-300 bg-white'
+                                    : 'border-mist-300 bg-white dark:bg-paper-50'
                                 }`}
                               >
-                                {selected && <Check size={13} strokeWidth={3} />}
+                                {selected && (
+                                  <Check size={13} strokeWidth={3} />
+                                )}
                               </span>
 
                               <span
@@ -460,7 +472,9 @@ export function ExportsPage() {
               </div>
             </FilterSection>
 
-            {/* TAXONOMY */}
+            {/* ========================================================
+                TAXONOMY
+            ======================================================== */}
             <FilterSection
               title="Taxonomy"
               description="Narrow the export using taxonomic classification."
@@ -518,7 +532,9 @@ export function ExportsPage() {
               </div>
             </FilterSection>
 
-            {/* CONSERVATION */}
+            {/* ========================================================
+                CONSERVATION
+            ======================================================== */}
             <FilterSection
               title="Conservation"
               description="Filter according to conservation classification."
@@ -559,7 +575,9 @@ export function ExportsPage() {
               </div>
             </FilterSection>
 
-            {/* VALIDATION */}
+            {/* ========================================================
+                VALIDATION
+            ======================================================== */}
             <FilterSection
               title="Validation"
               description="Filter species by their validation date."
@@ -591,11 +609,13 @@ export function ExportsPage() {
           </div>
         </Card>
 
-        {/* EXPORT SETTINGS */}
+        {/* ============================================================
+            EXPORT SETTINGS
+        ============================================================ */}
         <div className="space-y-6">
           <Card className="h-fit">
             <div className="flex items-start gap-3">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-canopy-700/10 text-canopy-700">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-canopy-700/10 text-canopy-700 dark:bg-canopy-700/15 dark:text-canopy-700">
                 <Download size={17} />
               </div>
 
@@ -603,6 +623,7 @@ export function ExportsPage() {
                 <h2 className="font-display text-sm font-bold text-canopy-950">
                   Export format
                 </h2>
+
                 <p className="mt-0.5 text-xs text-ink-950/50">
                   Choose the file format for your export.
                 </p>
@@ -629,7 +650,10 @@ export function ExportsPage() {
 
             {hasFilters && (
               <div className="mt-4 flex items-center gap-2 rounded-xl bg-mist-100 px-3.5 py-3 text-xs text-ink-950/60">
-                <Filter size={14} className="shrink-0 text-canopy-700" />
+                <Filter
+                  size={14}
+                  className="shrink-0 text-canopy-700"
+                />
 
                 <span>
                   <strong className="text-ink-950">
@@ -643,7 +667,7 @@ export function ExportsPage() {
             <Button
               onClick={handleCreate}
               isLoading={isCreating}
-              className="mt-5 w-full"
+              className="mt-5 w-full dark:!bg-canopy-700 dark:!text-white dark:hover:!bg-canopy-600"
             >
               Generate export
             </Button>
@@ -651,14 +675,14 @@ export function ExportsPage() {
             {error && (
               <div
                 role="alert"
-                className="mt-4 rounded-xl border border-red-200 bg-red-50 px-3.5 py-3 text-sm font-medium text-red-700"
+                className="mt-4 rounded-xl border border-red-200 bg-red-50 px-3.5 py-3 text-sm font-medium text-red-700 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-300"
               >
                 {error}
               </div>
             )}
 
             {job && (
-              <div className="mt-5 rounded-xl border border-canopy-900/10 bg-mist-100/50 p-4">
+              <div className="mt-5 rounded-xl border border-canopy-900/10 bg-mist-100/50 p-4 dark:border-canopy-400/15">
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex min-w-0 items-center gap-2.5">
                     {job.status === 'done' && (
@@ -715,8 +739,10 @@ export function ExportsPage() {
             )}
           </Card>
 
-          {/* SUMMARY */}
-          <Card className="h-fit bg-canopy-950 text-white">
+          {/* ============================================================
+              SUMMARY
+          ============================================================ */}
+          <Card className="h-fit bg-canopy-950 text-white dark:border-canopy-700/20 dark:bg-[#0a2111]">
             <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/45">
               Export summary
             </p>
@@ -752,6 +778,10 @@ export function ExportsPage() {
   )
 }
 
+/* ================================================================
+   FILTER SECTION
+================================================================ */
+
 interface FilterSectionProps {
   title: string
   description: string
@@ -780,6 +810,10 @@ function FilterSection({
   )
 }
 
+/* ================================================================
+   FIELD LABEL
+================================================================ */
+
 interface FieldLabelProps {
   htmlFor?: string
   children: React.ReactNode
@@ -795,6 +829,10 @@ function FieldLabel({ htmlFor, children }: FieldLabelProps) {
     </label>
   )
 }
+
+/* ================================================================
+   FILTER SELECT
+================================================================ */
 
 interface FilterSelectProps {
   label: string
@@ -819,12 +857,21 @@ function FilterSelect({
         <select
           value={value}
           onChange={(event) => onChange(event.target.value)}
-          className="h-11 w-full appearance-none rounded-xl border border-mist-200 bg-white px-3.5 pr-10 text-sm text-ink-950 outline-none transition hover:border-mist-300 focus:border-canopy-600 focus:ring-4 focus:ring-canopy-600/10"
+          className="h-11 w-full appearance-none rounded-xl border border-mist-200 bg-white px-3.5 pr-10 text-sm text-ink-950 outline-none transition hover:border-mist-300 focus:border-canopy-600 focus:ring-4 focus:ring-canopy-600/10 dark:bg-paper-50 dark:hover:border-canopy-400/40 dark:[color-scheme:dark]"
         >
-          <option value="">{placeholder}</option>
+          <option
+            value=""
+            className="bg-white text-ink-950 dark:bg-paper-50 dark:text-ink-950"
+          >
+            {placeholder}
+          </option>
 
           {options.map((option) => (
-            <option key={option} value={option}>
+            <option
+              key={option}
+              value={option}
+              className="bg-white text-ink-950 dark:bg-paper-50 dark:text-ink-950"
+            >
               {option}
             </option>
           ))}
@@ -838,6 +885,10 @@ function FilterSelect({
     </div>
   )
 }
+
+/* ================================================================
+   DATE FIELD
+================================================================ */
 
 interface DateFieldProps {
   label: string
@@ -864,12 +915,16 @@ function DateField({
           type="date"
           value={value}
           onChange={(event) => onChange(event.target.value)}
-          className="h-11 w-full rounded-xl border border-mist-200 bg-white pl-10 pr-3.5 text-sm text-ink-950 outline-none transition hover:border-mist-300 focus:border-canopy-600 focus:ring-4 focus:ring-canopy-600/10"
+          className="h-11 w-full rounded-xl border border-mist-200 bg-white pl-10 pr-3.5 text-sm text-ink-950 outline-none transition hover:border-mist-300 focus:border-canopy-600 focus:ring-4 focus:ring-canopy-600/10 dark:bg-paper-50 dark:hover:border-canopy-400/40 dark:[color-scheme:dark]"
         />
       </div>
     </div>
   )
 }
+
+/* ================================================================
+   FORMAT OPTION
+================================================================ */
 
 interface FormatOptionProps {
   selected: boolean
@@ -892,8 +947,8 @@ function FormatOption({
       onClick={onClick}
       className={`flex w-full items-center gap-3 rounded-xl border p-3.5 text-left transition ${
         selected
-          ? 'border-canopy-700 bg-canopy-700/8 shadow-sm'
-          : 'border-mist-200 bg-white hover:border-mist-300 hover:bg-mist-50'
+          ? 'border-canopy-700 bg-canopy-700/8 shadow-sm dark:border-canopy-500 dark:bg-canopy-700/10'
+          : 'border-mist-200 bg-white hover:border-mist-300 hover:bg-mist-50 dark:bg-paper-50 dark:hover:border-canopy-400/40 dark:hover:bg-mist-100'
       }`}
     >
       <div
@@ -924,7 +979,7 @@ function FormatOption({
         className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${
           selected
             ? 'border-canopy-700 bg-canopy-700 text-white'
-            : 'border-mist-300'
+            : 'border-mist-300 dark:border-mist-200'
         }`}
       >
         {selected && <Check size={12} strokeWidth={3} />}
@@ -932,6 +987,10 @@ function FormatOption({
     </button>
   )
 }
+
+/* ================================================================
+   SUMMARY ROW
+================================================================ */
 
 interface SummaryRowProps {
   label: string
@@ -942,6 +1001,7 @@ function SummaryRow({ label, value }: SummaryRowProps) {
   return (
     <div className="flex items-center justify-between gap-4 border-b border-white/10 pb-3 last:border-0 last:pb-0">
       <span className="text-xs text-white/50">{label}</span>
+
       <span className="text-xs font-semibold text-white">
         {value}
       </span>
