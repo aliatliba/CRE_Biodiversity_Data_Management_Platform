@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion'
 
 const COLORS = 
-  ['#2d6a4f', '#f59e0b', '#ef4444', '#40916c', '#6366f1', '#ec4899', '#14b8a6']
+  ['#117036', '#f59e0b', '#ef4444', '#40916c', '#6366f1', '#ec4899', '#14b8a6']
 
 interface PieSlice {
   label: string
@@ -12,12 +12,14 @@ interface AnimatedPieChartProps {
   data: PieSlice[]
   size?: number
   delay?: number
+  showValues?: boolean
 }
 
 export function AnimatedPieChart({
   data,
   size = 160,
   delay = 0,
+  showValues = false,
 }: AnimatedPieChartProps) {
   const total = data.reduce((sum, item) => sum + item.value, 0)
 
@@ -127,7 +129,9 @@ export function AnimatedPieChart({
             </span>
 
             <span className="shrink-0 font-semibold tabular-nums text-ink-950/70">
-              {Math.round(slice.percentage * 100)}%
+              {showValues
+                ? `${slice.value} (${Math.round(slice.percentage * 100)}%)`
+                : `${Math.round(slice.percentage * 100)}%`}
             </span>
           </div>
         ))}
