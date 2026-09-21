@@ -1,94 +1,133 @@
 import { motion } from 'framer-motion'
 
-const SLICE_COLORS = ['#2d6a4f', '#f59e0b', '#ef4444', '#40916c', '#6366f1', '#ec4899', '#14b8a6']
+const COLORS = 
+  ['#2d6a4f', '#f59e0b', '#ef4444', '#40916c', '#6366f1', '#ec4899', '#14b8a6']
 
-interface PieItem {
+interface PieSlice {
   label: string
   value: number
 }
 
 interface AnimatedPieChartProps {
-  data: PieItem[]
+  data: PieSlice[]
   size?: number
   delay?: number
 }
 
-export function AnimatedPieChart({ data, size = 160, delay = 0 }: AnimatedPieChartProps) {
+export function AnimatedPieChart({
+  data,
+  size = 160,
+  delay = 0,
+}: AnimatedPieChartProps) {
   const total = data.reduce((sum, item) => sum + item.value, 0)
 
-  if (total === 0) {
+  if (data.length === 0 || total === 0) {
     return <p className="text-sm text-ink-950/50">No data available.</p>
   }
 
-  const radius = size / 2 - 8
-  const center = size / 2
   let cumulative = 0
 
   const slices = data.map((item, index) => {
-    const fraction = item.value / total
-    const startAngle = cumulative * 2 * Math.PI - Math.PI / 2
-    cumulative += fraction
-    const endAngle = cumulative * 2 * Math.PI - Math.PI / 2
-
-    const x1 = center + radius * Math.cos(startAngle)
-    const y1 = center + radius * Math.sin(startAngle)
-    const x2 = center + radius * Math.cos(endAngle)
-    const y2 = center + radius * Math.sin(endAngle)
-    const largeArc = fraction > 0.5 ? 1 : 0
-
-    const path = `M ${center} ${center} L ${x1} ${y1} A ${radius} ${radius} 0 ${largeArc} 1 ${x2} ${y2} Z`
+    const start = cumulative
+    const percentage = item.value / total
+    cumulative += percentage
 
     return {
       ...item,
-      path,
-      color: SLICE_COLORS[index % SLICE_COLORS.length],
-      percent: Math.round(fraction * 100),
+      color: COLORS[index % COLORS.length],
+      start,
+      percentage,
     }
   })
 
-  return (
-    <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start sm:gap-6">
-      <motion.svg
-        width={size}
-        height={size}
-        viewBox={`0 0 ${size} ${size}`}
-        initial={{ opacity: 0, scale: 0.85, rotate: -8 }}
-        animate={{ opacity: 1, scale: 1, rotate: 0 }}
-        transition={{ duration: 0.6, delay, ease: [0.22, 1, 0.36, 1] }}
-      >
-        {slices.map((slice, index) => (
-          <motion.path
-            key={slice.label}
-            d={slice.path}
-            fill={slice.color}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.4, delay: delay + index * 0.08 }}
-          />
-        ))}
-        <circle cx={center} cy={center} r={radius * 0.55} fill="var(--color-paper-0)" />
-        <text
-          x={center}
-          y={center}
-          textAnchor="middle"
-          dominantBaseline="middle"
-          className="fill-canopy-950 text-sm font-bold"
-          style={{ fontSize: 14 }}
-        >
-          {total}
-        </text>
-      </motion.svg>
+  const radius = 58
+  const center = 80
+  const circumference = 2 * Math.PI * radius
 
-      <div className="flex flex-col gap-2">
+  return (
+    <div className="flex min-w-0 flex-col items-center gap-4 sm:flex-row sm:items-start sm:gap-6">
+      <div className="relative shrink-0">
+        <svg
+          width={size}
+          height={size}
+          viewBox="0 0 160 160"
+          className="-rotate-90 overflow-visible"
+        >
+          <circle
+            cx={center}
+            cy={center}
+            r={radius}
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="24"
+            className="text-mist-100"
+          />
+
+          {slices.map((slice, index) => {
+            const dash = slice.percentage * circumference
+            const gap = slices.length > 1 ? 2 : 0
+
+            return (
+              <motion.circle
+                key={slice.label}
+                cx={center}
+                cy={center}
+                r={radius}
+                fill="none"
+                stroke={slice.color}
+                strokeWidth="24"
+                strokeLinecap="butt"
+                strokeDasharray={`${Math.max(0, dash - gap)} ${circumference}`}
+                strokeDashoffset={-slice.start * circumference}
+                initial={{
+                  opacity: 0,
+                  strokeDasharray: `0 ${circumference}`,
+                }}
+                animate={{
+                  opacity: 1,
+                  strokeDasharray: `${Math.max(0, dash - gap)} ${circumference}`,
+                }}
+                transition={{
+                  duration: 0.8,
+                  delay: delay + index * 0.08,
+                  ease: [0.22, 1, 0.36, 1],
+                }}
+              />
+            )
+          })}
+        </svg>
+
+        <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+          <span className="text-2xl font-bold tracking-tight text-canopy-900">
+            {total}
+          </span>
+
+          <span className="text-[10px] font-medium uppercase tracking-wider text-ink-950/45">
+            Total
+          </span>
+        </div>
+      </div>
+
+      <div className="min-w-0 max-w-full flex-1 space-y-2">
         {slices.map((slice) => (
-          <div key={slice.label} className="flex items-center gap-2 text-xs">
+          <div
+            key={slice.label}
+            className="flex min-w-0 items-center gap-2 text-xs"
+          >
             <span
               className="h-2.5 w-2.5 shrink-0 rounded-full"
               style={{ backgroundColor: slice.color }}
             />
-            <span className="text-ink-950/70">{slice.label}</span>
-            <span className="font-semibold tabular-nums text-canopy-800">
-              {slice.value} ({slice.percent}%)
+
+            <span
+              className="min-w-0 flex-1 truncate text-ink-950/70"
+              title={slice.label}
+            >
+              {slice.label}
+            </span>
+
+            <span className="shrink-0 font-semibold tabular-nums text-ink-950/70">
+              {Math.round(slice.percentage * 100)}%
             </span>
           </div>
         ))}

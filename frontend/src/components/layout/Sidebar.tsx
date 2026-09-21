@@ -17,7 +17,7 @@ export function Sidebar() {
   const isAdmin = user?.role === 'admin'
 
   return (
-    <aside className="fixed left-0 top-0 z-40 hidden h-screen w-60 shrink-0 flex-col overflow-hidden border-r border-canopy-900/[0.08] bg-paper-0 md:flex">
+    <aside className="fixed inset-y-0 left-0 z-40 hidden w-60 flex-col border-r border-canopy-900/[0.08] bg-paper-0 md:flex">
       <div className="flex items-center gap-2.5 px-6 py-6">
         <svg width="22" height="22" viewBox="0 0 32 32" fill="none" aria-hidden="true">
           <path d="M6 26C6 14 14 6 26 6C26 18 18 26 6 26Z" fill="var(--color-canopy-600)" />

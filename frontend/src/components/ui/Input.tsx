@@ -1,43 +1,50 @@
-import { forwardRef, useId, type InputHTMLAttributes } from 'react'
+import type { InputHTMLAttributes } from 'react'
 import { cn } from '@/lib/utils'
 
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
-  label: string
+  label?: string
   error?: string
 }
 
-export const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ label, error, id, className, ...props }, ref) => {
-    const autoId = useId()
-    const inputId = id ?? autoId
+export function Input({
+  label,
+  error,
+  id,
+  className,
+  ...props
+}: InputProps) {
+  const inputId = id ?? props.name
 
-    return (
-      <div className="flex flex-col gap-1.5">
-        <label htmlFor={inputId} className="text-xs font-semibold uppercase tracking-[0.08em] text-canopy-900/70">
+  return (
+    <div className="w-full min-w-0">
+      {label && (
+        <label
+          htmlFor={inputId}
+          className="mb-2 block text-sm font-medium text-ink-950/75"
+        >
           {label}
         </label>
-        <input
-          id={inputId}
-          ref={ref}
-          className={cn(
-            'h-12 rounded-xl border bg-paper-0 px-4 text-[15px] text-ink-950 placeholder:text-ink-950/35',
-            'transition-colors duration-150 outline-none',
-            error
-              ? 'border-red-400 focus:border-red-500'
-              : 'border-mist-200 focus:border-canopy-600',
-            className
-          )}
-          aria-invalid={!!error}
-          aria-describedby={error ? `${inputId}-error` : undefined}
-          {...props}
-        />
-        {error && (
-          <p id={`${inputId}-error`} className="text-xs font-medium text-red-600">
-            {error}
-          </p>
+      )}
+
+      <input
+        id={inputId}
+        className={cn(
+          'h-12 w-full min-w-0 rounded-xl border bg-paper-0 px-4 text-[15px] text-ink-950 outline-none transition-all',
+          'placeholder:text-ink-950/35',
+          'focus:border-canopy-600 focus:ring-2 focus:ring-canopy-600/10',
+          error
+            ? 'border-red-500/50 focus:border-red-500 focus:ring-red-500/10'
+            : 'border-canopy-900/12',
+          className,
         )}
-      </div>
-    )
-  }
-)
-Input.displayName = 'Input'
+        {...props}
+      />
+
+      {error && (
+        <p className="mt-1.5 text-xs font-medium text-red-600">
+          {error}
+        </p>
+      )}
+    </div>
+  )
+}

@@ -107,7 +107,10 @@ export function SitesPage() {
           />
         </div>
         {isAdmin && (
-          <Button onClick={() => setIsModalOpen(true)} className="gap-2">
+          <Button
+            onClick={() => setIsModalOpen(true)}
+            className="w-full gap-2 sm:w-auto"
+          >
             <Plus size={16} />
             New site
           </Button>
@@ -140,9 +143,11 @@ export function SitesPage() {
             <Link key={site.id} to={`/sites/${site.id}`}>
               <Card className="flex h-full flex-col gap-2 transition-colors hover:border-canopy-700/30 hover:bg-mist-100/40">
                 <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-center gap-2">
+                  <div className="flex min-w-0 items-center gap-2">
                     <MapPin size={16} className="shrink-0 text-canopy-700" />
-                    <h3 className="font-display text-[15px] font-bold text-canopy-950">{site.name}</h3>
+                    <h3 className="min-w-0 break-words font-display text-[15px] font-bold text-canopy-950">
+                      {site.name}
+                    </h3>
                   </div>
                   {isAdmin && (
                     <button
@@ -213,3 +218,5 @@ export function SitesPage() {
 }
 
 export default SitesPage
+
+MapPin

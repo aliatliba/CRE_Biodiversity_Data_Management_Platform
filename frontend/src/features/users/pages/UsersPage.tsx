@@ -176,10 +176,12 @@ export function UsersPage() {
                     {u.is_active && u.id !== currentUser?.id && (
                       <button
                         onClick={() => handleDeactivate(u)}
-                        className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium text-ink-950/45 transition-colors hover:bg-red-50 hover:text-red-600"
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-full text-ink-950/45 transition-colors hover:bg-red-50 hover:text-red-600 sm:h-auto sm:w-auto sm:gap-1.5 sm:px-2.5 sm:py-1"
+                        aria-label={`Deactivate ${u.full_name}`}
+                        title={`Deactivate ${u.full_name}`}
                       >
                         <UserX size={13} />
-                        Deactivate
+                        <span className="hidden sm:inline">Deactivate</span>
                       </button>
                     )}
                   </td>
