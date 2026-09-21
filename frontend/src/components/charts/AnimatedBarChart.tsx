@@ -21,17 +21,26 @@ interface BarItem {
 interface AnimatedBarChartProps {
   data: BarItem[]
   delay?: number
+  colors?: string[]
+  maxValue?: number
+  valueSuffix?: string
 }
 
-export function AnimatedBarChart({ data, delay = 0 }: AnimatedBarChartProps) {
-  const max = Math.max(1, ...data.map((d) => d.value))
+export function AnimatedBarChart({
+  data,
+  delay = 0,
+  colors = COLORS,
+  maxValue,
+  valueSuffix = '',
+}: AnimatedBarChartProps) {
+  const max = maxValue ?? Math.max(1, ...data.map((d) => d.value))
 
   if (data.length === 0) {
     return <p className="text-sm text-ink-950/50">No data available.</p>
   }
 
   return (
-    <div className="flex min-w-0 flex-col gap-3">
+    <div className="flex min-w-0 flex-col justify-center gap-4">
       {data.map((item, index) => (
         <motion.div
           key={item.label}
@@ -41,24 +50,24 @@ export function AnimatedBarChart({ data, delay = 0 }: AnimatedBarChartProps) {
             duration: 0.4,
             delay: delay + index * 0.05,
           }}
-          className="flex min-w-0 items-center gap-2 sm:gap-3"
+          className="flex min-w-0 items-center gap-3"
         >
           <span
-            className="w-20 shrink-0 truncate text-xs font-medium text-ink-950/60 sm:w-28"
+            className="w-24 shrink-0 truncate text-sm font-medium text-ink-950/65"
             title={item.label}
           >
             {item.label}
           </span>
 
-          <div className="h-3 min-w-0 flex-1 overflow-hidden rounded-full bg-mist-100">
+          <div className="h-5 min-w-0 flex-1 overflow-hidden rounded-lg bg-[#E8F0EA]">
             <motion.div
-              className="h-full rounded-full"
+              className="h-full rounded-lg"
               style={{
-                backgroundColor: COLORS[index % COLORS.length],
+                backgroundColor: colors[index % colors.length],
               }}
               initial={{ width: 0 }}
               animate={{
-                width: `${(item.value / max) * 100}%`,
+                width: `${Math.min(100, (item.value / max) * 100)}%`,
               }}
               transition={{
                 duration: 0.8,
@@ -68,8 +77,9 @@ export function AnimatedBarChart({ data, delay = 0 }: AnimatedBarChartProps) {
             />
           </div>
 
-          <span className="w-8 shrink-0 text-right text-xs font-semibold tabular-nums text-canopy-800">
+          <span className="w-10 shrink-0 text-right text-sm font-semibold tabular-nums text-canopy-800">
             {item.value}
+            {valueSuffix}
           </span>
         </motion.div>
       ))}
