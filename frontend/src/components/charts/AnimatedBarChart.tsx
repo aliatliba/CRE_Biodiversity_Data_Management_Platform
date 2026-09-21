@@ -59,7 +59,7 @@ export function AnimatedBarChart({
             {item.label}
           </span>
 
-          <div className="h-5 min-w-0 flex-1 overflow-hidden rounded-lg bg-[#E8F0EA]">
+          <div className="h-5 min-w-0 flex-1 overflow-hidden rounded-lg bg-[#E8F0EA] dark:bg-white/[0.08]">
             <motion.div
               className="h-full rounded-lg"
               style={{
