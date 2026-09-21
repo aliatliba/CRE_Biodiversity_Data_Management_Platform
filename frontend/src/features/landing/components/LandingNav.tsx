@@ -16,7 +16,7 @@ export function LandingNav() {
       initial={{ opacity: 0, y: -16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-      className="absolute inset-x-0 top-0 z-20 flex w-full items-center justify-between border-b border-paper-0/10 bg-canopy-950/80 px-10 py-4 backdrop-blur-md"
+      className="fixed inset-x-0 top-0 z-20 flex w-full items-center justify-between border-b border-paper-0/10 bg-canopy-950/80 px-10 py-4 backdrop-blur-md"
     >
       <div className="flex items-center gap-2.5">
         <svg width="26" height="26" viewBox="0 0 32 32" fill="none" aria-hidden="true">

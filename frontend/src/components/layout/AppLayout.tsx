@@ -11,13 +11,13 @@ export function AppLayout({
   children: ReactNode
 }) {
   return (
-    <div className="min-h-screen w-full overflow-x-hidden bg-mist-100/30">
+    <div className="h-screen w-full overflow-hidden bg-mist-100/30">
       <Sidebar />
 
-      <div className="flex min-h-screen min-w-0 flex-col md:ml-60">
+      <div className="flex h-full min-w-0 flex-col md:ml-60">
         <Header title={title} />
 
-        <main className="min-w-0 flex-1 px-4 pb-24 pt-5 sm:px-6 md:px-8 md:pb-8">
+        <main className="min-h-0 min-w-0 flex-1 overflow-y-auto px-4 pb-24 pt-5 sm:px-6 md:px-8 md:pb-8">
           {children}
         </main>
       </div>
@@ -26,3 +26,4 @@ export function AppLayout({
     </div>
   )
 }
+
