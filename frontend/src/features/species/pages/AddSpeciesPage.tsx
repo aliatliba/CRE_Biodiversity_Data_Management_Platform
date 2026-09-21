@@ -191,6 +191,12 @@ export default function AddSpeciesPage() {
   const [isLookingUp, setIsLookingUp] =
     useState(false)
 
+  const [lookupProgress, setLookupProgress] =
+  useState({
+    processed: 0,
+    total: 0,
+  })
+
   const [isSavingAll, setIsSavingAll] =
     useState(false)
 
@@ -252,58 +258,106 @@ export default function AddSpeciesPage() {
     )
   }
 
-  async function handleLookup() {
-    if (!speciesCount) {
-      setError(
-        'Enter at least one scientific name before looking up species.',
+ async function handleLookup() {
+  if (!speciesCount) {
+    setError(
+      'Enter at least one scientific name before looking up species.',
+    )
+    return
+  }
+
+  setError(null)
+  setItems([])
+  setIsLookingUp(true)
+
+  setLookupProgress({
+    processed: 0,
+    total: speciesCount,
+  })
+
+  try {
+    console.log(
+      'Starting batch lookup with:',
+      parsedScientificNames,
+    )
+
+    const job =
+      await speciesService.startLookupSpeciesBatch(
+        parsedScientificNames,
       )
-      return
-    }
 
-    setError(null)
-    setIsLookingUp(true)
+    console.log('LOOKUP JOB RESPONSE:', job)
 
-    try {
-      const response =
-        await speciesService.lookupSpeciesBatch(
-          parsedScientificNames,
+    setLookupProgress({
+      processed: job.processed,
+      total: job.total,
+    })
+
+    const pollInterval = 500
+
+    while (true) {
+      const status =
+        await speciesService.getLookupSpeciesBatchStatus(
+          job.job_id,
         )
 
-      const nextItems: BatchSpeciesItem[] =
-        response.items.map((result) => {
-          const draft = result.draft
+      setLookupProgress({
+        processed: status.processed,
+        total: status.total,
+      })
 
-          return {
-            id: createId(),
-            inputScientificName:
-              result.input_scientific_name,
-            draft,
-            duplicate: result.duplicate,
-            existingSpecies:
-              result.existing_species ?? null,
-            error: result.error ?? null,
-            selectedIucnAssessment:
-              getDefaultIucnAssessment(draft),
-            values: draft
-              ? getInitialValues(draft)
-              : { ...EMPTY_VALUES },
-            expanded: false,
-            saveStatus: 'idle',
-            saveError: null,
-          }
-        })
+      if (status.status === 'failed') {
+        throw new Error(
+          status.error ||
+            'The batch lookup failed.',
+        )
+      }
 
-      setItems(nextItems)
-    } catch (err) {
-      setError(
-        `Batch lookup failed: ${getErrorMessage(
-          err,
-        )}`,
+      if (status.status === 'completed') {
+        const nextItems: BatchSpeciesItem[] =
+          status.items.map((result) => {
+            const draft = result.draft
+
+            return {
+              id: createId(),
+              inputScientificName:
+                result.input_scientific_name,
+              draft,
+              duplicate: result.duplicate,
+              existingSpecies:
+                result.existing_species ?? null,
+              error: result.error ?? null,
+              selectedIucnAssessment:
+                getDefaultIucnAssessment(draft),
+              values: draft
+                ? getInitialValues(draft)
+                : { ...EMPTY_VALUES },
+              expanded: false,
+              saveStatus: 'idle',
+              saveError: null,
+            }
+          })
+
+        setItems(nextItems)
+        break
+      }
+
+      await new Promise((resolve) =>
+        setTimeout(resolve, pollInterval),
       )
-    } finally {
-      setIsLookingUp(false)
     }
+  } catch (err) {
+    console.error('Batch lookup error:', err)
+
+    setError(
+      `Batch lookup failed: ${getErrorMessage(err)}`,
+    )
+  } finally {
+    setIsLookingUp(false)
   }
+}
+
+
 
   function buildCreatePayload(
     item: BatchSpeciesItem,
@@ -719,6 +773,69 @@ Aquila chrysaetos`}
                     speciesCount || ''
                   } species`}
             </Button>
+            {isLookingUp && (
+              <div className="mt-4 rounded-xl border border-canopy-100 bg-canopy-50/60 p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex min-w-0 items-center gap-2.5">
+                    <Loader2 className="h-4 w-4 shrink-0 animate-spin text-canopy-700" />
+
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-canopy-950">
+                        Looking up species…
+                      </p>
+
+                      <p className="mt-0.5 text-xs text-ink-950/55">
+                        Checking biodiversity data sources one species at a time.
+                      </p>
+                    </div>
+                  </div>
+
+                  <span className="shrink-0 font-mono text-sm font-semibold text-canopy-800">
+                    {lookupProgress.processed} /{' '}
+                    {lookupProgress.total}
+                  </span>
+                </div>
+
+                <div className="mt-3 h-2 overflow-hidden rounded-full bg-canopy-100">
+                  <div
+                    className="h-full rounded-full bg-canopy-600 transition-all duration-300 ease-out"
+                    style={{
+                      width:
+                        lookupProgress.total > 0
+                          ? `${Math.min(
+                              100,
+                              (lookupProgress.processed /
+                                lookupProgress.total) *
+                                100,
+                            )}%`
+                          : '0%',
+                    }}
+                  />
+                </div>
+
+                <div className="mt-2 flex items-center justify-between text-[11px] text-ink-950/45">
+                  <span>
+                    {lookupProgress.processed === 0
+                      ? 'Preparing lookup…'
+                      : lookupProgress.processed ===
+                          lookupProgress.total
+                        ? 'Finishing…'
+                        : `${lookupProgress.total - lookupProgress.processed} remaining`}
+                  </span>
+
+                  <span>
+                    {lookupProgress.total > 0
+                      ? Math.round(
+                          (lookupProgress.processed /
+                            lookupProgress.total) *
+                            100,
+                        )
+                      : 0}
+                    %
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
         </Card>
 
@@ -1340,3 +1457,4 @@ function SummaryField({
     </div>
   )
 }
+

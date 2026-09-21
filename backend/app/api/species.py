@@ -8,19 +8,7 @@ from typing import List
 from app.core.dependencies import DBSession, ActiveUser, AdminUser
 from app.core.db import SessionLocal
 from app.core.job_store import Job, job_store
-from app.schemas.species import (
-    SpeciesCreate,
-    SpeciesUpdate,
-    SpeciesResponse,
-    SpeciesLookupRequest,
-    SpeciesDraft,
-    SiteSpeciesCreate,
-    SiteSpeciesResponse,
-    ValidationHistoryResponse,
-    BulkImportRequest,
-    BulkImportJobResponse,
-    BulkImportItemResponse,
-)
+
 from app.services import species_service, site_service
 from app.services.bulk_import_service import ImportSummary, run_bulk_import
 from app.core.pagination import PaginationParams, paginate,Page
@@ -32,7 +20,7 @@ from app.schemas.species import (
     SpeciesDraft,
     BatchSpeciesLookupRequest,
     BatchSpeciesLookupItem,
-    BatchSpeciesLookupResponse,
+    BatchSpeciesLookupJobResponse,
     SiteSpeciesCreate,
     SiteSpeciesResponse,
     ValidationHistoryResponse,
@@ -40,7 +28,6 @@ from app.schemas.species import (
     BulkImportJobResponse,
     BulkImportItemResponse,
 )
-
 router = APIRouter()
 
 
@@ -57,9 +44,72 @@ async def lookup_species(data: SpeciesLookupRequest, db: DBSession):
     draft = await species_service.lookup_species(db, data.scientific_name)
     return draft
 
+
+async def _execute_lookup_batch(
+    job_id: str,
+    scientific_names: list[str],
+) -> None:
+    job = job_store.get(job_id)
+
+    if job is None:
+        return
+
+    db: Session = SessionLocal()
+
+    async def on_progress(
+        processed: int,
+        total: int,
+        item: dict,
+    ) -> None:
+        job.processed = processed
+        job.total = total
+        job.items.append(item)
+
+    try:
+        job.status = "running"
+
+        await species_service.lookup_species_batch(
+            db=db,
+            scientific_names=scientific_names,
+            delay_seconds=1.0,
+            on_progress=on_progress,
+        )
+
+        job.status = "completed"
+
+    except Exception as exc:
+        job.status = "failed"
+        job.error = str(exc)
+
+    finally:
+        from datetime import datetime, timezone
+
+        job.finished_at = datetime.now(timezone.utc)
+        db.close()
+
+
+def _lookup_job_to_response(
+    job: Job,
+) -> BatchSpeciesLookupJobResponse:
+    return BatchSpeciesLookupJobResponse(
+        job_id=job.id,
+        status=job.status,
+        total=job.total,
+        processed=job.processed,
+        items=[
+            BatchSpeciesLookupItem(**item)
+            for item in job.items
+        ],
+        started_at=job.started_at,
+        finished_at=job.finished_at,
+        error=job.error,
+    )
+
+
 @router.post(
     "/lookup-batch",
-    response_model=BatchSpeciesLookupResponse,
+    response_model=BatchSpeciesLookupJobResponse,
+    status_code=202,
 )
 async def lookup_species_batch(
     data: BatchSpeciesLookupRequest,
@@ -67,15 +117,14 @@ async def lookup_species_batch(
     user: ActiveUser,
 ):
     """
-    Review-only batch lookup.
+    Start a review-only batch lookup.
 
-    Looks up multiple species without creating database records.
-    Each returned draft can later be saved individually or through
-    the frontend's Save All action.
+    The lookup runs in the background so the request returns immediately.
+    The frontend can poll /lookup-batch/{job_id} for real-time progress.
     """
 
+    # Clean and deduplicate here before creating the job.
     names: list[str] = []
-
     seen: set[str] = set()
 
     for raw_name in data.scientific_names:
@@ -91,28 +140,43 @@ async def lookup_species_batch(
 
         seen.add(key)
         names.append(name)
-        
 
     if not names:
         raise HTTPException(
-  status_code=400,
+            status_code=400,
             detail="At least one scientific name is required.",
         )
 
-    results = await species_service.lookup_species_batch(
-        db=db,
-        scientific_names=names,
-        delay_seconds=1.0,
+    job = job_store.create()
+    job.total = len(names)
+
+    asyncio.create_task(
+        _execute_lookup_batch(
+            job.id,
+            names,
+        )
     )
 
-    return BatchSpeciesLookupResponse(
-        items=[
-            BatchSpeciesLookupItem(
-                **item
-            )
-            for item in results
-        ]
-    )
+    return _lookup_job_to_response(job)
+
+
+@router.get(
+    "/lookup-batch/{job_id}",
+    response_model=BatchSpeciesLookupJobResponse,
+)
+def get_lookup_batch_status(
+    job_id: str,
+    user: ActiveUser,
+):
+    job = job_store.get(job_id)
+
+    if job is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Lookup job not found",
+        )
+
+    return _lookup_job_to_response(job)
 
 
 def _job_to_response(job: Job) -> BulkImportJobResponse:

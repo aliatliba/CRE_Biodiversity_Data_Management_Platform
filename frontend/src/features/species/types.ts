@@ -175,3 +175,14 @@ export interface BatchSpeciesLookupItem {
 export interface BatchSpeciesLookupResponse {
   items: BatchSpeciesLookupItem[]
 }
+
+export interface BatchSpeciesLookupJobResponse {
+  job_id: string
+  status: 'queued' | 'running' | 'completed' | 'failed'
+  total: number
+  processed: number
+  items: BatchSpeciesLookupItem[]
+  started_at: string | null
+  finished_at: string | null
+  error: string | null
+}
