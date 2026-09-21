@@ -7,7 +7,7 @@ import type {
   SpeciesLookupDraft,
   SpeciesUpdateInput,
   ValidationHistoryEntry,
-  BatchSpeciesLookupResponse,
+  BatchSpeciesLookupJobResponse,
 } from '../types'
 
 export interface ListParams {
@@ -76,15 +76,27 @@ export async function removeSpeciesFromSite(siteId: number, speciesId: number): 
   await api.delete(`/species/${siteId}/species/${speciesId}`)
 }
 
-export async function lookupSpeciesBatch(
+export async function startLookupSpeciesBatch(
   scientificNames: string[],
-): Promise<BatchSpeciesLookupResponse> {
-  const { data } = await api.post<BatchSpeciesLookupResponse>(
-    '/species/lookup-batch',
-    {
-      scientific_names: scientificNames,
-    },
-  )
+): Promise<BatchSpeciesLookupJobResponse> {
+  const { data } =
+    await api.post<BatchSpeciesLookupJobResponse>(
+      '/species/lookup-batch',
+      {
+        scientific_names: scientificNames,
+      },
+    )
+
+  return data
+}
+
+export async function getLookupSpeciesBatchStatus(
+  jobId: string,
+): Promise<BatchSpeciesLookupJobResponse> {
+  const { data } =
+    await api.get<BatchSpeciesLookupJobResponse>(
+      `/species/lookup-batch/${jobId}`,
+    )
 
   return data
 }

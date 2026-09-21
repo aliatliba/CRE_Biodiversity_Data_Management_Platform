@@ -150,6 +150,17 @@ class BatchSpeciesLookupItem(BaseModel):
 class BatchSpeciesLookupResponse(BaseModel):
     items: list[BatchSpeciesLookupItem]
 
+
+class BatchSpeciesLookupJobResponse(BaseModel):
+    job_id: str
+    status: str
+    total: int
+    processed: int
+    items: list[BatchSpeciesLookupItem] = Field(default_factory=list)
+    started_at: datetime | None = None
+    finished_at: datetime | None = None
+    error: str | None = None
+
 class ValidationHistoryResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int

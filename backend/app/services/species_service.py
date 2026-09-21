@@ -83,12 +83,17 @@ async def lookup_species_batch(
     db: Session,
     scientific_names: list[str],
     delay_seconds: float = 1.0,
+    on_progress=None,
 ) -> list[dict[str, Any]]:
     """
     Review-only batch lookup.
 
     Looks up multiple scientific names without creating any Species records.
     Each item can independently be reviewed and saved later by the frontend.
+
+    `on_progress`, when provided, is called after each species has finished
+    processing. It receives the current number of processed species and the
+    result item.
     """
 
     if not scientific_names:
@@ -114,6 +119,8 @@ async def lookup_species_batch(
 
     results: list[dict[str, Any]] = []
 
+    total = len(unique_names)
+
     for index, scientific_name in enumerate(unique_names):
         item: dict[str, Any] = {
             "input_scientific_name": scientific_name,
@@ -130,11 +137,13 @@ async def lookup_species_batch(
             if existing:
                 item["duplicate"] = True
                 item["existing_species"] = existing
-                results.append(item)
 
             else:
                 # Perform the normal external-provider lookup.
-                draft = await lookup_species(db, scientific_name)
+                draft = await lookup_species(
+                    db,
+                    scientific_name,
+                )
 
                 # GBIF may resolve a synonym to another canonical name.
                 # Check that resolved name as well.
@@ -151,18 +160,25 @@ async def lookup_species_batch(
                 if resolved_existing:
                     item["duplicate"] = True
                     item["existing_species"] = resolved_existing
-                    item["draft"] = draft
-                else:
-                    item["draft"] = draft
 
-                results.append(item)
+                item["draft"] = draft
 
         except Exception as exc:
             item["error"] = str(exc)
-            results.append(item)
+
+        results.append(item)
+
+        # This is the important part:
+        # report progress AFTER this species has actually finished.
+        if on_progress is not None:
+            await on_progress(
+                processed=index + 1,
+                total=total,
+                item=item,
+            )
 
         # Rate-limit between species, not between providers.
-        if index < len(unique_names) - 1 and delay_seconds > 0:
+        if index < total - 1 and delay_seconds > 0:
             await asyncio.sleep(delay_seconds)
 
     return results
