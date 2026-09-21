@@ -133,7 +133,7 @@ export function DashboardPage() {
             />
 
             <StatCard
-              label="IUCN threatened species"
+              label="IUCN threatened species - VU · EN · CR"
               value={stats.iucn_threatened_species}
               icon={ShieldCheck}
               delay={0.1}
