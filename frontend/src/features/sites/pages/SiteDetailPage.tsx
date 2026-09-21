@@ -4,7 +4,6 @@ import axios from 'axios'
 import { motion } from 'framer-motion'
 import {
   ArrowLeft,
-  BarChart3,
   Edit2,
   Leaf,
   MapPin,
