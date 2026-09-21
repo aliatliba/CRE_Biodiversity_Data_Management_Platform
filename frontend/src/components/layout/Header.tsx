@@ -14,7 +14,7 @@ export function Header({ title }: { title: string }) {
   }
 
   return (
-    <header className="sticky top-0 z-30 flex min-h-16 w-full shrink-0 items-center justify-between gap-3 border-b border-canopy-900/[0.08] bg-paper-0/95 px-4 backdrop-blur-md sm:px-6">
+    <header className="relative z-30 flex min-h-16 w-full shrink-0 items-center justify-between gap-3 border-b border-canopy-900/[0.08] bg-paper-0/95 px-4 backdrop-blur-md sm:px-6">
       <h1 className="min-w-0 truncate font-display text-base font-bold tracking-tight text-canopy-950 sm:text-lg">
         {title}
       </h1>
@@ -34,3 +34,4 @@ export function Header({ title }: { title: string }) {
     </header>
   )
 }
+
