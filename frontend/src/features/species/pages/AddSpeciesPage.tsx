@@ -468,14 +468,6 @@ export default function AddSpeciesPage() {
       return
     }
 
-    if (!item.selectedIucnAssessment) {
-      updateItem(itemId, {
-        saveStatus: 'error',
-        saveError:
-          'Select an IUCN assessment before saving.',
-      })
-      return
-    }
 
     const payload =
       buildCreatePayload(item)
@@ -524,7 +516,6 @@ export default function AddSpeciesPage() {
       (item) =>
         !item.duplicate &&
         item.draft !== null &&
-        item.selectedIucnAssessment !== null &&
         item.saveStatus !== 'saving' &&
         item.saveStatus !== 'saved',
     )
@@ -553,7 +544,7 @@ export default function AddSpeciesPage() {
   ).length
 
   const savedCount = items.filter(
-    (item) => item.saveStatus === 'saved',
+    (item) => item.saveStatus === 'saved',                           
   ).length
 
   const errorCount = items.filter(
@@ -923,11 +914,7 @@ Aquila chrysaetos`}
                   Boolean(siteId) &&
                   Boolean(draft) &&
                   !item.duplicate &&
-                  Boolean(
-                    item.selectedIucnAssessment,
-                  ) &&
-                  item.saveStatus !==
-                    'saving' &&
+                  item.saveStatus !== 'saving' &&
                   item.saveStatus !== 'saved'
 
                 const isLookupError =
@@ -1198,22 +1185,19 @@ Aquila chrysaetos`}
                       {/* -----------------------------------------
                           NO IUCN ASSESSMENT
                       ------------------------------------------ */}
-                      {draft &&
-                        !item.selectedIucnAssessment && (
-                          <div className="mt-5 rounded-lg border border-amber-200 bg-amber-50 px-3.5 py-3 text-sm text-amber-800">
-                            <p className="font-semibold">
-                              No IUCN assessment
-                              selected
-                            </p>
+                      {draft && !item.selectedIucnAssessment && (
+                        <div className="mt-5 rounded-lg border border-violet-200 bg-violet-50 px-3.5 py-3 text-sm text-violet-800">
+                          <p className="font-semibold">
+                            IUCN assessment unavailable
+                          </p>
 
-                            <p className="mt-1 text-xs leading-5">
-                              Open Review &amp; Edit
-                              and select an
-                              available assessment
-                              before saving.
-                            </p>
-                          </div>
-                        )}
+                          <p className="mt-1 text-xs leading-5">
+                            No IUCN assessment was found for this species.
+                            You can still save the record; the conservation
+                            fields will remain empty and can be completed later.
+                          </p>
+                        </div>
+                      )}
 
                       {/* -----------------------------------------
                           REVIEW TOGGLE
