@@ -20,6 +20,12 @@
       content="BioData — the field biodiversity registry. Log sites, validate species against global taxonomy databases, and keep every survey record in one place."
     />
 
+    <link
+      rel="preload"
+      as="image"
+      href="/assests/landing/National_Emblem_of_Algeria_(bronze_effect).svg.webp"
+    />
+
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link
       rel="preconnect"
@@ -107,23 +113,23 @@
         pointer-events: none;
       }
 
-      .initial-splash-emblem {
-        position: relative;
-        z-index: 2;
+.initial-splash-emblem {
+      position: relative;
+      z-index: 2;
 
-        display: block;
+      display: block;
 
-        width: min(48vw, 520px);
-        height: min(48vw, 520px);
+      width: min(48vw, 520px);
+      height: min(48vw, 520px);
 
-        object-fit: contain;
+      object-fit: contain;
 
-        opacity: 0;
+      opacity: 0;
 
-        animation: initial-splash-appear 1.2s ease-in-out forwards;
+      animation: initial-splash-appear 1.2s ease-in-out forwards;
 
-        pointer-events: none;
-      }
+      pointer-events: none;
+    }
 
       @keyframes initial-splash-appear {
         from {
