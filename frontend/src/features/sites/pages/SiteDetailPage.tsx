@@ -258,12 +258,6 @@ export function SiteDetailPage() {
                 {site.name}
               </h1>
 
-              {site.code && (
-                <span className="mt-2 inline-block rounded-full bg-mist-100 px-2.5 py-0.5 font-mono text-[11px] font-medium text-canopy-800">
-                  {site.code}
-                </span>
-              )}
-
               <p className="mt-3 max-w-2xl text-sm leading-relaxed text-ink-950/65">
                 {site.description || 'No description provided.'}
               </p>

@@ -9,7 +9,6 @@ import { Input } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
 import { LoadingSpinner } from '@/components/common/LoadingSpinner'
 import { ErrorState } from '@/components/common/ErrorState'
-import { EmptyState } from '@/components/common/EmptyState'
 import { useAuth } from '@/hooks/useAuth'
 import * as siteService from '../services/siteService'
 import type { Site } from '../types'
@@ -125,30 +124,24 @@ export function SitesPage() {
 
       {!isLoading && error && <ErrorState message={error} onRetry={() => load(search || undefined)} />}
 
-      {!isLoading && !error && sites.length === 0 && (
-        <EmptyState
-          icon={<MapPin size={22} />}
-          title="No sites yet"
-          description={
-            isAdmin
-              ? 'Create the first survey site to start logging species against it.'
-              : 'Ask your administrator to set up a survey site.'
-          }
-        />
-      )}
-
       {!isLoading && !error && sites.length > 0 && (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {sites.map((site) => (
             <Link key={site.id} to={`/sites/${site.id}`}>
-              <Card className="flex h-full flex-col gap-2 transition-colors hover:border-canopy-700/30 hover:bg-mist-100/40">
+              <Card className="flex h-full min-h-[210px] flex-col transition-colors hover:border-canopy-700/30 hover:bg-mist-100/40">
+                {/* Header */}
                 <div className="flex items-start justify-between gap-3">
-                  <div className="flex min-w-0 items-center gap-2">
-                    <MapPin size={16} className="shrink-0 text-canopy-700" />
-                    <h3 className="min-w-0 break-words font-display text-[15px] font-bold text-canopy-950">
+                  <div className="flex min-w-0 items-start gap-2.5">
+                    <MapPin
+                      size={17}
+                      className="mt-0.5 shrink-0 text-canopy-700"
+                    />
+
+                    <h3 className="min-w-0 break-words font-display text-[15px] font-bold leading-snug text-canopy-950">
                       {site.name}
                     </h3>
                   </div>
+
                   {isAdmin && (
                     <button
                       onClick={(e) => {
@@ -157,20 +150,19 @@ export function SitesPage() {
                         handleDelete(site)
                       }}
                       aria-label={`Delete ${site.name}`}
-                      className="rounded-full p-1.5 text-ink-950/30 transition-colors hover:bg-red-50 hover:text-red-600"
+                      className="shrink-0 rounded-full p-1.5 text-ink-950/30 transition-colors hover:bg-red-50 hover:text-red-600"
                     >
                       <Trash2 size={15} />
                     </button>
                   )}
                 </div>
-                {site.code && (
-                  <span className="w-fit rounded-full bg-mist-100 px-2.5 py-0.5 font-mono text-[11px] font-medium text-canopy-800">
-                    {site.code}
-                  </span>
-                )}
-                <p className="text-sm leading-relaxed text-ink-950/60">
-                  {site.description || 'No description provided.'}
-                </p>
+
+                {/* Description */}
+                <div className="mt-4 flex-1 border-t border-canopy-900/[0.07] pt-3.5">
+                  <p className="line-clamp-4 text-sm leading-relaxed text-ink-950/60">
+                    {site.description || 'No description provided.'}
+                  </p>
+                </div>
               </Card>
             </Link>
           ))}
@@ -197,12 +189,25 @@ export function SitesPage() {
             onChange={(e) => setForm((f) => ({ ...f, code: e.target.value }))}
             placeholder="SITE-014"
           />
-          <Input
-            label="Description (optional)"
-            value={form.description}
-            onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-            placeholder="Mixed oak forest, north-facing slope"
-          />
+          <div className="w-full min-w-0">
+            <label
+              htmlFor="site-description"
+              className="mb-2 block text-sm font-medium text-ink-950/75"
+            >
+              Description (optional)
+            </label>
+
+            <textarea
+              id="site-description"
+              value={form.description}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, description: e.target.value }))
+              }
+              placeholder="Mixed oak forest, north-facing slope. The site includes a dense woodland area with seasonal streams."
+              rows={4}
+              className="w-full resize-none rounded-xl border border-canopy-900/12 bg-paper-0 px-4 py-3 text-[15px] text-ink-950 outline-none transition-all placeholder:text-ink-950/35 focus:border-canopy-600 focus:ring-2 focus:ring-canopy-600/10"
+            />
+          </div>
           {formError && (
             <div role="alert" className="rounded-lg border border-red-200 bg-red-50 px-3.5 py-2.5 text-sm font-medium text-red-700">
               {formError}
