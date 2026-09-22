@@ -8,13 +8,28 @@ import './index.css'
 const initialSplash = document.getElementById('initial-splash')
 
 if (initialSplash) {
-  window.setTimeout(() => {
-    initialSplash.classList.add('initial-splash-exit')
-
+  const startSplash = () => {
     window.setTimeout(() => {
-      initialSplash.remove()
-    }, 1600)
-  }, 2600)
+      initialSplash.classList.add('initial-splash-exit')
+
+      window.setTimeout(() => {
+        initialSplash.remove()
+      }, 1600)
+    }, 2600)
+  }
+
+  const splashImage =
+    initialSplash.querySelector<HTMLImageElement>(
+      '.initial-splash-emblem',
+    )
+
+  if (splashImage && !splashImage.complete) {
+    splashImage.addEventListener('load', startSplash, {
+      once: true,
+    })
+  } else {
+    startSplash()
+  }
 }
 
 createRoot(document.getElementById('root')!).render(
