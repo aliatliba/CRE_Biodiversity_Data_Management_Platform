@@ -2,27 +2,183 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+
     <link rel="icon" type="image/svg+xml" href="/leaf.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#053B06" />
-    <meta name="description" content="BioData — the field biodiversity registry. Log sites, validate species against global taxonomy databases, and keep every survey record in one place." />
+
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1"
+    />
+
+    <meta
+      name="theme-color"
+      content="#053B06"
+    />
+
+    <meta
+      name="description"
+      content="BioData — the field biodiversity registry. Log sites, validate species against global taxonomy databases, and keep every survey record in one place."
+    />
+
     <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,500&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
-    <title>BioData </title>
+    <link
+      rel="preconnect"
+      href="https://fonts.gstatic.com"
+      crossorigin
+    />
+
+    <link
+      href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,500&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+
+    <title>BioData</title>
+
+    <!-- Prevent light-mode flash before the page paints -->
     <script>
-      // Applied before paint to avoid a light-mode flash on load.
       (function () {
         try {
           var stored = localStorage.getItem('canopy.theme')
-          var dark = stored ? stored === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches
-          if (dark) document.documentElement.classList.add('dark')
+          var dark = stored
+            ? stored === 'dark'
+            : window.matchMedia('(prefers-color-scheme: dark)').matches
+
+          if (dark) {
+            document.documentElement.classList.add('dark')
+          }
         } catch (e) {}
       })()
     </script>
+
+    <!-- Initial splash: exists before React loads -->
+    <style>
+      #initial-splash {
+        position: fixed;
+        inset: 0;
+        z-index: 99999;
+
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        width: 100%;
+        height: 100%;
+
+        overflow: hidden;
+
+        background: #052707;
+
+        opacity: 1;
+
+        transition:
+          opacity 1.6s ease-in-out,
+          visibility 1.6s ease-in-out;
+      }
+
+      #initial-splash::before {
+        content: "";
+
+        position: absolute;
+        inset: 0;
+
+        background:
+          radial-gradient(
+            circle at center,
+            rgba(158, 240, 26, 0.10) 0%,
+            rgba(5, 59, 6, 0.25) 35%,
+            rgba(5, 39, 7, 0.96) 100%
+          );
+
+        pointer-events: none;
+      }
+
+      .initial-splash-glow {
+        position: absolute;
+
+        width: min(60vw, 650px);
+        height: min(60vw, 650px);
+
+        border-radius: 50%;
+
+        background: rgba(158, 240, 26, 0.07);
+
+        filter: blur(90px);
+
+        pointer-events: none;
+      }
+
+      .initial-splash-emblem {
+        position: relative;
+        z-index: 2;
+
+        display: block;
+
+        width: min(48vw, 520px);
+        height: min(48vw, 520px);
+
+        object-fit: contain;
+
+        opacity: 0;
+
+        animation: initial-splash-appear 1.2s ease-in-out forwards;
+
+        pointer-events: none;
+      }
+
+      @keyframes initial-splash-appear {
+        from {
+          opacity: 0;
+        }
+
+        to {
+          opacity: 1;
+        }
+      }
+
+      #initial-splash.initial-splash-exit {
+        opacity: 0;
+        visibility: hidden;
+      }
+
+      @media (max-width: 640px) {
+        .initial-splash-emblem {
+          width: min(72vw, 360px);
+          height: min(72vw, 360px);
+        }
+
+        .initial-splash-glow {
+          width: 80vw;
+          height: 80vw;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        #initial-splash {
+          transition: none;
+        }
+
+        .initial-splash-emblem {
+          animation: none;
+          opacity: 1;
+        }
+      }
+    </style>
   </head>
+
   <body>
+    <!-- This is visible immediately, before React/Vite loads -->
+    <div id="initial-splash">
+      <div class="initial-splash-glow"></div>
+
+      <img
+        src="/assests/landing/National_Emblem_of_Algeria_(bronze_effect).svg.webp"
+        alt=""
+        class="initial-splash-emblem"
+      />
+    </div>
+
     <div id="root"></div>
+
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
