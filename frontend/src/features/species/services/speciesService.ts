@@ -19,6 +19,7 @@ export interface ListParams {
   family?: string
   genus?: string
   national_status?: string
+  iucn_status?: string
   site_id?: number
   page?: number
   page_size?: number

@@ -366,6 +366,7 @@ def _apply_species_filters(
     genus: str | None = None,
     national_status: str | None = None,
     site_id: int | None = None,
+    iucn_status: str | None = None,
 ):
     if site_id is not None:
         query = query.join(SiteSpecies, SiteSpecies.species_id == Species.id).filter(
@@ -391,6 +392,10 @@ def _apply_species_filters(
         query = query.filter(Species.genus.ilike(f"%{genus}%"))
     if national_status:
         query = query.filter(Species.national_status == national_status)
+    if iucn_status:
+        statuses = [s.strip() for s in iucn_status.split(",") if s.strip()]
+        if statuses:
+            query = query.filter(Species.iucn_status.in_(statuses))
     return query
 
 
@@ -404,9 +409,11 @@ def list_species(
     family: str | None = None,
     genus: str | None = None,
     national_status: str | None = None,
+    iucn_status: str | None = None,
     site_id: int | None = None,
     page: int = 1,
     page_size: int = 20,
+
 ) -> tuple[list[Species], int]:
     query = db.query(Species)
     query = _apply_species_filters(
@@ -420,6 +427,7 @@ def list_species(
         genus=genus,
         national_status=national_status,
         site_id=site_id,
+        iucn_status=iucn_status,
     )
     total = query.count()
     items = (

@@ -13,6 +13,7 @@ import AddSpeciesPage from '@/features/species/pages/AddSpeciesPage'
 import { SpeciesDetailPage } from '@/features/species/pages/SpeciesDetailPage'
 import { EditSpeciesPage } from '@/features/species/pages/EditSpeciesPage'
 import { SiteDetailPage } from '@/features/sites/pages/SiteDetailPage'
+import { SiteSpeciesPage } from '@/features/sites/pages/SiteSpeciesPage'
 import { ProtectedSpeciesPage } from '@/features/protected-species/pages/ProtectedSpeciesPage'
 import { UsersPage } from '@/features/users/pages/UsersPage'
 import { ExportsPage } from '@/features/exports/pages/ExportsPage'
@@ -101,6 +102,22 @@ function App() {
           element={
             <ProtectedRoute>
               <SiteDetailPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/sites/:id/species/protected"
+          element={
+            <ProtectedRoute>
+              <SiteSpeciesPage mode="protected" />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/sites/:id/species/threatened"
+          element={
+            <ProtectedRoute>
+              <SiteSpeciesPage mode="threatened" />
             </ProtectedRoute>
           }
         />

@@ -189,14 +189,19 @@ export function SiteDetailPage() {
         },
         {
           label: 'Micro-organisms',
-          value: stats.biodiversity_composition['Micro-organisms'] ?? 0,
+          value:
+            stats.biodiversity_composition['Micro-organisms'] ?? 0,
+        },
+        {
+          label: 'Fungi',
+          value: stats.biodiversity_composition['Fungi'] ?? 0,
         },
       ]
     : []
 
   const iucnData = stats
     ? Object.entries(stats.iucn_breakdown).map(([label, value]) => ({
-        label,
+        label: label.toLowerCase() === 'unknown' ? 'NE' : label,
         value,
       }))
     : []
@@ -212,9 +217,7 @@ export function SiteDetailPage() {
     stats && stats.total_species > 0
       ? stats.top_families.map((family) => ({
           label: family.family,
-          value: Number(
-            ((family.count / stats.total_species) * 100).toFixed(1)
-          ),
+          value: family.count ,
         }))
       : []
 
@@ -290,6 +293,7 @@ export function SiteDetailPage() {
               SUMMARY STAT CARDS
           ------------------------------------------------- */}
 
+          
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             <StatCard
               label="Species at site"
@@ -298,19 +302,29 @@ export function SiteDetailPage() {
               delay={0}
             />
 
-            <StatCard
-              label="Protected species"
-              value={stats.status_breakdown['Protected'] ?? 0}
-              icon={ShieldCheck}
-              delay={0.05}
-            />
+            <Link
+              to={`/sites/${siteId}/species/protected`}
+              className="block rounded-2xl transition-transform duration-200 hover:-translate-y-0.5"
+            >
+              <StatCard
+                label="Protected species"
+                value={stats.status_breakdown['Protected'] ?? 0}
+                icon={ShieldCheck}
+                delay={0.05}
+              />
+            </Link>
 
-            <StatCard
-              label="IUCN threatened species - VU · EN · CR"
-              value={stats.iucn_threatened_species}
-              icon={ShieldCheck}
-              delay={0.1}
-            />
+            <Link
+              to={`/sites/${siteId}/species/threatened`}
+              className="block rounded-2xl transition-transform duration-200 hover:-translate-y-0.5"
+            >
+              <StatCard
+                label="IUCN threatened species - VU · EN · CR"
+                value={stats.iucn_threatened_species}
+                icon={ShieldCheck}
+                delay={0.1}
+              />
+            </Link>
           </div>
 
           {/* -------------------------------------------------
@@ -415,8 +429,6 @@ export function SiteDetailPage() {
                 <div className="mt-5">
                   <AnimatedBarChart
                     data={familyData}
-                    maxValue={100}
-                    valueSuffix="%"
                     colors={[
                       '#3C8D69',
                       '#47A377',
@@ -430,6 +442,7 @@ export function SiteDetailPage() {
                       '#C7E9D4',
                     ]}
                     delay={0.3}
+                    showValues
                   />
                 </div>
               </Card>

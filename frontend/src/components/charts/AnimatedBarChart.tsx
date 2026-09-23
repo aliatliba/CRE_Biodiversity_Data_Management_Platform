@@ -24,6 +24,7 @@ interface AnimatedBarChartProps {
   colors?: string[]
   maxValue?: number
   valueSuffix?: string
+  showValues?: boolean
 }
 
 export function AnimatedBarChart({
@@ -32,6 +33,7 @@ export function AnimatedBarChart({
   colors = COLORS,
   maxValue,
   valueSuffix = '',
+  showValues = false,
 }: AnimatedBarChartProps) {
   const max = maxValue ?? Math.max(1, ...data.map((d) => d.value))
 
@@ -80,6 +82,7 @@ export function AnimatedBarChart({
           <span className="w-10 shrink-0 text-right text-sm font-semibold tabular-nums text-canopy-800">
             {item.value}
             {valueSuffix}
+            {showValues ? '' : ''}
           </span>
         </motion.div>
       ))}

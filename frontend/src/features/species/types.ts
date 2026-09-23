@@ -128,6 +128,7 @@ export interface SpeciesFilters {
   genus: string
   national_status: string
   site_id: string
+  iucn_status: string
 }
 
 export const EMPTY_SPECIES_FILTERS: SpeciesFilters = {
@@ -139,6 +140,8 @@ export const EMPTY_SPECIES_FILTERS: SpeciesFilters = {
   genus: '',
   national_status: '',
   site_id: '',
+  iucn_status: '',
+
 }
 
 export interface ValidationHistoryEntry {
