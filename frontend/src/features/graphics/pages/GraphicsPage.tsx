@@ -11,7 +11,7 @@ import {
   XCircle,
 } from 'lucide-react'
 
-import { AppLayout } from '@/components/layout/AppLayout'
+import { AppLayout } from '@/components/layout/AppLayout'   
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { LoadingSpinner } from '@/components/common/LoadingSpinner'
@@ -31,6 +31,8 @@ export function GraphicsPage() {
 
   const [loadingSites, setLoadingSites] = useState(true)
   const [generating, setGenerating] = useState(false)
+
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
 
   const [error, setError] = useState<string | null>(null)
 
@@ -58,6 +60,47 @@ export function GraphicsPage() {
       }
     }
   }, [])
+
+  useEffect(() => {
+  let objectUrl: string | null = null
+
+  async function loadPreview() {
+    if (
+      !job ||
+      job.status !== 'completed' ||
+      !job.png_available
+    ) {
+      setPreviewUrl(null)
+      return
+    }
+
+    try {
+      const blob =
+        await graphicsService.getGraphicsPreviewBlob(
+          job.job_id,
+        )
+
+      objectUrl = URL.createObjectURL(blob)
+
+      setPreviewUrl(objectUrl)
+    } catch (err) {
+      console.error('Could not load graphics preview:', err)
+
+      setPreviewUrl(null)
+      setError(
+        'Could not load the generated graphics preview.',
+      )
+    }
+  }
+
+  loadPreview()
+
+  return () => {
+    if (objectUrl) {
+      URL.revokeObjectURL(objectUrl)
+    }
+  }
+}, [job])
 
   function stopPolling() {
     if (pollRef.current) {
@@ -116,9 +159,11 @@ export function GraphicsPage() {
 
     stopPolling()
 
+    
     setError(null)
     setJob(null)
     setGenerating(true)
+    setPreviewUrl(null)
 
     try {
       const created =
@@ -239,6 +284,7 @@ export function GraphicsPage() {
                     setSelectedSiteId(event.target.value)
                     setJob(null)
                     setError(null)
+                    setPreviewUrl(null)
                     stopPolling()
                   }}
                   disabled={generating}
@@ -442,13 +488,13 @@ export function GraphicsPage() {
                   job.png_available && (
                     <div className="pt-5">
                       <div className="overflow-hidden rounded-xl border border-mist-200 bg-white dark:bg-paper-50">
-                        <img
-                          src={graphicsService.getGraphicsPreviewUrl(
-                            job.job_id,
-                          )}
-                          alt={`Circular taxonomic dendrogram for ${job.site_name || 'research site'}`}
-                          className="block h-auto w-full"
-                        />
+                        {previewUrl && (
+                          <img
+                            src={previewUrl}
+                            alt={`Circular taxonomic dendrogram for ${job.site_name || 'research site'}`}
+                            className="block h-auto w-full"
+                          />
+                        )}
                       </div>
 
                       {/* DOWNLOADS */}
