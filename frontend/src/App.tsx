@@ -19,6 +19,7 @@ import { ProtectedSpeciesPage } from '@/features/protected-species/pages/Protect
 import { UsersPage } from '@/features/users/pages/UsersPage'
 import { ExportsPage } from '@/features/exports/pages/ExportsPage'
 import { ProfilePage } from '@/features/profile/pages/ProfilePage'
+import { GraphicsPage } from '@/features/graphics/pages/GraphicsPage'
 import { NotFoundPage } from '@/pages/NotFoundPage'
 import { ROUTES } from '@/lib/constants'
 
@@ -39,9 +40,12 @@ function App() {
   return (
     <AuthProvider>
       <PublicThemeGuard />
+
       <Routes>
         <Route path={ROUTES.landing} element={<LandingPage />} />
+
         <Route path={ROUTES.login} element={<LoginPage />} />
+
         <Route
           path={ROUTES.completeProfile}
           element={
@@ -50,6 +54,7 @@ function App() {
             </ProtectedRoute>
           }
         />
+
         <Route
           path={ROUTES.dashboard}
           element={
@@ -58,6 +63,7 @@ function App() {
             </ProtectedRoute>
           }
         />
+
         <Route
           path={ROUTES.sites}
           element={
@@ -66,6 +72,7 @@ function App() {
             </ProtectedRoute>
           }
         />
+
         <Route
           path={ROUTES.species}
           element={
@@ -74,6 +81,7 @@ function App() {
             </ProtectedRoute>
           }
         />
+
         <Route
           path={ROUTES.addSpecies}
           element={
@@ -82,6 +90,8 @@ function App() {
             </ProtectedRoute>
           }
         />
+
+        {/* Claude's standalone threatened species page */}
         <Route
           path="/species/threatened"
           element={
@@ -90,6 +100,7 @@ function App() {
             </ProtectedRoute>
           }
         />
+
         <Route
           path="/species/:id/edit"
           element={
@@ -98,6 +109,7 @@ function App() {
             </ProtectedRoute>
           }
         />
+
         <Route
           path="/species/:id"
           element={
@@ -106,6 +118,7 @@ function App() {
             </ProtectedRoute>
           }
         />
+
         <Route
           path="/sites/:id"
           element={
@@ -114,6 +127,7 @@ function App() {
             </ProtectedRoute>
           }
         />
+
         <Route
           path="/sites/:id/species/protected"
           element={
@@ -122,6 +136,7 @@ function App() {
             </ProtectedRoute>
           }
         />
+
         <Route
           path="/sites/:id/species/threatened"
           element={
@@ -130,6 +145,7 @@ function App() {
             </ProtectedRoute>
           }
         />
+
         <Route
           path={ROUTES.protectedSpecies}
           element={
@@ -138,6 +154,7 @@ function App() {
             </ProtectedRoute>
           }
         />
+
         <Route
           path={ROUTES.users}
           element={
@@ -146,6 +163,7 @@ function App() {
             </ProtectedRoute>
           }
         />
+
         <Route
           path={ROUTES.exports}
           element={
@@ -154,6 +172,17 @@ function App() {
             </ProtectedRoute>
           }
         />
+
+        {/* Graphics page */}
+        <Route
+          path="/graphics"
+          element={
+            <ProtectedRoute>
+              <GraphicsPage />
+            </ProtectedRoute>
+          }
+        />
+
         <Route
           path={ROUTES.profile}
           element={
@@ -162,6 +191,7 @@ function App() {
             </ProtectedRoute>
           }
         />
+
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </AuthProvider>
