@@ -12,6 +12,7 @@ import { SpeciesPage } from '@/features/species/pages/SpeciesPage'
 import AddSpeciesPage from '@/features/species/pages/AddSpeciesPage'
 import { SpeciesDetailPage } from '@/features/species/pages/SpeciesDetailPage'
 import { EditSpeciesPage } from '@/features/species/pages/EditSpeciesPage'
+import { ThreatenedSpeciesPage } from '@/features/species/pages/ThreatenedSpeciesPage'
 import { SiteDetailPage } from '@/features/sites/pages/SiteDetailPage'
 import { SiteSpeciesPage } from '@/features/sites/pages/SiteSpeciesPage'
 import { ProtectedSpeciesPage } from '@/features/protected-species/pages/ProtectedSpeciesPage'
@@ -20,7 +21,6 @@ import { ExportsPage } from '@/features/exports/pages/ExportsPage'
 import { ProfilePage } from '@/features/profile/pages/ProfilePage'
 import { NotFoundPage } from '@/pages/NotFoundPage'
 import { ROUTES } from '@/lib/constants'
-import { GraphicsPage } from '@/features/graphics/pages/GraphicsPage'
 
 function PublicThemeGuard() {
   const { pathname } = useLocation()
@@ -79,6 +79,14 @@ function App() {
           element={
             <ProtectedRoute>
               <AddSpeciesPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/species/threatened"
+          element={
+            <ProtectedRoute>
+              <ThreatenedSpeciesPage />
             </ProtectedRoute>
           }
         />
@@ -146,16 +154,6 @@ function App() {
             </ProtectedRoute>
           }
         />
-
-        <Route
-          path="/graphics"
-          element={
-            <ProtectedRoute>
-              <GraphicsPage />
-            </ProtectedRoute>
-          }
-        />
-        
         <Route
           path={ROUTES.profile}
           element={

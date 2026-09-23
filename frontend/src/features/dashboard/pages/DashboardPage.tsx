@@ -134,12 +134,17 @@ export function DashboardPage() {
               delay={0.05}
             />
 
-            <StatCard
-              label="IUCN threatened species - VU · EN · CR "
-              value={stats.iucn_threatened_species}
-              icon={ShieldCheck}
-              delay={0.1}
-            />
+            <Link
+              to="/species/threatened"
+              className="block rounded-2xl transition-transform duration-200 hover:-translate-y-0.5"
+            >
+              <StatCard
+                label="IUCN threatened species - VU · EN · CR "
+                value={stats.iucn_threatened_species}
+                icon={ShieldCheck}
+                delay={0.1}
+              />
+            </Link>
           </div>
 
           {/* -------------------------------------------------------- */}
