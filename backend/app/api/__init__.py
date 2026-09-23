@@ -1,5 +1,6 @@
 from fastapi import APIRouter
 from app.api import auth, users, sites, species, exports, dashboard, protected_species
+from app.api import graphics
 
 router = APIRouter(prefix="/api/v1")
 
@@ -11,4 +12,9 @@ router.include_router(exports.router, prefix="/exports", tags=["exports"])
 router.include_router(dashboard.router, prefix="/dashboard", tags=["dashboard"])
 router.include_router(
     protected_species.router, prefix="/protected-species", tags=["protected-species"]
+)
+router.include_router(
+    graphics.router,
+    prefix="/graphics",
+    tags=["graphics"],
 )
