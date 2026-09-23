@@ -54,11 +54,12 @@ def _species_query_for_scope(db: Session, site_id: int | None):
 
 def _biodiversity_composition(species_query):
     """
-    Derive the three dashboard biodiversity groups from taxonomy.
+    Derive biodiversity composition from taxonomy.
 
     Animalia -> Fauna
     Plantae -> Flora
-    Other kingdoms -> Micro-organisms
+    Bacteria -> Micro-organisms
+    Fungi -> Fungi
     """
 
     kingdom_counts = (
@@ -75,6 +76,7 @@ def _biodiversity_composition(species_query):
         "Fauna": 0,
         "Flora": 0,
         "Micro-organisms": 0,
+        "Fungi": 0,
     }
 
     for kingdom, count in kingdom_counts:
@@ -82,10 +84,15 @@ def _biodiversity_composition(species_query):
 
         if normalized == "animalia":
             composition["Fauna"] += count
+
         elif normalized == "plantae":
             composition["Flora"] += count
-        else:
+
+        elif normalized == "bacteria":
             composition["Micro-organisms"] += count
+
+        elif normalized == "fungi":
+            composition["Fungi"] += count
 
     return composition
 

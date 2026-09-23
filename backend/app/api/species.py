@@ -284,6 +284,13 @@ def list_species(
     site_id: int | None = Query(None),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
+    iucn_status: str | None = Query(
+        None,
+        description=(
+            "One or more IUCN statuses. Accepts a single value (e.g. 'CR') "
+            "or a comma-separated list (e.g. 'CR,EN,VU'), matched as an OR."
+        ),
+    ),
 ):
     params = PaginationParams(page=page, page_size=page_size)
     items, total = species_service.list_species(
@@ -297,6 +304,7 @@ def list_species(
         genus=genus,
         national_status=national_status,
         site_id=site_id,
+        iucn_status=iucn_status,
         page=page,
         page_size=page_size,
     )

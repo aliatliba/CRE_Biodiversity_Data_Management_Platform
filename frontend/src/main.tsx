@@ -8,28 +8,16 @@ import './index.css'
 const initialSplash = document.getElementById('initial-splash')
 
 if (initialSplash) {
-  const startSplash = () => {
+  // Keep the splash visible for ~2.6s, then fade it out.
+  // Image loading must never block the exit animation.
+  window.setTimeout(() => {
+    initialSplash.classList.add('initial-splash-exit')
+
+    // Remove it after the CSS fade-out finishes.
     window.setTimeout(() => {
-      initialSplash.classList.add('initial-splash-exit')
-
-      window.setTimeout(() => {
-        initialSplash.remove()
-      }, 1600)
-    }, 2600)
-  }
-
-  const splashImage =
-    initialSplash.querySelector<HTMLImageElement>(
-      '.initial-splash-emblem',
-    )
-
-  if (splashImage && !splashImage.complete) {
-    splashImage.addEventListener('load', startSplash, {
-      once: true,
-    })
-  } else {
-    startSplash()
-  }
+      initialSplash.remove()
+    }, 1600)
+  }, 2600)
 }
 
 createRoot(document.getElementById('root')!).render(
@@ -39,5 +27,5 @@ createRoot(document.getElementById('root')!).render(
         <App />
       </BrowserRouter>
     </ThemeProvider>
-  </StrictMode>
+  </StrictMode>,
 )

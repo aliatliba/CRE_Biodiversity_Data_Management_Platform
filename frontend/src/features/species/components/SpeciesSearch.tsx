@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Filter, Search, X } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { ChevronDown, Filter, Search, X } from 'lucide-react'
 import type { Site } from '@/features/sites/types'
 import type { SpeciesFilters } from '../types'
 import { EMPTY_SPECIES_FILTERS } from '../types'
@@ -18,6 +18,100 @@ const FILTER_FIELDS: { key: keyof SpeciesFilters; label: string; placeholder: st
   { key: 'family', label: 'Family', placeholder: 'e.g. Fagaceae' },
   { key: 'genus', label: 'Genus', placeholder: 'e.g. Quercus' },
 ]
+
+const IUCN_STATUS_OPTIONS: { value: string; label: string }[] = [
+  { value: 'CR', label: 'Critically Endangered (CR)' },
+  { value: 'EN', label: 'Endangered (EN)' },
+  { value: 'VU', label: 'Vulnerable (VU)' },
+  { value: 'NT', label: 'Near Threatened (NT)' },
+  { value: 'LC', label: 'Least Concern (LC)' },
+  { value: 'DD', label: 'Data Deficient (DD)' },
+  { value: 'NE', label: 'Not Evaluated (NE)' },
+]
+
+/**
+ * IUCN status filter, rendered as a multiselect.
+ *
+ * The selected statuses are kept in `SpeciesFilters.iucn_status` as a single
+ * comma-separated string (e.g. "CR,EN,VU"), matching the query param format
+ * the backend accepts. This keeps the field a plain string, so nothing else
+ * that reads `filters.iucn_status` needs to change.
+ */
+function IucnStatusMultiSelect({
+  value,
+  onChange,
+}: {
+  value: string
+  onChange: (value: string) => void
+}) {
+  const [isOpen, setIsOpen] = useState(false)
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  const selected = value ? value.split(',').filter(Boolean) : []
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  function toggleStatus(status: string) {
+    const next = selected.includes(status)
+      ? selected.filter((s) => s !== status)
+      : [...selected, status]
+
+    onChange(next.join(','))
+  }
+
+  const buttonLabel =
+    selected.length === 0
+      ? 'All IUCN statuses'
+      : selected.length === 1
+        ? (IUCN_STATUS_OPTIONS.find((o) => o.value === selected[0])?.label ?? selected[0])
+        : `${selected.length} IUCN statuses`
+
+  return (
+    <div ref={containerRef} className="relative">
+      <button
+        type="button"
+        onClick={() => setIsOpen((v) => !v)}
+        aria-haspopup="listbox"
+        aria-expanded={isOpen}
+        className="flex h-11 items-center gap-2 whitespace-nowrap rounded-xl border border-mist-200 bg-paper-0 px-3.5 text-sm text-ink-950/80 outline-none transition-colors focus:border-canopy-600"
+      >
+        {buttonLabel}
+        <ChevronDown size={14} className="text-ink-950/40" />
+      </button>
+
+      {isOpen && (
+        <div
+          role="listbox"
+          className="absolute left-0 z-10 mt-2 w-56 rounded-xl border border-mist-200 bg-paper-0 p-2 shadow-lg"
+        >
+          {IUCN_STATUS_OPTIONS.map((option) => (
+            <label
+              key={option.value}
+              className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-ink-950/80 transition-colors hover:bg-mist-100"
+            >
+              <input
+                type="checkbox"
+                checked={selected.includes(option.value)}
+                onChange={() => toggleStatus(option.value)}
+                className="h-3.5 w-3.5 rounded border-mist-300 text-canopy-700 focus:ring-canopy-600"
+              />
+              {option.label}
+            </label>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
 
 export function SpeciesSearch({ filters, onChange, sites }: SpeciesSearchProps) {
   const [showAdvanced, setShowAdvanced] = useState(false)
@@ -66,6 +160,11 @@ export function SpeciesSearch({ filters, onChange, sites }: SpeciesSearchProps) 
           <option value="Protected">Protected</option>
           <option value="Non Protected">Non Protected</option>
         </select>
+
+        <IucnStatusMultiSelect
+          value={filters.iucn_status}
+          onChange={(value) => setField('iucn_status', value)}
+        />
 
         <button
           type="button"

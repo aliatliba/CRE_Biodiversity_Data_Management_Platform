@@ -13,7 +13,7 @@ import { Card } from '@/components/ui/Card'
 import { LoadingSpinner } from '@/components/common/LoadingSpinner'
 import { ErrorState } from '@/components/common/ErrorState'
 import { AnimatedBarChart } from '@/components/charts/AnimatedBarChart'
-import { AnimatedPieChart } from '@/components/charts/AnimatedPieChart'
+import { AnimatedPieChart, IUCN_COLORS } from '@/components/charts/AnimatedPieChart'
 import * as dashboardService from '../services/dashboardService'
 import type { DashboardStats } from '../types'
 import { StatCard } from '../components/StatCard'
@@ -63,16 +63,18 @@ export function DashboardPage() {
           value:
             stats.biodiversity_composition['Micro-organisms'] ?? 0,
         },
+        {
+          label: 'Fungi',
+          value: stats.biodiversity_composition['Fungi'] ?? 0,
+        },
       ]
     : []
 
   const iucnData = stats
-    ? Object.entries(stats.iucn_breakdown).map(
-        ([label, value]) => ({
-          label,
-          value,
-        })
-      )
+    ? Object.entries(stats.iucn_breakdown).map(([label, value]) => ({
+        label: label.toLowerCase() === 'unknown' ? 'NE' : label,
+        value,
+      }))
     : []
 
   const statusData = stats
@@ -87,7 +89,7 @@ export function DashboardPage() {
   const siteRichnessData =
     stats?.species_richness_by_site.map((site) => ({
       label: site.site_name,
-      value: site.percentage,
+      value: site.species_count,
     })) ?? []
 
   return (
@@ -133,7 +135,7 @@ export function DashboardPage() {
             />
 
             <StatCard
-              label="IUCN threatened species - VU · EN · CR"
+              label="IUCN threatened species - VU · EN · CR "
               value={stats.iucn_threatened_species}
               icon={ShieldCheck}
               delay={0.1}
@@ -192,6 +194,7 @@ export function DashboardPage() {
                     data={iucnData}
                     delay={0.2}
                     showValues
+                    colorMap={IUCN_COLORS}
                   />
                 </div>
               </Card>
@@ -243,8 +246,6 @@ export function DashboardPage() {
                 <div className="mt-5 min-w-0 overflow-hidden">
                   <AnimatedBarChart
                     data={siteRichnessData}
-                    maxValue={100}
-                    valueSuffix="%"
                     colors={[
                       '#49AA7F',
                       '#80C6A2',

@@ -1,7 +1,17 @@
 import { motion } from 'framer-motion'
 
 const COLORS = 
-  ['#117036', '#f59e0b', '#ef4444', '#40916c', '#6366f1', '#ec4899', '#14b8a6']
+  ['#117036', '#f59e0b',  '#6366f1','#ef4444','#40916c',  '#ec4899', '#14b8a6']
+
+  export const IUCN_COLORS: Record<string, string> = {
+  CR: '#dc2626',
+  EN: '#ea580c',
+  VU: '#f59e0b',
+  NT: '#eab308',
+  LC: '#16a34a',
+  DD: '#6b7280',
+  NE: '#9ca3af',
+}
 
 interface PieSlice {
   label: string
@@ -13,6 +23,7 @@ interface AnimatedPieChartProps {
   size?: number
   delay?: number
   showValues?: boolean
+  colorMap?: Record<string, string>
 }
 
 export function AnimatedPieChart({
@@ -20,6 +31,7 @@ export function AnimatedPieChart({
   size = 160,
   delay = 0,
   showValues = false,
+  colorMap,
 }: AnimatedPieChartProps) {
   const total = data.reduce((sum, item) => sum + item.value, 0)
 
@@ -36,7 +48,9 @@ export function AnimatedPieChart({
 
     return {
       ...item,
-      color: COLORS[index % COLORS.length],
+      color:
+        colorMap?.[item.label] ??
+        COLORS[index % COLORS.length],
       start,
       percentage,
     }

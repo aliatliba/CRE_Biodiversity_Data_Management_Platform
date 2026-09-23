@@ -4,7 +4,7 @@ import axios from 'axios'
 import { ArrowLeft, Trash2, Pencil } from 'lucide-react'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { Card } from '@/components/ui/Card'
-import { Badge } from '@/components/ui/Badge'
+import { Badge, getIucnTone } from '@/components/ui/Badge'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { LoadingSpinner } from '@/components/common/LoadingSpinner'
@@ -281,9 +281,11 @@ export function SpeciesDetailPage() {
               {species.common_name && <p className="text-ink-950/60">{species.common_name}</p>}
               <div className="mt-3 flex flex-wrap gap-2">
                 {species.iucn_status ? (
-                  <Badge tone="warning">{species.iucn_status}</Badge>
+                  <Badge tone={getIucnTone(species.iucn_status)}>
+                    {species.iucn_status}
+                  </Badge>
                 ) : (
-                  <Badge tone="warning">No IUCN status</Badge>
+                  <Badge tone="iucn-ne">NE</Badge>
                 )}
                 <Badge tone={species.national_status === 'Protected' ? 'accent' : 'neutral'}>
                   {species.national_status}
