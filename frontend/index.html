@@ -26,6 +26,12 @@
       href="/assests/landing/National_Emblem_of_Algeria_(bronze_effect).svg.webp"
     />
 
+    <link
+      rel="preload"
+      as="image"
+      href="/assests/landing/CRE%20LOGO.png"
+    />
+
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link
       rel="preconnect"
@@ -41,22 +47,6 @@
     <title>BioData</title>
 
     <!-- Prevent light-mode flash before the page paints -->
-    <script>
-      (function () {
-        try {
-          var stored = localStorage.getItem('canopy.theme')
-          var dark = stored
-            ? stored === 'dark'
-            : window.matchMedia('(prefers-color-scheme: dark)').matches
-
-          if (dark) {
-            document.documentElement.classList.add('dark')
-          }
-        } catch (e) {}
-      })()
-    </script>
-
-    <!-- Initial splash: exists before React loads -->
     <style>
       #initial-splash {
         position: fixed;
@@ -113,31 +103,78 @@
         pointer-events: none;
       }
 
-.initial-splash-emblem {
-      position: relative;
-      z-index: 2;
+      .initial-splash-image {
+        position: absolute;
+        z-index: 2;
 
-      display: block;
+        display: block;
 
-      width: min(48vw, 520px);
-      height: min(48vw, 520px);
+        object-fit: contain;
 
-      object-fit: contain;
+        pointer-events: none;
+      }
 
-      opacity: 0;
+      /* Algerian emblem */
+      .initial-splash-emblem {
+        width: min(48vw, 520px);
+        height: min(48vw, 520px);
 
-      animation: initial-splash-appear 1.2s ease-in-out forwards;
+        opacity: 0;
 
-      pointer-events: none;
-    }
+        animation:
+          splash-emblem-in 1.2s ease-in-out 0s forwards,
+          splash-emblem-out 1.6s ease-in-out 2.6s forwards;
+      }
 
-      @keyframes initial-splash-appear {
+      /* CRE logo */
+      .initial-splash-cre-logo {
+          width: min(67vw, 736px);
+          height: min(67vw, 736px);
+
+        opacity: 0;
+
+        animation:
+          splash-cre-in 1.2s ease-in-out 4.2s forwards,
+          splash-cre-out 1.6s ease-in-out 6.8s forwards;
+      }
+
+      @keyframes splash-emblem-in {
         from {
           opacity: 0;
         }
 
         to {
           opacity: 1;
+        }
+      }
+
+      @keyframes splash-emblem-out {
+        from {
+          opacity: 1;
+        }
+
+        to {
+          opacity: 0;
+        }
+      }
+
+      @keyframes splash-cre-in {
+        from {
+          opacity: 0;
+        }
+
+        to {
+          opacity: 1;
+        }
+      }
+
+      @keyframes splash-cre-out {
+        from {
+          opacity: 1;
+        }
+
+        to {
+          opacity: 0;
         }
       }
 
@@ -152,6 +189,11 @@
           height: min(72vw, 360px);
         }
 
+        .initial-splash-cre-logo {
+          width: min(65vw, 320px);
+          height: min(65vw, 320px);
+        }
+
         .initial-splash-glow {
           width: 80vw;
           height: 80vw;
@@ -163,7 +205,8 @@
           transition: none;
         }
 
-        .initial-splash-emblem {
+        .initial-splash-emblem,
+        .initial-splash-cre-logo {
           animation: none;
           opacity: 1;
         }
@@ -179,7 +222,13 @@
       <img
         src="/assests/landing/National_Emblem_of_Algeria_(bronze_effect).svg.webp"
         alt=""
-        class="initial-splash-emblem"
+        class="initial-splash-image initial-splash-emblem"
+      />
+
+      <img
+        src="/assests/landing/CRE%20LOGO.png"
+        alt=""
+        class="initial-splash-image initial-splash-cre-logo"
       />
     </div>
 

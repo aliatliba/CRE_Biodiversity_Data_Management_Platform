@@ -8,16 +8,13 @@ import './index.css'
 const initialSplash = document.getElementById('initial-splash')
 
 if (initialSplash) {
-  // Keep the splash visible for ~2.6s, then fade it out.
-  // Image loading must never block the exit animation.
   window.setTimeout(() => {
     initialSplash.classList.add('initial-splash-exit')
 
-    // Remove it after the CSS fade-out finishes.
     window.setTimeout(() => {
       initialSplash.remove()
     }, 1600)
-  }, 2600)
+  }, 6800)
 }
 
 createRoot(document.getElementById('root')!).render(
