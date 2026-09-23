@@ -1,8 +1,9 @@
+
 # ============================================================
 #
 # DENDROGRAMME TAXONOMIQUE CIRCULAIRE
 #
-# VERSION FINALE - NOUVEAU JEU DE DONNEES
+# VERSION SERVEUR / DOCKER - MEMORY OPTIMIZED
 #
 # Structure attendue :
 #
@@ -18,10 +19,15 @@
 # - NA / valeurs non renseignées exclus
 # - Anomalies de la colonne Class exclues
 # - Légende des classes complètement à droite
-# - Titre générique : aucune référence à Oum Lahnach
-# - Export PNG / TIFF / PDF haute résolution
+# - Titre générique
 #
-# VERSION SERVEUR / DOCKER
+# EXPORT :
+#
+# - PNG 300 DPI
+# - TIFF 300 DPI
+# - PDF vectoriel
+#
+# IMPORTANT :
 #
 # Le fichier Excel et le dossier de sortie sont fournis
 # comme arguments :
@@ -39,6 +45,8 @@ rm(list = ls())
 
 graphics.off()
 
+gc()
+
 options(stringsAsFactors = FALSE)
 
 options(timeout = 600)
@@ -47,10 +55,6 @@ options(timeout = 600)
 # ============================================================
 # 1. PACKAGES
 # ============================================================
-
-# IMPORTANT :
-# Les packages sont installés dans l'image Docker.
-# Aucun install.packages() n'est exécuté au runtime.
 
 packages <- c(
   "readxl",
@@ -135,9 +139,7 @@ if (file.info(excel_path)$isdir) {
 cat("\n")
 
 cat("====================================================\n")
-
 cat("FICHIER UTILISE POUR LE GRAPHIQUE\n")
-
 cat("====================================================\n")
 
 cat(
@@ -166,8 +168,6 @@ cat("Feuilles disponibles :\n")
 
 print(sheets)
 
-
-# Chercher Species sans être sensible aux majuscules
 
 species_sheet <- sheets[
   tolower(sheets) == "species"
@@ -212,36 +212,27 @@ df <- readxl::read_excel(
 
 
 # ============================================================
-# 5.1 REMPLACEMENT DE janitor::clean_names()
+# 5.1 NETTOYAGE DES NOMS DE COLONNES
 # ============================================================
-
-# Cette fonction reproduit le comportement nécessaire de
-# janitor::clean_names() pour les colonnes utilisées ici,
-# sans installer janitor au runtime.
 
 clean_column_names <- function(x) {
 
   x <- as.character(x)
 
-  # Conversion en minuscules
   x <- tolower(x)
 
-  # Remplacement des caractères non alphanumériques
-  # par des underscores
   x <- gsub(
     "[^a-z0-9]+",
     "_",
     x
   )
 
-  # Suppression des underscores au début et à la fin
   x <- gsub(
     "^_+|_+$",
     "",
     x
   )
 
-  # Suppression des underscores consécutifs
   x <- gsub(
     "_+",
     "_",
@@ -258,9 +249,7 @@ names(df) <- clean_column_names(names(df))
 cat("\n")
 
 cat("====================================================\n")
-
 cat("CONTROLE DU FICHIER IMPORTE\n")
-
 cat("====================================================\n")
 
 cat(
@@ -449,13 +438,6 @@ taxo <- taxo |>
 
 # ============================================================
 # 9. ELIMINATION DES FAUSSES CLASSES
-#
-# Evite par exemple :
-#
-# "Phylum"
-# "Class"
-# "Non renseigné"
-# etc.
 # ============================================================
 
 classes_anormales <- c(
@@ -522,14 +504,6 @@ taxo <- taxo |>
 
 # ============================================================
 # 10. TRAITEMENT DES RANGS TAXONOMIQUES MANQUANTS
-#
-# IMPORTANT :
-#
-# On ne remplace PAS les données par celles d'un autre site.
-#
-# Les rangs manquants sous une classe valide sont conservés
-# avec des identifiants techniques propres afin que le taxon
-# puisse rester représenté.
 # ============================================================
 
 taxo <- taxo |>
@@ -636,9 +610,6 @@ taxo <- taxo |>
 
 # ============================================================
 # 12. TRI TAXONOMIQUE
-#
-# Ce tri améliore fortement l'organisation du cercle :
-# les espèces d'une même classe restent regroupées.
 # ============================================================
 
 taxo <- taxo |>
@@ -684,9 +655,7 @@ controle_classes <- taxo |>
 cat("\n")
 
 cat("====================================================\n")
-
 cat("CLASSES CONSERVEES\n")
-
 cat("====================================================\n\n")
 
 print(controle_classes)
@@ -710,9 +679,6 @@ if (nrow(taxo) == 0) {
 
 # ============================================================
 # 15. CREATION DES IDENTIFIANTS HIERARCHIQUES
-#
-# Les identifiants sont uniques :
-# aucun risque de mélanger deux familles ou genres homonymes.
 # ============================================================
 
 taxo <- taxo |>
@@ -926,11 +892,11 @@ graph_taxo <- igraph::graph_from_data_frame(
 
 )
 
+gc()
+
 
 # ============================================================
 # 20. PALETTE DES CLASSES
-#
-# Couleurs utilisées UNIQUEMENT pour les points terminaux.
 # ============================================================
 
 classes <- sort(
@@ -1025,6 +991,8 @@ layout_taxo <- ggraph::create_layout(
 
 )
 
+gc()
+
 
 # ============================================================
 # 22. TAXONS TERMINAUX
@@ -1052,9 +1020,7 @@ terminaux <- layout_taxo |>
 cat("\n")
 
 cat("====================================================\n")
-
 cat("TAXONS TERMINAUX REPRESENTES\n")
-
 cat("====================================================\n")
 
 cat(
@@ -1199,14 +1165,14 @@ p_taxo <- ggraph(layout_taxo) +
         colour = "grey20"
       ),
 
-        legend.key =
-          ggplot2::element_blank(),
+    legend.key =
+      ggplot2::element_blank(),
 
-        legend.key.height =
-          grid::unit(
-            0.75,
-            "cm"
-          ),
+    legend.key.height =
+      grid::unit(
+        0.75,
+        "cm"
+      ),
 
     legend.spacing.y =
       grid::unit(
@@ -1279,16 +1245,19 @@ p_taxo <- ggraph(layout_taxo) +
 
 
 # ============================================================
-# 25. AFFICHAGE
+# 25. PAS DE print(p_taxo)
+#
+# IMPORTANT :
+#
+# Sur Render, print() force un rendu graphique supplémentaire
+# inutile avant les exports.
+#
+# Le graphique est directement envoyé vers les fichiers.
 # ============================================================
-
-print(p_taxo)   
 
 
 # ============================================================
 # 26. CREATION DU DOSSIER DE SORTIE
-#
-# Le dossier est fourni par le backend Python.
 # ============================================================
 
 if (!dir.exists(out_dir)) {
@@ -1324,7 +1293,23 @@ base_name <-
 
 
 # ============================================================
-# 28. EXPORT PNG 600 DPI
+# 28. EXPORT PNG
+#
+# MEMORY OPTIMIZATION
+#
+# Ancien :
+# 18 x 15 pouces
+# 600 DPI
+# = 10800 x 9000 pixels
+# = 97.2 millions de pixels
+#
+# Nouveau :
+# 16 x 13 pouces
+# 300 DPI
+# = 4800 x 3900 pixels
+# = 18.72 millions de pixels
+#
+# Soit environ 5.2 fois moins de pixels.
 # ============================================================
 
 png_file <- file.path(
@@ -1339,13 +1324,13 @@ ggplot2::ggsave(
 
   plot = p_taxo,
 
-  width = 18,
+  width = 16,
 
-  height = 15,
+  height = 13,
 
   units = "in",
 
-  dpi = 600,
+  dpi = 300,
 
   bg = "white",
 
@@ -1354,8 +1339,14 @@ ggplot2::ggsave(
 )
 
 
+gc()
+
+
 # ============================================================
-# 29. EXPORT TIFF 600 DPI
+# 29. EXPORT TIFF
+#
+# Même résolution mémoire raisonnable :
+# 300 DPI
 # ============================================================
 
 tiff_file <- file.path(
@@ -1370,13 +1361,13 @@ ggplot2::ggsave(
 
   plot = p_taxo,
 
-  width = 18,
+  width = 16,
 
-  height = 15,
+  height = 13,
 
   units = "in",
 
-  dpi = 600,
+  dpi = 300,
 
   compression = "lzw",
 
@@ -1387,8 +1378,14 @@ ggplot2::ggsave(
 )
 
 
+gc()
+
+
 # ============================================================
 # 30. EXPORT PDF VECTORIEL
+#
+# Le PDF reste vectoriel.
+# Aucun DPI raster important n'est nécessaire.
 # ============================================================
 
 pdf_file <- file.path(
@@ -1403,9 +1400,9 @@ ggplot2::ggsave(
 
   plot = p_taxo,
 
-  width = 18,
+  width = 16,
 
-  height = 15,
+  height = 13,
 
   units = "in",
 
@@ -1414,6 +1411,9 @@ ggplot2::ggsave(
   limitsize = FALSE
 
 )
+
+
+gc()
 
 
 # ============================================================
@@ -1549,6 +1549,9 @@ writexl::write_xlsx(
 )
 
 
+gc()
+
+
 # ============================================================
 # 34. VERIFICATION DU TABLEAU DE CONTROLE
 # ============================================================
@@ -1572,9 +1575,7 @@ if (!file.exists(control_excel)) {
 cat("\n")
 
 cat("====================================================\n")
-
 cat("RESUME TAXONOMIQUE DU NOUVEAU FICHIER\n")
-
 cat("====================================================\n\n")
 
 print(resume_taxonomique)
@@ -1586,15 +1587,22 @@ print(controle_classes)
 
 
 # ============================================================
-# 36. MESSAGE FINAL
+# 36. NETTOYAGE FINAL
+# ============================================================
+
+gc()
+
+graphics.off()
+
+
+# ============================================================
+# 37. MESSAGE FINAL
 # ============================================================
 
 cat("\n")
 
 cat("====================================================\n")
-
 cat("DENDROGRAMME TERMINE AVEC SUCCES\n")
-
 cat("====================================================\n\n")
 
 
