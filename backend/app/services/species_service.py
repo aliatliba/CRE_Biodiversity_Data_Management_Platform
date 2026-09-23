@@ -82,6 +82,7 @@ async def lookup_species(db: Session, scientific_name: str) -> dict[str, Any]:
 async def lookup_species_batch(
     db: Session,
     scientific_names: list[str],
+    site_id: int,
     delay_seconds: float = 1.0,
     on_progress=None,
 ) -> list[dict[str, Any]]:
@@ -135,33 +136,36 @@ async def lookup_species_batch(
             existing = check_duplicate(db, scientific_name)
 
             if existing:
-                item["duplicate"] = True
                 item["existing_species"] = existing
-
+                item["duplicate"] = is_species_associated_with_site(
+                    db,
+                    site_id,
+                    existing.id,
+                )
             else:
                 # Perform the normal external-provider lookup.
                 draft = await lookup_species(
                     db,
                     scientific_name,
                 )
+                item["draft"] = draft
 
                 # GBIF may resolve a synonym to another canonical name.
                 # Check that resolved name as well.
                 resolved_name = draft.get("scientific_name")
 
-                resolved_existing = None
-
-                if resolved_name:
-                    resolved_existing = check_duplicate(
-                        db,
-                        resolved_name,
-                    )
+                resolved_existing = check_duplicate(
+                    db,
+                    resolved_name,
+                )
 
                 if resolved_existing:
-                    item["duplicate"] = True
                     item["existing_species"] = resolved_existing
-
-                item["draft"] = draft
+                    item["duplicate"] = is_species_associated_with_site(
+                        db,
+                        site_id,
+                        resolved_existing.id,
+                    )
 
         except Exception as exc:
             item["error"] = str(exc)
@@ -196,6 +200,22 @@ def check_duplicate(db: Session, scientific_name: str) -> Species | None:
         db.query(Species)
         .filter(func.lower(Species.scientific_name) == func.lower(scientific_name))
         .first()
+    )
+
+
+def is_species_associated_with_site(
+    db: Session,
+    site_id: int,
+    species_id: int,
+) -> bool:
+    return (
+        db.query(SiteSpecies)
+        .filter(
+            SiteSpecies.site_id == site_id,
+            SiteSpecies.species_id == species_id,
+        )
+        .first()
+        is not None
     )
 
 
@@ -507,3 +527,19 @@ def remove_site_species(db: Session, site_id: int, species_id: int) -> None:
         )
     db.delete(association)
     db.commit()
+
+
+def is_species_associated_with_site(
+    db: Session,
+    site_id: int,
+    species_id: int,
+) -> bool:
+    return (
+        db.query(SiteSpecies)
+        .filter(
+            SiteSpecies.site_id == site_id,
+            SiteSpecies.species_id == species_id,
+        )
+        .first()
+        is not None
+    )

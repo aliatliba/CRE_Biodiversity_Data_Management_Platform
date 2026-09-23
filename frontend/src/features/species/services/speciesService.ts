@@ -79,12 +79,14 @@ export async function removeSpeciesFromSite(siteId: number, speciesId: number): 
 
 export async function startLookupSpeciesBatch(
   scientificNames: string[],
+  siteId: number,
 ): Promise<BatchSpeciesLookupJobResponse> {
   const { data } =
     await api.post<BatchSpeciesLookupJobResponse>(
       '/species/lookup-batch',
       {
         scientific_names: scientificNames,
+        site_id: siteId,
       },
     )
 

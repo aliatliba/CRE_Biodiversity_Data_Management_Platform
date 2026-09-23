@@ -61,6 +61,7 @@ class BatchSpeciesLookupRequest(BaseModel):
         min_length=1,
         max_length=50,
     )
+    site_id: int
 
 
 class SpeciesCreate(BaseModel):

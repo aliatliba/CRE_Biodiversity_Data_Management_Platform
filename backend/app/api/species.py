@@ -48,6 +48,7 @@ async def lookup_species(data: SpeciesLookupRequest, db: DBSession):
 async def _execute_lookup_batch(
     job_id: str,
     scientific_names: list[str],
+    site_id: int,
 ) -> None:
     job = job_store.get(job_id)
 
@@ -71,6 +72,7 @@ async def _execute_lookup_batch(
         await species_service.lookup_species_batch(
             db=db,
             scientific_names=scientific_names,
+            site_id=site_id,
             delay_seconds=1.0,
             on_progress=on_progress,
         )
@@ -147,6 +149,8 @@ async def lookup_species_batch(
             detail="At least one scientific name is required.",
         )
 
+    site_service.get_site(db, data.site_id)
+
     job = job_store.create()
     job.total = len(names)
 
@@ -154,6 +158,7 @@ async def lookup_species_batch(
         _execute_lookup_batch(
             job.id,
             names,
+            data.site_id,
         )
     )
 
