@@ -259,6 +259,11 @@ export default function AddSpeciesPage() {
   }
 
  async function handleLookup() {
+  if (!siteId) {
+    setError('Select a site before looking up species.')
+    return
+  }
+
   if (!speciesCount) {
     setError(
       'Enter at least one scientific name before looking up species.',
@@ -284,6 +289,7 @@ export default function AddSpeciesPage() {
     const job =
       await speciesService.startLookupSpeciesBatch(
         parsedScientificNames,
+        Number(siteId),
       )
 
     console.log('LOOKUP JOB RESPONSE:', job)
@@ -443,6 +449,40 @@ export default function AddSpeciesPage() {
 
     if (!item) return
 
+    if (item.existingSpecies && !item.duplicate) {
+      if (!siteId) {
+        setError(
+          'Select a site before saving species.',
+        )
+        return
+      }
+
+      updateItem(itemId, {
+        saveStatus: 'saving',
+        saveError: null,
+      })
+
+      try {
+        await speciesService.associateSpeciesWithSite(
+          Number(siteId),
+          item.existingSpecies.id,
+        )
+
+        updateItem(itemId, {
+          saveStatus: 'saved',
+          saveError: null,
+          expanded: false,
+        })
+      } catch (err) {
+        updateItem(itemId, {
+          saveStatus: 'error',
+          saveError: getErrorMessage(err),
+        })
+      }
+
+      return
+    }
+
     if (item.duplicate) {
       updateItem(itemId, {
         saveStatus: 'error',
@@ -515,7 +555,7 @@ export default function AddSpeciesPage() {
     const eligibleItems = items.filter(
       (item) =>
         !item.duplicate &&
-        item.draft !== null &&
+        (item.draft !== null || item.existingSpecies !== null) &&
         item.saveStatus !== 'saving' &&
         item.saveStatus !== 'saved',
     )
@@ -556,7 +596,7 @@ export default function AddSpeciesPage() {
   const pendingCount = items.filter(
     (item) =>
       !item.duplicate &&
-      item.draft !== null &&
+      (item.draft !== null || item.existingSpecies !== null) &&
       item.saveStatus !== 'saved',
   ).length
 
@@ -670,15 +710,15 @@ export default function AddSpeciesPage() {
                 <select
                   id="species-site"
                   value={siteId}
-                  onChange={(event) =>
-                    setSiteId(
-                      event.target.value
-                        ? Number(
-                            event.target.value,
-                          )
-                        : '',
-                    )
-                  }
+                  onChange={(event) => {
+                    const nextSiteId = event.target.value
+                      ? Number(event.target.value)
+                      : ''
+
+                    setSiteId(nextSiteId)
+                    setItems([])
+                    setError(null)
+                  }}
                   className="h-12 w-full appearance-none rounded-xl border border-mist-200 bg-paper-0 pl-11 pr-10 text-[15px] outline-none transition-colors focus:border-canopy-600"
                 >
                   <option value="">
@@ -912,14 +952,15 @@ Aquila chrysaetos`}
 
                 const canSave =
                   Boolean(siteId) &&
-                  Boolean(draft) &&
+                  (Boolean(draft) ||
+                    Boolean(item.existingSpecies)) &&
                   !item.duplicate &&
                   item.saveStatus !== 'saving' &&
                   item.saveStatus !== 'saved'
 
                 const isLookupError =
-                  !draft ||
-                  Boolean(item.error)
+                  !item.existingSpecies &&
+                  (!draft || Boolean(item.error))
 
                 const nationalStatus =
                   draft?.national_status
@@ -1048,6 +1089,41 @@ Aquila chrysaetos`}
                               >
                                 <Eye className="h-4 w-4" />
                                 View existing
+                              </Button>
+                            )}
+
+                          {item.existingSpecies &&
+                            !item.duplicate && (
+                              <Button
+                                type="button"
+                                disabled={
+                                  item.saveStatus ===
+                                    'saving' ||
+                                  item.saveStatus ===
+                                    'saved'
+                                }
+                                onClick={() =>
+                                  handleSaveItem(item.id)
+                                }
+                              >
+                                {item.saveStatus ===
+                                'saving' ? (
+                                  <>
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                    Adding…
+                                  </>
+                                ) : item.saveStatus ===
+                                  'saved' ? (
+                                  <>
+                                    <Check className="h-4 w-4" />
+                                    Added
+                                  </>
+                                ) : (
+                                  <>
+                                    <MapPin className="h-4 w-4" />
+                                    Add to site
+                                  </>
+                                )}
                               </Button>
                             )}
 
@@ -1359,7 +1435,7 @@ Aquila chrysaetos`}
                     {/* =================================================
                         LOOKUP ERROR FOOTER
                     ================================================== */}
-                    {!draft && (
+                    {!draft && !item.existingSpecies && (
                       <div className="border-t border-mist-200 bg-mist-50/50 px-5 py-4 sm:px-6">
                         <p className="text-xs text-ink-950/45">
                           This item cannot be saved
