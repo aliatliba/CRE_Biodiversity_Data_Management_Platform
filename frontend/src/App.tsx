@@ -20,6 +20,7 @@ import { ExportsPage } from '@/features/exports/pages/ExportsPage'
 import { ProfilePage } from '@/features/profile/pages/ProfilePage'
 import { NotFoundPage } from '@/pages/NotFoundPage'
 import { ROUTES } from '@/lib/constants'
+import { GraphicsPage } from '@/features/graphics/pages/GraphicsPage'
 
 function PublicThemeGuard() {
   const { pathname } = useLocation()
@@ -145,6 +146,16 @@ function App() {
             </ProtectedRoute>
           }
         />
+
+        <Route
+          path="/graphics"
+          element={
+            <ProtectedRoute>
+              <GraphicsPage />
+            </ProtectedRoute>
+          }
+        />
+        
         <Route
           path={ROUTES.profile}
           element={

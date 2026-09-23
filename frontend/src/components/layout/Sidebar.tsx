@@ -1,5 +1,13 @@
 import { NavLink } from 'react-router-dom'
-import { LayoutGrid, MapPin, Leaf, Users, Download, ShieldCheck } from 'lucide-react'
+import {
+  LayoutGrid,
+  MapPin,
+  Leaf,
+  Users,
+  Download,
+  ShieldCheck,
+  BarChart3,
+} from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { cn } from '@/lib/utils'
 
@@ -9,7 +17,9 @@ const NAV_ITEMS = [
   { to: '/species', label: 'Species', icon: Leaf, adminOnly: false },
   { to: '/protected-species', label: 'Protected list', icon: ShieldCheck, adminOnly: false },
   { to: '/exports', label: 'Exports', icon: Download, adminOnly: false },
+  { to: '/graphics', label: 'Graphics', icon: BarChart3, adminOnly: false },
   { to: '/users', label: 'Users', icon: Users, adminOnly: true },
+
 ]
 
 export function Sidebar() {
