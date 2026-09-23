@@ -65,12 +65,33 @@ export async function getGraphicsJob(
 }
 
 /**
- * Build the URL used to preview the generated PNG.
+ * Build the direct preview URL.
+ *
+ * NOTE:
+ * This URL is not used directly by <img> anymore because
+ * the preview endpoint requires authentication.
  */
 export function getGraphicsPreviewUrl(
   jobId: string,
 ): string {
   return `${api.defaults.baseURL}/graphics/jobs/${jobId}/preview`
+}
+
+/**
+ * Fetch the generated PNG through Axios so that the normal
+ * authentication interceptor is applied.
+ */
+export async function getGraphicsPreviewBlob(
+  jobId: string,
+): Promise<Blob> {
+  const response = await api.get(
+    `/graphics/jobs/${jobId}/preview`,
+    {
+      responseType: 'blob',
+    },
+  )
+
+  return response.data
 }
 
 /**
