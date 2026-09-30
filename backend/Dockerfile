@@ -3,7 +3,7 @@ FROM python:3.12-slim
 WORKDIR /app
 
 # ---------------------------------------------------------
-# System + R + R packages
+# System packages + R + R packages available via Debian
 # ---------------------------------------------------------
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
@@ -18,7 +18,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     r-cran-igraph \
     r-cran-scales \
     r-cran-writexl \
-    r-cran-janitor \
     libcurl4-openssl-dev \
     libssl-dev \
     libxml2-dev \
@@ -32,9 +31,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # ---------------------------------------------------------
-# Install R package from GitHub
+# R packages from CRAN / GitHub
 # ---------------------------------------------------------
-RUN Rscript -e 'install.packages("remotes", repos="https://cloud.r-project.org")' && \
+RUN Rscript -e 'install.packages(c("janitor", "remotes"), repos="https://cloud.r-project.org")' && \
     Rscript -e 'remotes::install_github("hrbrmstr/ggchicklet")'
 
 # ---------------------------------------------------------
