@@ -3,7 +3,7 @@ FROM python:3.12-slim
 WORKDIR /app
 
 # ---------------------------------------------------------
-# System + prebuilt R packages
+# System + R + R packages
 # ---------------------------------------------------------
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
@@ -29,6 +29,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libtiff-dev \
     libjpeg-dev \
     && rm -rf /var/lib/apt/lists/*
+
+# ---------------------------------------------------------
+# Install R package from GitHub
+# ---------------------------------------------------------
+RUN Rscript -e 'install.packages("remotes", repos="https://cloud.r-project.org")' && \
+    Rscript -e 'remotes::install_github("hrbrmstr/ggchicklet")'
 
 # ---------------------------------------------------------
 # Python dependencies

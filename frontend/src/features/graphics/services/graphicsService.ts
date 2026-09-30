@@ -1,153 +1,66 @@
 import { api } from '@/services/api'
+import type { GraphicsFormat, GraphicsJob, GraphicType } from '../types'
 
-export type GraphicsJobStatus =
-  | 'queued'
-  | 'running'
-  | 'completed'
-  | 'failed'
+export type { GraphicsJob, GraphicType, GraphicsFormat }
 
-export interface GraphicsJob {
-  job_id: string
-  status: GraphicsJobStatus
-
-  site_id: number
-  site_name: string
-
-  total_species: number
-  processed: number
-
-  started_at: string | null
-  finished_at: string | null
-
-  message: string | null
-  error: string | null
-
-  png_available: boolean
-  tiff_available: boolean
-  pdf_available: boolean
+/** List the graphics the backend can generate. */
+export async function listGraphicTypes(): Promise<GraphicType[]> {
+  const response = await api.get<GraphicType[]>('/graphics/types')
+  return response.data
 }
 
-export interface GenerateGraphicsRequest {
-  site_id: number
-}
-
-export interface GenerateGraphicsResponse {
-  job_id: string
-}
-
-/**
- * Start a new taxonomic dendrogram generation job.
- */
+/** Start a graphics generation job. */
 export async function generateGraphics(
   siteId: number,
-): Promise<GenerateGraphicsResponse> {
-  const response = await api.post<GenerateGraphicsResponse>(
-    '/graphics/jobs',
-    {
-      site_id: siteId,
-    },
-  )
-
-  return response.data
-}
-
-/**
- * Get the current status and progress of a graphics generation job.
- */
-export async function getGraphicsJob(
-  jobId: string,
+  graphicType: string,
 ): Promise<GraphicsJob> {
-  const response = await api.get<GraphicsJob>(
-    `/graphics/jobs/${jobId}`,
-  )
-
+  const response = await api.post<GraphicsJob>('/graphics/jobs', {
+    site_id: siteId,
+    graphic_type: graphicType,
+  })
   return response.data
 }
 
-/**
- * Build the direct preview URL.
- *
- * NOTE:
- * This URL is not used directly by <img> anymore because
- * the preview endpoint requires authentication.
- */
-export function getGraphicsPreviewUrl(
-  jobId: string,
-): string {
-  return `${api.defaults.baseURL}/graphics/jobs/${jobId}/preview`
-}
-
-/**
- * Fetch the generated PNG through Axios so that the normal
- * authentication interceptor is applied.
- */
-export async function getGraphicsPreviewBlob(
-  jobId: string,
-): Promise<Blob> {
-  const response = await api.get(
-    `/graphics/jobs/${jobId}/preview`,
-    {
-      responseType: 'blob',
-    },
-  )
-
+export async function getGraphicsJob(jobId: string): Promise<GraphicsJob> {
+  const response = await api.get<GraphicsJob>(`/graphics/jobs/${jobId}`)
   return response.data
 }
 
-/**
- * Download a generated graphics file.
- *
- * Supported formats:
- * - png
- * - tiff
- * - pdf
- */
+/** Fetch the PNG through Axios so the auth interceptor is applied. */
+export async function getGraphicsPreviewBlob(jobId: string): Promise<Blob> {
+  const response = await api.get(`/graphics/jobs/${jobId}/preview`, {
+    responseType: 'blob',
+  })
+  return response.data
+}
+
 export async function downloadGraphics(
   jobId: string,
-  format: 'png' | 'tiff' | 'pdf',
+  format: GraphicsFormat,
 ): Promise<void> {
   const response = await api.get(
     `/graphics/jobs/${jobId}/download/${format}`,
-    {
-      responseType: 'blob',
-    },
+    { responseType: 'blob' },
   )
 
-  const rawContentType = response.headers['content-type']
-
-  const contentType =
-    typeof rawContentType === 'string'
-      ? rawContentType
-      : undefined
-
+  const rawType = response.headers['content-type']
   const blob = new Blob([response.data], {
-    type: contentType,
+    type: typeof rawType === 'string' ? rawType : undefined,
   })
 
-  const rawDisposition =
-    response.headers['content-disposition']
-
-  let filename = `dendrogram_${jobId}.${format}`
-
-  if (typeof rawDisposition === 'string') {
-    const match = rawDisposition.match(
-      /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/,
-    )
-
-    if (match?.[1]) {
-      filename = match[1].replace(/^["']|["']$/g, '')
-    }
+  let filename = `graphic_${jobId}.${format}`
+  const disposition = response.headers['content-disposition']
+  if (typeof disposition === 'string') {
+    const match = disposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/)
+    if (match?.[1]) filename = match[1].replace(/^["']|["']$/g, '')
   }
 
   const url = window.URL.createObjectURL(blob)
-
   const link = document.createElement('a')
   link.href = url
   link.download = filename
-
   document.body.appendChild(link)
   link.click()
   link.remove()
-
   window.URL.revokeObjectURL(url)
 }
