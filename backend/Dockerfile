@@ -18,6 +18,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     r-cran-igraph \
     r-cran-scales \
     r-cran-writexl \
+    r-cran-janitor \
     libcurl4-openssl-dev \
     libssl-dev \
     libxml2-dev \
