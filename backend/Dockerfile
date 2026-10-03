@@ -31,6 +31,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libtiff-dev \
     libjpeg-dev \
     libmagick++-dev \
+    libuv1-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # ---------------------------------------------------------
