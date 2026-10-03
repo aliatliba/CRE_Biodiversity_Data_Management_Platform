@@ -54,15 +54,33 @@ def build_site_excel(
     if spec.only_validated:
         query = query.filter(Species.status == "validated")
 
+    rows = query.order_by(Species.scientific_name).all()
+
+    unknown = [a for a in spec.required_attrs if not hasattr(Species, a)]
+    unknown += [a for a in spec.columns.values() if not hasattr(Species, a)]
+    if unknown:
+        raise ValueError(
+            "Registry error: the Species model has no attribute(s): "
+            + ", ".join(sorted(set(unknown)))
+        )
+
+    missing = {a: 0 for a in spec.required_attrs}
     records = []
-    for species in query.order_by(Species.scientific_name).all():
-        if spec.required_attr and not getattr(species, spec.required_attr, None):
+    for species in rows:
+        absent = [a for a in spec.required_attrs if not getattr(species, a, None)]
+        for a in absent:
+            missing[a] += 1
+        if absent:
             continue
         records.append(
-            {
-                header: getattr(species, attr, None)
-                for header, attr in spec.columns.items()
-            }
+            {h: getattr(species, attr, None) for h, attr in spec.columns.items()}
+        )
+
+    if rows and not records:
+        details = ", ".join(f"{a} empty for {n}/{len(rows)}" for a, n in missing.items())
+        raise ValueError(
+            f"{len(rows)} validated species found, but none has all the "
+            f"data this graphic needs ({details})."
         )
 
     pd.DataFrame(records, columns=list(spec.columns)).to_excel(

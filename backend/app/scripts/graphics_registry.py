@@ -24,7 +24,7 @@ class GraphicSpec:
     columns: dict[str, str]           # Excel header -> Species model attribute
     formats: tuple[str, ...] = ("png", "tiff", "pdf")
     only_validated: bool = True
-    required_attr: str | None = None  # rows with an empty value here are skipped
+    required_attrs: tuple[str, ...] = ()  # rows missing any of these are skipped
     timeout: int = 900
 
 
@@ -60,10 +60,44 @@ GRAPHIC_SPECS: dict[str, GraphicSpec] = {
             output_basename="graphique_uicn",
             columns={
                 "Scientific name": "scientific_name",
-                # !!! adapt to the real attribute name on your Species model
                 "IUCN": "iucn_status",
             },
-            required_attr="iucn_status",
+            required_attrs=("iucn_status",),
+        ),
+        GraphicSpec(
+            key="family_richness",
+            label="Species richness by family",
+            description=(
+                "Bar chart of the number of species per family, with "
+                "PhyloPic silhouettes (needs internet access on the server)."
+            ),
+            script=SCRIPTS_DIR / "richesse_familles.R",
+            output_basename="richesse_familles",
+            columns={
+                "Order": "order_name",
+                "Family": "family",
+                "Genus": "genus",
+                "Scientific name": "scientific_name",
+            },
+            formats=("png", "pdf"),
+            required_attrs=("family",),
+        ),
+        GraphicSpec(
+            key="conservation_network",
+            label="Trend, protection and IUCN diagram",
+            description=(
+                "Circular diagram linking population trend, national "
+                "protection status and IUCN category."
+            ),
+            script=SCRIPTS_DIR / "statuts_conservation.R",
+            output_basename="diagramme_circulaire_statuts",
+            columns={
+                "Scientific name": "scientific_name",
+                "Trend": "iucn_trend",
+                "National status": "national_status",
+                "IUCN": "iucn_status",
+            },
+            required_attrs=("iucn_trend", "national_status", "iucn_status"),
         ),
     )
 }
