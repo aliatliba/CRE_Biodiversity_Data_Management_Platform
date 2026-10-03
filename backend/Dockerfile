@@ -18,6 +18,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     r-cran-igraph \
     r-cran-scales \
     r-cran-writexl \
+    r-cran-jsonlite \
+    r-cran-magick \
     libcurl4-openssl-dev \
     libssl-dev \
     libxml2-dev \
@@ -28,6 +30,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libpng-dev \
     libtiff-dev \
     libjpeg-dev \
+    libmagick++-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # ---------------------------------------------------------
@@ -35,6 +38,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # ---------------------------------------------------------
 RUN Rscript -e 'install.packages(c("janitor", "remotes"), repos="https://cloud.r-project.org")' && \
     Rscript -e 'remotes::install_github("hrbrmstr/ggchicklet")'
+
+# ggimage (family richness chart: PhyloPic silhouettes)
+RUN Rscript -e 'install.packages("ggimage", repos="https://cloud.r-project.org", Ncpus=2)'
+
+# ---------------------------------------------------------
+# Fail the build if any package needed by the R scripts is missing
+# (install.packages only warns, so without this the error
+#  would only appear later, when a graphic is generated)
+# ---------------------------------------------------------
+RUN Rscript -e 'needed <- c("readxl","dplyr","stringr","janitor","ggplot2","ggraph","igraph","scales","writexl","ggchicklet","jsonlite","magick","ggimage"); missing <- setdiff(needed, rownames(installed.packages())); if (length(missing) > 0) stop("Missing R packages: ", paste(missing, collapse=", ")); cat("All R packages OK\n")'
 
 # ---------------------------------------------------------
 # Python dependencies
