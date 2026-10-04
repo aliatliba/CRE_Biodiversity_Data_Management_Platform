@@ -8,8 +8,10 @@
 #          Order, Family, Genus, Scientific name
 # Sorties: richesse_familles.png / .pdf
 #
-# Les silhouettes sont récupérées via l'API PhyloPic v2.
-# Si l'API est injoignable, le graphique est produit sans silhouettes.
+# Les silhouettes sont récupérées via l'API PhyloPic v2, avec cache
+# disque (variable d'environnement GRAPHICS_CACHE_DIR) et requêtes
+# parallèles. Si l'API est injoignable, le graphique est produit
+# avec les silhouettes en cache, ou sans silhouettes.
 # ============================================================
 
 rm(list = ls())
@@ -18,7 +20,7 @@ options(stringsAsFactors = FALSE, timeout = 30)
 
 # ---------- 1. PACKAGES -------------------------------------
 packages <- c("readxl", "dplyr", "stringr", "janitor",
-              "ggplot2", "scales", "jsonlite", "ggimage")
+              "ggplot2", "scales", "httr2", "ggimage")
 
 for (pkg in packages) {
   if (!requireNamespace(pkg, quietly = TRUE)) {
@@ -90,20 +92,72 @@ cat("Familles :", nb_familles, "\n")
 cat("Genres   :", nb_genres, "\n")
 
 # ---------- 5. SILHOUETTES PHYLOPIC (API v2) ----------------
-silhouette_dir <- file.path(tempdir(), "phylopic_silhouettes")
-dir.create(silhouette_dir, showWarnings = FALSE, recursive = TRUE)
+# Cache disque persistant + requêtes HTTP en parallèle.
+#  - <famille>.png  : silhouette déjà téléchargée
+#  - <famille>.none : PhyloPic n'a pas de silhouette (re-testé après 30 jours)
+# Les erreurs réseau ne sont jamais mises en cache : elles seront
+# réessayées au prochain lancement.
 
-API <- "https://api.phylopic.org"
+t0 <- Sys.time()
 
-fetch_json <- function(url) jsonlite::fromJSON(url, simplifyVector = FALSE)
+cache_root <- Sys.getenv(
+  "GRAPHICS_CACHE_DIR",
+  unset = file.path(tempdir(), "graphics_cache")
+)
+cache_dir <- file.path(cache_root, "phylopic")
+dir.create(cache_dir, showWarnings = FALSE, recursive = TRUE)
 
-phylopic_build <- tryCatch(fetch_json(API)$build, error = function(e) NULL)
+API          <- "https://api.phylopic.org"
+NEG_TTL_DAYS <- 30
+MAX_ACTIVE   <- 8
 
-if (is.null(phylopic_build)) {
-  cat("PhyloPic injoignable : graphique sans silhouettes.\n")
+safe_name <- function(x) gsub("[^A-Za-z0-9]", "_", x)
+png_path  <- function(x) file.path(cache_dir, paste0(safe_name(x), ".png"))
+none_path <- function(x) file.path(cache_dir, paste0(safe_name(x), ".none"))
+
+mark_none <- function(x) invisible(file.create(none_path(x)))
+
+has_fresh_none <- function(x) {
+  f  <- none_path(x)
+  ok <- file.exists(f)
+  if (any(ok)) {
+    age <- as.numeric(difftime(Sys.time(), file.mtime(f[ok]), units = "days"))
+    ok[ok] <- age < NEG_TTL_DAYS
+  }
+  ok
 }
 
-# choisit le fichier raster dont la largeur est la plus proche de 512 px
+# numéro de build de l'API (requis par PhyloPic v2)
+phylopic_build <- tryCatch({
+  b <- httr2::request(paste0(API, "/")) |>
+    httr2::req_timeout(10) |>
+    httr2::req_perform() |>
+    httr2::resp_body_json()
+  b$build
+}, error = function(e) NULL)
+
+api_req <- function(path, ...) {
+  httr2::request(paste0(API, path)) |>
+    httr2::req_url_query(build = phylopic_build, ...) |>
+    httr2::req_timeout(15) |>
+    httr2::req_retry(max_tries = 2) |>
+    httr2::req_error(is_error = function(resp) FALSE)  # pas d'exception sur 4xx/5xx
+}
+
+# exécute les requêtes en parallèle ; NULL = échec (réseau ou statut != 200)
+perform_json <- function(reqs) {
+  if (length(reqs) == 0) return(list())
+  resps <- httr2::req_perform_parallel(
+    reqs, on_error = "continue", max_active = MAX_ACTIVE, progress = FALSE
+  )
+  lapply(resps, function(r) {
+    if (inherits(r, "httr2_response") && httr2::resp_status(r) == 200) {
+      tryCatch(httr2::resp_body_json(r), error = function(e) NULL)
+    } else NULL
+  })
+}
+
+# fichier raster dont la largeur est la plus proche de 512 px
 pick_raster <- function(files) {
   if (length(files) == 0) return(NA_character_)
   widths <- vapply(files, function(f) {
@@ -113,41 +167,109 @@ pick_raster <- function(files) {
   files[[which.min(abs(widths - 512))]]$href
 }
 
-get_phylopic <- function(taxon_name) {
-  if (is.null(phylopic_build)) return(NA_character_)
+families <- as.character(richesse$Famille)
+todo <- families[!file.exists(png_path(families)) & !has_fresh_none(families)]
 
-  tryCatch({
-    # 1) noeud correspondant au nom
-    nodes <- fetch_json(paste0(
-      API, "/nodes?build=", phylopic_build,
-      "&filter_name=", utils::URLencode(tolower(taxon_name), reserved = TRUE),
-      "&embed_items=true&page=0"
-    ))
-    items <- nodes[["_embedded"]][["items"]]
-    if (length(items) == 0) return(NA_character_)
-    node_uuid <- items[[1]]$uuid
+cat("Silhouettes en cache :", sum(file.exists(png_path(families))),
+    "| absentes de PhyloPic (cache) :", sum(has_fresh_none(families)),
+    "| à rechercher :", length(todo), "\n")
 
-    # 2) image principale du noeud
-    node <- fetch_json(paste0(
-      API, "/nodes/", node_uuid,
-      "?build=", phylopic_build, "&embed_primaryImage=true"
-    ))
-    img <- node[["_embedded"]][["primaryImage"]]
-    if (is.null(img)) return(NA_character_)
-
-    href <- pick_raster(img[["_links"]][["rasterFiles"]])
-    if (is.na(href)) return(NA_character_)
-
-    out <- file.path(silhouette_dir,
-                     paste0(gsub("[^A-Za-z0-9]", "_", taxon_name), ".png"))
-    utils::download.file(href, out, mode = "wb", quiet = TRUE)
-    if (file.exists(out)) out else NA_character_
-  }, error = function(e) NA_character_)
+if (length(todo) > 0 && is.null(phylopic_build)) {
+  cat("PhyloPic injoignable : seules les silhouettes en cache sont utilisées.\n")
 }
 
-richesse$Silhouette <- vapply(richesse$Famille, get_phylopic, character(1))
-cat("Silhouettes trouvées :", sum(!is.na(richesse$Silhouette)),
-    "/", nrow(richesse), "\n")
+if (length(todo) > 0 && !is.null(phylopic_build)) {
+
+  # --- Étape 1 : recherche des noeuds (parallèle) -------------
+  node_json <- perform_json(lapply(todo, function(f) {
+    api_req("/nodes", filter_name = tolower(f),
+            embed_items = "true", page = 0)
+  }))
+
+  node_uuid <- rep(NA_character_, length(todo))
+  for (i in seq_along(todo)) {
+    js <- node_json[[i]]
+    if (is.null(js)) next                       # échec réseau : on réessaiera
+    items <- js[["_embedded"]][["items"]]
+    if (length(items) == 0) { mark_none(todo[i]); next }
+    exact <- Filter(function(it) {
+      any(tolower(unlist(it$names)) == tolower(todo[i]))
+    }, items)
+    chosen <- if (length(exact) > 0) exact[[1]] else items[[1]]
+    node_uuid[i] <- chosen$uuid
+  }
+
+  # --- Étape 2 : image principale de chaque noeud (parallèle) -
+  img_href <- rep(NA_character_, length(todo))
+  idx <- which(!is.na(node_uuid))
+
+  if (length(idx) > 0) {
+    node_img <- perform_json(lapply(idx, function(i) {
+      api_req(paste0("/nodes/", node_uuid[i]), embed_primaryImage = "true")
+    }))
+
+    for (k in seq_along(idx)) {
+      js <- node_img[[k]]
+      if (is.null(js)) next
+      img <- js[["_embedded"]][["primaryImage"]]
+      if (!is.null(img)) {
+        img_href[idx[k]] <- pick_raster(img[["_links"]][["rasterFiles"]])
+      }
+    }
+
+    # --- Étape 2b : pas d'image propre -> image d'un descendant -
+    need_clade <- idx[vapply(seq_along(idx), function(k) {
+      !is.null(node_img[[k]]) && is.na(img_href[idx[k]])
+    }, logical(1))]
+
+    if (length(need_clade) > 0) {
+      clade_json <- perform_json(lapply(need_clade, function(i) {
+        api_req("/images", filter_clade = node_uuid[i],
+                embed_items = "true", page = 0)
+      }))
+      for (k in seq_along(need_clade)) {
+        js <- clade_json[[k]]
+        i  <- need_clade[k]
+        if (is.null(js)) next
+        items <- js[["_embedded"]][["items"]]
+        if (length(items) > 0) {
+          img_href[i] <- pick_raster(items[[1]][["_links"]][["rasterFiles"]])
+        }
+        if (is.na(img_href[i])) mark_none(todo[i])
+      }
+    }
+  }
+
+  # --- Étape 3 : téléchargement des PNG (parallèle) -----------
+  dl <- which(!is.na(img_href))
+
+  if (length(dl) > 0) {
+    tmp <- paste0(png_path(todo[dl]), ".part")
+    reqs <- lapply(img_href[dl], function(u) {
+      httr2::request(u) |>
+        httr2::req_timeout(30) |>
+        httr2::req_retry(max_tries = 2) |>
+        httr2::req_error(is_error = function(resp) FALSE)
+    })
+    resps <- httr2::req_perform_parallel(
+      reqs, paths = tmp, on_error = "continue",
+      max_active = MAX_ACTIVE, progress = FALSE
+    )
+    for (k in seq_along(dl)) {
+      ok <- inherits(resps[[k]], "httr2_response") &&
+        httr2::resp_status(resps[[k]]) == 200 &&
+        file.exists(tmp[k]) && file.size(tmp[k]) > 0
+      if (ok) file.rename(tmp[k], png_path(todo[dl[k]])) else unlink(tmp[k])
+    }
+  }
+}
+
+richesse$Silhouette <- ifelse(file.exists(png_path(families)),
+                              png_path(families), NA_character_)
+
+cat("Silhouettes utilisées :", sum(!is.na(richesse$Silhouette)),
+    "/", nrow(richesse),
+    "(", round(as.numeric(difftime(Sys.time(), t0, units = "secs"))), "s )\n")
 
 # ---------- 6. GRAPHIQUE ------------------------------------
 max_richesse <- max(richesse$Richesse)

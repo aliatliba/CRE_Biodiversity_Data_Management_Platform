@@ -19,6 +19,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     r-cran-scales \
     r-cran-writexl \
     r-cran-jsonlite \
+    r-cran-httr2 \
     r-cran-magick \
     libcurl4-openssl-dev \
     libssl-dev \
@@ -48,7 +49,7 @@ RUN Rscript -e 'install.packages("ggimage", repos="https://cloud.r-project.org",
 # (install.packages only warns, so without this the error
 #  would only appear later, when a graphic is generated)
 # ---------------------------------------------------------
-RUN Rscript -e 'needed <- c("readxl","dplyr","stringr","janitor","ggplot2","ggraph","igraph","scales","writexl","ggchicklet","jsonlite","magick","ggimage"); missing <- setdiff(needed, rownames(installed.packages())); if (length(missing) > 0) stop("Missing R packages: ", paste(missing, collapse=", ")); cat("All R packages OK\n")'
+RUN Rscript -e 'needed <- c("readxl","dplyr","stringr","janitor","ggplot2","ggraph","igraph","scales","writexl","ggchicklet","jsonlite","httr2","magick","ggimage"); missing <- setdiff(needed, rownames(installed.packages())); if (length(missing) > 0) stop("Missing R packages: ", paste(missing, collapse=", ")); cat("All R packages OK\n")'
 
 # ---------------------------------------------------------
 # Python dependencies
