@@ -16,6 +16,10 @@ logger = logging.getLogger(__name__)
 
 BASE_DIR = Path(__file__).resolve().parents[1]
 GRAPHICS_DIR = Path(os.environ.get("GRAPHICS_DIR", str(BASE_DIR / "graphics")))
+# Persistent cache shared by all R scripts (e.g. PhyloPic silhouettes)
+GRAPHICS_CACHE_DIR = Path(
+    os.environ.get("GRAPHICS_CACHE_DIR", str(GRAPHICS_DIR / ".cache"))
+)
 
 MEDIA_TYPES = {
     "png": "image/png",
@@ -99,6 +103,7 @@ def run_r_script(
         raise RuntimeError(f"R script not found: {spec.script}")
 
     output_dir.mkdir(parents=True, exist_ok=True)
+    GRAPHICS_CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
     command = [
         "Rscript", "--vanilla",
@@ -110,6 +115,7 @@ def run_r_script(
         text=True,
         timeout=spec.timeout,
         check=False,
+        env={**os.environ, "GRAPHICS_CACHE_DIR": str(GRAPHICS_CACHE_DIR)},
     )
 
     logger.info(
