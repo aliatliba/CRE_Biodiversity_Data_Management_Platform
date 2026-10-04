@@ -27,6 +27,11 @@ for (pkg in packages) {
   library(pkg, character.only = TRUE)
 }
 
+# Résolution des exports raster (la mémoire croît avec le carré du DPI).
+# Réduire sur les petites instances : GRAPHICS_DPI=150
+GRAPHICS_DPI <- suppressWarnings(as.numeric(Sys.getenv("GRAPHICS_DPI", "300")))
+if (is.na(GRAPHICS_DPI) || GRAPHICS_DPI < 72) GRAPHICS_DPI <- 300
+
 # ---------- 2. ARGUMENTS ------------------------------------
 args <- commandArgs(trailingOnly = TRUE)
 if (length(args) < 2) {
@@ -208,9 +213,9 @@ p <- ggraph::ggraph(layout_cercle) +
 base <- file.path(out_dir, "diagramme_circulaire_statuts")
 
 ggplot2::ggsave(paste0(base, ".png"), p, width = 11, height = 11,
-                units = "in", dpi = 300, bg = "white", limitsize = FALSE)
+                units = "in", dpi = GRAPHICS_DPI, bg = "white", limitsize = FALSE)
 ggplot2::ggsave(paste0(base, ".tiff"), p, width = 11, height = 11,
-                units = "in", dpi = 300, compression = "lzw", bg = "white",
+                units = "in", dpi = GRAPHICS_DPI, compression = "lzw", bg = "white",
                 limitsize = FALSE)
 ggplot2::ggsave(paste0(base, ".pdf"), p, width = 11, height = 11,
                 units = "in", bg = "white", limitsize = FALSE)
