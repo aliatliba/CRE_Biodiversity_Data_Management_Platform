@@ -24,6 +24,11 @@ for (pkg in packages) {
   library(pkg, character.only = TRUE)
 }
 
+# Résolution des exports raster (la mémoire croît avec le carré du DPI).
+# Réduire sur les petites instances : GRAPHICS_DPI=150
+GRAPHICS_DPI <- suppressWarnings(as.numeric(Sys.getenv("GRAPHICS_DPI", "300")))
+if (is.na(GRAPHICS_DPI) || GRAPHICS_DPI < 72) GRAPHICS_DPI <- 300
+
 # ---------- 2. ARGUMENTS ------------------------------------
 args <- commandArgs(trailingOnly = TRUE)
 if (length(args) < 2) {
@@ -199,9 +204,9 @@ base <- file.path(out_dir, "graphique_uicn")
 bg   <- "#F6F8FB"
 
 ggplot2::ggsave(paste0(base, ".png"),  p, width = 13, height = 7.5,
-                units = "in", dpi = 300, bg = bg, limitsize = FALSE)
+                units = "in", dpi = GRAPHICS_DPI, bg = bg, limitsize = FALSE)
 ggplot2::ggsave(paste0(base, ".tiff"), p, width = 13, height = 7.5,
-                units = "in", dpi = 300, compression = "lzw", bg = bg,
+                units = "in", dpi = GRAPHICS_DPI, compression = "lzw", bg = bg,
                 limitsize = FALSE)
 ggplot2::ggsave(paste0(base, ".pdf"),  p, width = 13, height = 7.5,
                 units = "in", bg = bg, limitsize = FALSE)

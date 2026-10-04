@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import os
+import resource
 import subprocess
 from pathlib import Path
 from tempfile import TemporaryDirectory  # noqa: F401  (re-exported for the API)
@@ -117,6 +118,10 @@ def run_r_script(
         check=False,
         env={**os.environ, "GRAPHICS_CACHE_DIR": str(GRAPHICS_CACHE_DIR)},
     )
+
+    # Highest memory used so far by any R child process (Linux: KB).
+    peak_mb = resource.getrusage(resource.RUSAGE_CHILDREN).ru_maxrss / 1024
+    logger.info("R script %s: peak child memory so far ~%.0f MB", spec.script.name, peak_mb)
 
     logger.info(
         "R script %s finished (code %s)\n--- STDOUT ---\n%s\n--- STDERR ---\n%s",
