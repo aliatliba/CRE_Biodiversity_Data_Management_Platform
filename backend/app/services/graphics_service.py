@@ -4,6 +4,7 @@ import logging
 import os
 import resource
 import subprocess
+import threading
 from pathlib import Path
 from tempfile import TemporaryDirectory  # noqa: F401  (re-exported for the API)
 
@@ -110,34 +111,67 @@ def run_r_script(
         "Rscript", "--vanilla",
         str(spec.script), str(input_excel), str(output_dir),
     ]
-    completed = subprocess.run(
+
+    # Stream R's output line by line into the server logs, so that if the
+    # container dies mid-run (e.g. out of memory) the logs still show how
+    # far the script got. stderr is merged into stdout to keep the order.
+    proc = subprocess.Popen(
         command,
-        capture_output=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
         text=True,
-        timeout=spec.timeout,
-        check=False,
+        bufsize=1,
         env={**os.environ, "GRAPHICS_CACHE_DIR": str(GRAPHICS_CACHE_DIR)},
     )
 
+    timed_out = threading.Event()
+
+    def _kill_on_timeout() -> None:
+        timed_out.set()
+        proc.kill()
+
+    timer = threading.Timer(spec.timeout, _kill_on_timeout)
+    timer.start()
+
+    output_lines: list[str] = []
+    try:
+        print(f"[R:{spec.key}] started: {' '.join(command)}", flush=True)
+        assert proc.stdout is not None
+        for line in proc.stdout:
+            line = line.rstrip("\n")
+            output_lines.append(line)
+            print(f"[R:{spec.key}] {line}", flush=True)
+        returncode = proc.wait()
+    finally:
+        timer.cancel()
+        if proc.poll() is None:
+            proc.kill()
+
     # Highest memory used so far by any R child process (Linux: KB).
     peak_mb = resource.getrusage(resource.RUSAGE_CHILDREN).ru_maxrss / 1024
-    logger.info("R script %s: peak child memory so far ~%.0f MB", spec.script.name, peak_mb)
-
-    logger.info(
-        "R script %s finished (code %s)\n--- STDOUT ---\n%s\n--- STDERR ---\n%s",
-        spec.script.name,
-        completed.returncode,
-        completed.stdout or "(empty)",
-        completed.stderr or "(empty)",
+    print(
+        f"[R:{spec.key}] finished with code {returncode}; "
+        f"peak R child memory so far ~{peak_mb:.0f} MB",
+        flush=True,
     )
 
-    if completed.returncode != 0:
-        parts = []
-        if completed.stdout.strip():
-            parts.append("R STDOUT:\n" + completed.stdout.strip())
-        if completed.stderr.strip():
-            parts.append("R STDERR:\n" + completed.stderr.strip())
-        raise RuntimeError("\n\n".join(parts) or "R graphic generation failed.")
+    if timed_out.is_set():
+        raise RuntimeError(
+            f"The graphic took longer than {spec.timeout} seconds and was stopped."
+        )
+
+    if returncode in (-9, 137):
+        raise RuntimeError(
+            "The R process was killed by the system, most likely because the "
+            "server ran out of memory. Try again, or use a larger instance / "
+            "a lower GRAPHICS_DPI."
+        )
+
+    if returncode != 0:
+        tail = "\n".join(output_lines[-60:]).strip()
+        raise RuntimeError(
+            "R script failed:\n" + tail if tail else "R graphic generation failed."
+        )
 
     files = {fmt: output_dir / f"{spec.output_basename}.{fmt}" for fmt in spec.formats}
     missing = [str(p) for p in files.values() if not p.exists()]
