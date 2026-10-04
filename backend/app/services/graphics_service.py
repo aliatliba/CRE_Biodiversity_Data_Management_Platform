@@ -3,12 +3,12 @@ from __future__ import annotations
 import logging
 import os
 import resource
+import signal
 import subprocess
 import threading
 from pathlib import Path
 from tempfile import TemporaryDirectory  # noqa: F401  (re-exported for the API)
 
-import pandas as pd
 from sqlalchemy.orm import Session
 
 from app.core.graphics_job_store import GraphicsJob
@@ -22,6 +22,23 @@ GRAPHICS_DIR = Path(os.environ.get("GRAPHICS_DIR", str(BASE_DIR / "graphics")))
 GRAPHICS_CACHE_DIR = Path(
     os.environ.get("GRAPHICS_CACHE_DIR", str(GRAPHICS_DIR / ".cache"))
 )
+
+# --- Memory protection (tune with Render environment variables) -------------
+# Default raster resolution handed to the R scripts (memory ~ DPI squared).
+GRAPHICS_DPI = os.environ.get("GRAPHICS_DPI", "200")
+# The R process (and its children) is killed above this RSS, so the API
+# survives and the job fails with a readable error instead of Render
+# restarting the whole container. 0 disables the watchdog.
+MAX_R_RSS_MB = int(os.environ.get("GRAPHICS_MAX_RSS_MB", "350"))
+# Number of R processes allowed at the same time.
+_R_SLOT = threading.BoundedSemaphore(
+    max(1, int(os.environ.get("GRAPHICS_MAX_CONCURRENT", "1")))
+)
+
+try:
+    _PAGE_MB = os.sysconf("SC_PAGE_SIZE") / (1024 * 1024)
+except (AttributeError, ValueError, OSError):
+    _PAGE_MB = 4096 / (1024 * 1024)
 
 MEDIA_TYPES = {
     "png": "image/png",
@@ -44,6 +61,10 @@ def build_site_excel(
     output_path: Path,
 ) -> tuple[str, int]:
     """Export the site's species to the Excel layout the R script expects."""
+    # Imported lazily: keeps pandas out of the API's idle memory footprint
+    # when nothing else has loaded it yet.
+    import pandas as pd
+
     from app.models.site import Site
     from app.models.site_species import SiteSpecies
     from app.models.species import Species
@@ -95,12 +116,68 @@ def build_site_excel(
     return site.name, len(records)
 
 
+def _tree_rss_mb(root_pid: int) -> float:
+    """Resident memory (MB) of root_pid plus all its descendants (Linux /proc)."""
+    children: dict[int, list[int]] = {}
+    rss_pages: dict[int, int] = {}
+    try:
+        pids = [int(p) for p in os.listdir("/proc") if p.isdigit()]
+    except OSError:
+        return 0.0
+
+    for pid in pids:
+        try:
+            with open(f"/proc/{pid}/stat") as f:
+                stat = f.read()
+            # The command name may contain spaces/parentheses: parse after
+            # the last ')'. fields[0] = state, fields[1] = parent pid.
+            fields = stat[stat.rfind(")") + 2:].split()
+            ppid = int(fields[1])
+            with open(f"/proc/{pid}/statm") as f:
+                pages = int(f.read().split()[1])
+        except (OSError, ValueError, IndexError):
+            continue
+        children.setdefault(ppid, []).append(pid)
+        rss_pages[pid] = pages
+
+    total, stack = 0, [root_pid]
+    while stack:
+        pid = stack.pop()
+        total += rss_pages.get(pid, 0)
+        stack.extend(children.get(pid, []))
+    return total * _PAGE_MB
+
+
+def _kill_tree(proc: subprocess.Popen) -> None:
+    """Kill the R process and anything it spawned."""
+    try:
+        os.killpg(proc.pid, signal.SIGKILL)
+    except OSError:
+        try:
+            proc.kill()
+        except OSError:
+            pass
+
+
 def run_r_script(
     spec: GraphicSpec,
     input_excel: Path,
     output_dir: Path,
 ) -> dict[str, Path]:
-    """Run the spec's R script and return {format: file_path}."""
+    """Run the spec's R script and return {format: file_path}.
+
+    Only one R process runs at a time (GRAPHICS_MAX_CONCURRENT): two
+    concurrent renders would double the peak memory.
+    """
+    with _R_SLOT:
+        return _run_r_script(spec, input_excel, output_dir)
+
+
+def _run_r_script(
+    spec: GraphicSpec,
+    input_excel: Path,
+    output_dir: Path,
+) -> dict[str, Path]:
     if not spec.script.exists():
         raise RuntimeError(f"R script not found: {spec.script}")
 
@@ -121,17 +198,35 @@ def run_r_script(
         stderr=subprocess.STDOUT,
         text=True,
         bufsize=1,
-        env={**os.environ, "GRAPHICS_CACHE_DIR": str(GRAPHICS_CACHE_DIR)},
+        start_new_session=True,  # own process group -> can kill the whole tree
+        env={
+            **os.environ,
+            "GRAPHICS_CACHE_DIR": str(GRAPHICS_CACHE_DIR),
+            "GRAPHICS_DPI": GRAPHICS_DPI,
+        },
     )
 
     timed_out = threading.Event()
+    rss_exceeded = threading.Event()
+    stop_watch = threading.Event()
+    peak = {"mb": 0.0}
 
     def _kill_on_timeout() -> None:
         timed_out.set()
-        proc.kill()
+        _kill_tree(proc)
+
+    def _watch_memory() -> None:
+        while not stop_watch.wait(0.5):
+            mb = _tree_rss_mb(proc.pid)
+            peak["mb"] = max(peak["mb"], mb)
+            if MAX_R_RSS_MB > 0 and mb > MAX_R_RSS_MB:
+                rss_exceeded.set()
+                _kill_tree(proc)
+                return
 
     timer = threading.Timer(spec.timeout, _kill_on_timeout)
     timer.start()
+    threading.Thread(target=_watch_memory, daemon=True).start()
 
     output_lines: list[str] = []
     try:
@@ -144,20 +239,29 @@ def run_r_script(
         returncode = proc.wait()
     finally:
         timer.cancel()
+        stop_watch.set()
         if proc.poll() is None:
-            proc.kill()
+            _kill_tree(proc)
 
     # Highest memory used so far by any R child process (Linux: KB).
-    peak_mb = resource.getrusage(resource.RUSAGE_CHILDREN).ru_maxrss / 1024
+    peak_children_mb = resource.getrusage(resource.RUSAGE_CHILDREN).ru_maxrss / 1024
     print(
         f"[R:{spec.key}] finished with code {returncode}; "
-        f"peak R child memory so far ~{peak_mb:.0f} MB",
+        f"peak R memory this run ~{peak['mb']:.0f} MB "
+        f"(all R runs so far ~{peak_children_mb:.0f} MB, limit {MAX_R_RSS_MB} MB)",
         flush=True,
     )
 
     if timed_out.is_set():
         raise RuntimeError(
             f"The graphic took longer than {spec.timeout} seconds and was stopped."
+        )
+
+    if rss_exceeded.is_set():
+        raise RuntimeError(
+            f"The graphic needed more than {MAX_R_RSS_MB} MB of memory and was "
+            "stopped to keep the server running. Try again later, or ask an "
+            "administrator to lower GRAPHICS_DPI or upgrade the server."
         )
 
     if returncode in (-9, 137):
