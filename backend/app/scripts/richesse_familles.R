@@ -1,17 +1,25 @@
 # ============================================================
-# RICHESSE TAXONOMIQUE PAR FAMILLE + SILHOUETTES PHYLOPIC
+# RICHESSE AVIFAUNISTIQUE PAR FAMILLE + SILHOUETTES PHYLOPIC
 # VERSION SERVEUR / DOCKER
 #
 # Rscript richesse_familles.R <input_excel> <output_dir>
 #
 # Entrée : feuille "Species" avec colonnes
-#          Order, Family, Genus, Scientific name
+#          Class, Order, Family, Genus, Scientific name
 # Sorties: richesse_familles.png / .pdf
 #
-# Les silhouettes sont récupérées via l'API PhyloPic v2, avec cache
-# disque (variable d'environnement GRAPHICS_CACHE_DIR) et requêtes
-# parallèles. Si l'API est injoignable, le graphique est produit
-# avec les silhouettes en cache, ou sans silhouettes.
+# - Filtre la classe Aves (si la colonne Class est renseignée)
+# - 1 barre = 1 famille, hauteur = nombre d'espèces distinctes
+# - Classement décroissant
+# - Silhouette PhyloPic au-dessus de chaque barre :
+#     1) silhouette de la famille
+#     2) sinon silhouette d'une espèce de la famille (secours)
+# - API PhyloPic v2 via httr2 (requêtes parallèles, sans rphylopic
+#   ni magick -> beaucoup moins de mémoire)
+# - Cache disque persistant (GRAPHICS_CACHE_DIR) + dossier "graine"
+#   optionnel (phylopic_seed/) livré avec le code, pour que le
+#   premier graphique après un déploiement soit rapide et fonctionne
+#   même sans accès à PhyloPic.
 # ============================================================
 
 rm(list = ls())
@@ -34,6 +42,9 @@ for (pkg in packages) {
 # Réduire sur les petites instances : GRAPHICS_DPI=150
 GRAPHICS_DPI <- suppressWarnings(as.numeric(Sys.getenv("GRAPHICS_DPI", "300")))
 if (is.na(GRAPHICS_DPI) || GRAPHICS_DPI < 72) GRAPHICS_DPI <- 300
+
+# TRUE : si la famille n'a pas de silhouette, essayer une espèce de la famille
+UTILISER_ESPECE_SECOURS <- TRUE
 
 # Journal mémoire (visible dans les logs du serveur)
 log_mem <- function(tag) {
@@ -69,17 +80,23 @@ sheet_to_read <- if ("species" %in% tolower(sheets)) {
 df <- readxl::read_excel(excel_path, sheet = sheet_to_read) |>
   janitor::clean_names()
 
-needed <- c("order", "family", "genus", "scientific_name")
+# family et scientific_name sont indispensables ; le reste est optionnel
+needed <- c("family", "scientific_name")
 if (!all(needed %in% names(df))) {
   stop(paste("ERREUR - Colonnes absentes :",
              paste(setdiff(needed, names(df)), collapse = ", ")))
 }
+for (col in c("class", "order", "genus")) {
+  if (!col %in% names(df)) df[[col]] <- NA_character_
+}
 
 # ---------- 4. PREPARATION ----------------------------------
-invalides <- c("", "NA", "N/A", "-", "--", "?")
+invalides <- c("", "NA", "N/A", "N.A.", "NULL", "NONE", "-", "--", "?",
+               "UNKNOWN", "NON RENSEIGNE", "NON RENSEIGNÉ")
 
 taxa <- df |>
   dplyr::transmute(
+    Classe  = stringr::str_squish(as.character(class)),
     Ordre   = stringr::str_squish(as.character(order)),
     Famille = stringr::str_squish(as.character(family)),
     Genre   = stringr::str_squish(as.character(genus)),
@@ -89,29 +106,58 @@ taxa <- df |>
     dplyr::everything(),
     ~ dplyr::if_else(is.na(.x) | toupper(.x) %in% invalides,
                      NA_character_, .x)
-  )) |>
+  ))
+
+rm(df)  # libère la mémoire du tableau brut
+
+# Filtre strict Aves (ignoré si la colonne Class est vide partout)
+if (any(!is.na(taxa$Classe))) {
+  n_avant <- nrow(taxa)
+  taxa <- taxa |> dplyr::filter(tolower(Classe) == "aves")
+  cat("Lignes Aves :", nrow(taxa), "/", n_avant, "\n")
+  if (nrow(taxa) == 0) {
+    stop("ERREUR - Aucune espèce de la classe Aves pour ce site.")
+  }
+} else {
+  cat("Colonne Class vide : filtre Aves ignoré.\n")
+}
+
+taxa <- taxa |>
   dplyr::filter(!is.na(Famille), !is.na(Espece)) |>
+  # genre manquant -> premier mot du nom scientifique
+  dplyr::mutate(Genre = dplyr::coalesce(Genre, stringr::word(Espece, 1))) |>
+  # une espèce = une observation
   dplyr::distinct(Famille, Espece, .keep_all = TRUE)
 
 if (nrow(taxa) == 0) stop("ERREUR - Aucune donnée exploitable.")
 
 richesse <- taxa |>
   dplyr::group_by(Famille) |>
-  dplyr::summarise(Richesse = dplyr::n_distinct(Espece), .groups = "drop") |>
+  dplyr::summarise(
+    Richesse   = dplyr::n_distinct(Espece),
+    # espèce utilisée seulement si la famille n'a pas de silhouette
+    Espece_rep = sort(unique(Espece))[1],
+    .groups = "drop"
+  ) |>
   dplyr::arrange(dplyr::desc(Richesse), Famille)
 
+nb_especes  <- dplyr::n_distinct(taxa$Espece)
 nb_ordres   <- dplyr::n_distinct(taxa$Ordre[!is.na(taxa$Ordre)])
 nb_familles <- dplyr::n_distinct(taxa$Famille)
 nb_genres   <- dplyr::n_distinct(taxa$Genre[!is.na(taxa$Genre)])
 
+cat("Especes  :", nb_especes, "\n")
 cat("Ordres   :", nb_ordres, "\n")
 cat("Familles :", nb_familles, "\n")
 cat("Genres   :", nb_genres, "\n")
 
+rm(taxa)
+
 # ---------- 5. SILHOUETTES PHYLOPIC (API v2) ----------------
 # Cache disque persistant + requêtes HTTP en parallèle.
-#  - <famille>.png  : silhouette déjà téléchargée
-#  - <famille>.none : PhyloPic n'a pas de silhouette (re-testé après 30 jours)
+#  - <famille>.png  : silhouette déjà téléchargée (de la famille, ou
+#                     à défaut d'une espèce de la famille)
+#  - <famille>.none : PhyloPic n'a rien trouvé (re-testé après 30 jours)
 # Les erreurs réseau ne sont jamais mises en cache : elles seront
 # réessayées au prochain lancement.
 
@@ -142,6 +188,25 @@ has_fresh_none <- function(x) {
     ok[ok] <- age < NEG_TTL_DAYS
   }
   ok
+}
+
+# --- Cache "graine" : PNG livrés avec le code (optionnel) -----
+# Dossier : <dossier du script>/phylopic_seed  (ou PHYLOPIC_SEED_DIR).
+# Les fichiers absents du cache y sont copiés au démarrage.
+script_dir <- tryCatch({
+  f <- sub("^--file=", "", grep("^--file=", commandArgs(FALSE), value = TRUE))
+  if (length(f) > 0) dirname(normalizePath(f[1])) else getwd()
+}, error = function(e) getwd())
+
+seed_dir <- Sys.getenv("PHYLOPIC_SEED_DIR",
+                       unset = file.path(script_dir, "phylopic_seed"))
+if (dir.exists(seed_dir)) {
+  seeds <- list.files(seed_dir, pattern = "\\.png$", full.names = TRUE)
+  seeds <- seeds[!file.exists(file.path(cache_dir, basename(seeds)))]
+  if (length(seeds) > 0) {
+    file.copy(seeds, cache_dir)
+    cat("Silhouettes copiées depuis le dossier graine :", length(seeds), "\n")
+  }
 }
 
 # numéro de build de l'API (requis par PhyloPic v2)
@@ -179,10 +244,89 @@ perform_json <- function(reqs) {
 pick_raster <- function(files) {
   if (length(files) == 0) return(NA_character_)
   widths <- vapply(files, function(f) {
-    w <- suppressWarnings(as.numeric(strsplit(f$sizes, "x")[[1]][1]))
-    if (is.na(w)) 0 else w
+    s <- if (is.null(f$sizes)) "" else as.character(f$sizes)[1]
+    w <- suppressWarnings(as.numeric(strsplit(s, "x")[[1]][1]))
+    if (length(w) == 0 || is.na(w)) 0 else w
   }, numeric(1))
-  files[[which.min(abs(widths - 256))]]$href
+  href <- files[[which.min(abs(widths - 256))]]$href
+  if (is.null(href)) NA_character_ else href
+}
+
+# Cherche une image PhyloPic pour chaque nom (famille ou espèce).
+# Retourne, pour chaque nom :
+#   status "ok"    + href de l'image
+#   status "none"  : PhyloPic n'a rien (définitif)
+#   status "error" : échec réseau (à réessayer plus tard)
+find_images <- function(terms) {
+  n      <- length(terms)
+  href   <- rep(NA_character_, n)
+  status <- rep("error", n)
+  if (n == 0) return(list(href = href, status = status))
+
+  # --- Étape 1 : recherche des noeuds (parallèle) -------------
+  node_json <- perform_json(lapply(terms, function(t) {
+    api_req("/nodes", filter_name = tolower(t),
+            embed_items = "true", page = 0)
+  }))
+
+  uuid <- rep(NA_character_, n)
+  for (i in seq_len(n)) {
+    js <- node_json[[i]]
+    if (is.null(js)) next                       # échec réseau
+    items <- js[["_embedded"]][["items"]]
+    if (length(items) == 0) { status[i] <- "none"; next }
+    exact <- Filter(function(it) {
+      any(tolower(unlist(it$names)) == tolower(terms[i]))
+    }, items)
+    chosen <- if (length(exact) > 0) exact[[1]] else items[[1]]
+    uuid[i] <- chosen$uuid
+  }
+
+  # --- Étape 2 : image principale de chaque noeud (parallèle) -
+  idx <- which(!is.na(uuid))
+  if (length(idx) == 0) return(list(href = href, status = status))
+
+  node_img <- perform_json(lapply(idx, function(i) {
+    api_req(paste0("/nodes/", uuid[i]), embed_primaryImage = "true")
+  }))
+
+  need_clade <- integer(0)
+  for (k in seq_along(idx)) {
+    i  <- idx[k]
+    js <- node_img[[k]]
+    if (is.null(js)) next
+    img <- js[["_embedded"]][["primaryImage"]]
+    h <- if (!is.null(img)) pick_raster(img[["_links"]][["rasterFiles"]]) else NA_character_
+    if (!is.na(h)) {
+      href[i] <- h; status[i] <- "ok"
+    } else {
+      need_clade <- c(need_clade, i)
+    }
+  }
+
+  # --- Étape 2b : pas d'image propre -> image d'un descendant -
+  if (length(need_clade) > 0) {
+    clade_json <- perform_json(lapply(need_clade, function(i) {
+      api_req("/images", filter_clade = uuid[i],
+              embed_items = "true", page = 0)
+    }))
+    for (k in seq_along(need_clade)) {
+      i  <- need_clade[k]
+      js <- clade_json[[k]]
+      if (is.null(js)) next
+      items <- js[["_embedded"]][["items"]]
+      h <- if (length(items) > 0) {
+        pick_raster(items[[1]][["_links"]][["rasterFiles"]])
+      } else NA_character_
+      if (is.na(h)) {
+        status[i] <- "none"
+      } else {
+        href[i] <- h; status[i] <- "ok"
+      }
+    }
+  }
+
+  list(href = href, status = status)
 }
 
 families <- as.character(richesse$Famille)
@@ -198,72 +342,33 @@ if (length(todo) > 0 && is.null(phylopic_build)) {
 
 if (length(todo) > 0 && !is.null(phylopic_build)) {
 
-  # --- Étape 1 : recherche des noeuds (parallèle) -------------
-  node_json <- perform_json(lapply(todo, function(f) {
-    api_req("/nodes", filter_name = tolower(f),
-            embed_items = "true", page = 0)
-  }))
+  # --- Passe 1 : silhouette de la famille ---------------------
+  r1     <- find_images(todo)
+  href   <- r1$href
+  status <- r1$status
 
-  node_uuid <- rep(NA_character_, length(todo))
-  for (i in seq_along(todo)) {
-    js <- node_json[[i]]
-    if (is.null(js)) next                       # échec réseau : on réessaiera
-    items <- js[["_embedded"]][["items"]]
-    if (length(items) == 0) { mark_none(todo[i]); next }
-    exact <- Filter(function(it) {
-      any(tolower(unlist(it$names)) == tolower(todo[i]))
-    }, items)
-    chosen <- if (length(exact) > 0) exact[[1]] else items[[1]]
-    node_uuid[i] <- chosen$uuid
-  }
-
-  # --- Étape 2 : image principale de chaque noeud (parallèle) -
-  img_href <- rep(NA_character_, length(todo))
-  idx <- which(!is.na(node_uuid))
-
-  if (length(idx) > 0) {
-    node_img <- perform_json(lapply(idx, function(i) {
-      api_req(paste0("/nodes/", node_uuid[i]), embed_primaryImage = "true")
-    }))
-
-    for (k in seq_along(idx)) {
-      js <- node_img[[k]]
-      if (is.null(js)) next
-      img <- js[["_embedded"]][["primaryImage"]]
-      if (!is.null(img)) {
-        img_href[idx[k]] <- pick_raster(img[["_links"]][["rasterFiles"]])
-      }
-    }
-
-    # --- Étape 2b : pas d'image propre -> image d'un descendant -
-    need_clade <- idx[vapply(seq_along(idx), function(k) {
-      !is.null(node_img[[k]]) && is.na(img_href[idx[k]])
-    }, logical(1))]
-
-    if (length(need_clade) > 0) {
-      clade_json <- perform_json(lapply(need_clade, function(i) {
-        api_req("/images", filter_clade = node_uuid[i],
-                embed_items = "true", page = 0)
-      }))
-      for (k in seq_along(need_clade)) {
-        js <- clade_json[[k]]
-        i  <- need_clade[k]
-        if (is.null(js)) next
-        items <- js[["_embedded"]][["items"]]
-        if (length(items) > 0) {
-          img_href[i] <- pick_raster(items[[1]][["_links"]][["rasterFiles"]])
-        }
-        if (is.na(img_href[i])) mark_none(todo[i])
-      }
+  # --- Passe 2 : espèce représentative (secours) --------------
+  if (UTILISER_ESPECE_SECOURS) {
+    fb <- which(status == "none")
+    if (length(fb) > 0) {
+      esp <- richesse$Espece_rep[match(todo[fb], families)]
+      esp <- stringr::word(esp, 1, 2)            # binomial : "Genre espece"
+      r2  <- find_images(esp)
+      href[fb]   <- r2$href
+      status[fb] <- r2$status
+      cat("Secours par espèce :", sum(r2$status == "ok"), "/", length(fb), "\n")
     }
   }
+
+  # familles pour lesquelles PhyloPic n'a vraiment rien
+  for (i in which(status == "none")) mark_none(todo[i])
 
   # --- Étape 3 : téléchargement des PNG (parallèle) -----------
-  dl <- which(!is.na(img_href))
+  dl <- which(!is.na(href))
 
   if (length(dl) > 0) {
     tmp <- paste0(png_path(todo[dl]), ".part")
-    reqs <- lapply(img_href[dl], function(u) {
+    reqs <- lapply(href[dl], function(u) {
       httr2::request(u) |>
         httr2::req_timeout(30) |>
         httr2::req_retry(max_tries = 2) |>
@@ -292,6 +397,12 @@ cat("Silhouettes utilisées :", sum(!is.na(richesse$Silhouette)),
 log_mem("apres silhouettes")
 
 # ---------- 6. GRAPHIQUE ------------------------------------
+VERT_BARRE   <- "#69A93F"
+VERT_CONTOUR <- "#4E832F"
+ROUGE_TITRE  <- "#D41414"
+GRIS_TEXTE   <- "#7B7B7B"
+GRIS_GRILLE  <- "#D9D9D9"
+
 max_richesse <- max(richesse$Richesse)
 
 richesse <- richesse |>
@@ -300,21 +411,8 @@ richesse <- richesse |>
 richesse$Famille <- factor(richesse$Famille, levels = richesse$Famille)
 
 p <- ggplot2::ggplot(richesse, ggplot2::aes(x = Famille, y = Richesse)) +
-  # ombre
-  ggplot2::geom_col(width = 0.56, fill = "#233326", alpha = 0.10,
-                    position = ggplot2::position_nudge(x = 0.045),
-                    show.legend = FALSE) +
-  # barres
-  ggplot2::geom_col(width = 0.56, fill = "#579B38", colour = NA) +
-  # reflets
-  ggplot2::geom_col(ggplot2::aes(y = Richesse * 0.99), width = 0.11,
-                    fill = "white", alpha = 0.14,
-                    position = ggplot2::position_nudge(x = -0.14),
-                    show.legend = FALSE) +
-  ggplot2::geom_col(ggplot2::aes(y = Richesse * 0.99), width = 0.18,
-                    fill = "white", alpha = 0.045,
-                    position = ggplot2::position_nudge(x = 0.02),
-                    show.legend = FALSE)
+  ggplot2::geom_col(width = 0.52, fill = VERT_BARRE,
+                    colour = VERT_CONTOUR, linewidth = 0.7)
 
 silhouettes_ok <- richesse |> dplyr::filter(!is.na(Silhouette))
 
@@ -327,16 +425,19 @@ if (nrow(silhouettes_ok) > 0) {
     )
 }
 
-texte_stats <- paste0(nb_ordres, " Ordres\n\n",
-                      nb_familles, " Familles\n\n",
-                      nb_genres, " Genres")
+stats_lignes <- c(
+  if (nb_ordres > 0) paste0(nb_ordres, " Ordres"),
+  paste0(nb_familles, " Familles"),
+  paste0(nb_genres, " Genres")
+)
+texte_stats <- paste(stats_lignes, collapse = "\n\n")
 
 p <- p +
   ggplot2::annotate(
     "text", x = length(levels(richesse$Famille)) + 0.4,
     y = max_richesse * 1.03, label = texte_stats,
-    hjust = 1, vjust = 1, colour = "#777777",
-    fontface = "bold", size = 4.7, lineheight = 1.5
+    hjust = 1, vjust = 1, colour = GRIS_TEXTE,
+    fontface = "bold", size = 5.2, lineheight = 1.5
   ) +
   ggplot2::scale_y_continuous(
     limits = c(0, max_richesse * 1.12),
@@ -348,19 +449,20 @@ p <- p +
   ggplot2::theme(
     plot.background  = ggplot2::element_rect(fill = "white", colour = NA),
     panel.background = ggplot2::element_rect(fill = "white", colour = NA),
-    plot.title = ggplot2::element_text(colour = "#C00000", size = 22,
+    plot.title = ggplot2::element_text(colour = ROUGE_TITRE, size = 22,
                                        face = "bold", hjust = 0.5,
-                                       margin = ggplot2::margin(b = 15)),
+                                       margin = ggplot2::margin(b = 18)),
     panel.grid.major.x = ggplot2::element_blank(),
     panel.grid.minor   = ggplot2::element_blank(),
-    panel.grid.major.y = ggplot2::element_line(colour = "#D7D7D7",
-                                               linewidth = 0.5),
-    axis.text.x = ggplot2::element_text(angle = 48, hjust = 1, vjust = 1,
-                                        colour = "#555555", size = 9),
+    panel.grid.major.y = ggplot2::element_line(colour = GRIS_GRILLE,
+                                               linewidth = 0.65),
+    axis.text.x = ggplot2::element_text(angle = 50, hjust = 1, vjust = 1,
+                                        colour = "#555555", size = 10),
     axis.text.y = ggplot2::element_text(colour = "#555555", size = 9),
     axis.ticks  = ggplot2::element_blank(),
     panel.border = ggplot2::element_blank(),
-    plot.margin = ggplot2::margin(20, 45, 35, 30)
+    legend.position = "none",
+    plot.margin = ggplot2::margin(25, 40, 50, 20)
   )
 
 log_mem("graphique construit")
@@ -368,13 +470,17 @@ log_mem("graphique construit")
 # ---------- 7. EXPORTS (noms fixes attendus par le serveur) --
 base <- file.path(out_dir, "richesse_familles")
 
+invisible(gc())   # libère le maximum avant l'export raster
+
 ggplot2::ggsave(paste0(base, ".png"), p, width = 15, height = 8.5,
                 units = "in", dpi = GRAPHICS_DPI, bg = "white", limitsize = FALSE)
 log_mem("apres export PNG")
+invisible(gc())
+
 ggplot2::ggsave(paste0(base, ".pdf"), p, width = 15, height = 8.5,
                 units = "in", bg = "white", limitsize = FALSE)
-
 log_mem("apres export PDF")
+
 expected <- paste0(base, c(".png", ".pdf"))
 if (!all(file.exists(expected))) {
   stop("ERREUR - Certains fichiers graphiques n'ont pas été générés.")
