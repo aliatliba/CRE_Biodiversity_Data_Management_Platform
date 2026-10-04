@@ -35,6 +35,16 @@ for (pkg in packages) {
 GRAPHICS_DPI <- suppressWarnings(as.numeric(Sys.getenv("GRAPHICS_DPI", "300")))
 if (is.na(GRAPHICS_DPI) || GRAPHICS_DPI < 72) GRAPHICS_DPI <- 300
 
+# Journal mémoire (visible dans les logs du serveur)
+log_mem <- function(tag) {
+  st <- tryCatch(readLines("/proc/self/status"), error = function(e) character(0))
+  g  <- function(k) {
+    l <- st[startsWith(st, k)]
+    if (length(l) == 0) "?" else trimws(sub("^[^:]*:", "", l[1]))
+  }
+  cat(sprintf("[MEM] %-28s RSS=%s  PEAK=%s\n", tag, g("VmRSS:"), g("VmHWM:")))
+}
+
 # ---------- 2. ARGUMENTS ------------------------------------
 args <- commandArgs(trailingOnly = TRUE)
 if (length(args) < 2) {
@@ -47,6 +57,8 @@ if (!file.exists(excel_path)) {
   stop(paste0("ERREUR - Fichier Excel introuvable : ", excel_path))
 }
 if (!dir.exists(out_dir)) dir.create(out_dir, recursive = TRUE)
+
+log_mem("packages charges")
 
 # ---------- 3. IMPORTATION ----------------------------------
 sheets <- readxl::excel_sheets(excel_path)
@@ -162,14 +174,15 @@ perform_json <- function(reqs) {
   })
 }
 
-# fichier raster dont la largeur est la plus proche de 512 px
+# fichier raster dont la largeur est la plus proche de 256 px
+# (les silhouettes sont dessinées à ~0.6 pouce : 256 px suffisent)
 pick_raster <- function(files) {
   if (length(files) == 0) return(NA_character_)
   widths <- vapply(files, function(f) {
     w <- suppressWarnings(as.numeric(strsplit(f$sizes, "x")[[1]][1]))
     if (is.na(w)) 0 else w
   }, numeric(1))
-  files[[which.min(abs(widths - 512))]]$href
+  files[[which.min(abs(widths - 256))]]$href
 }
 
 families <- as.character(richesse$Famille)
@@ -276,6 +289,8 @@ cat("Silhouettes utilisées :", sum(!is.na(richesse$Silhouette)),
     "/", nrow(richesse),
     "(", round(as.numeric(difftime(Sys.time(), t0, units = "secs"))), "s )\n")
 
+log_mem("apres silhouettes")
+
 # ---------- 6. GRAPHIQUE ------------------------------------
 max_richesse <- max(richesse$Richesse)
 
@@ -348,14 +363,18 @@ p <- p +
     plot.margin = ggplot2::margin(20, 45, 35, 30)
   )
 
+log_mem("graphique construit")
+
 # ---------- 7. EXPORTS (noms fixes attendus par le serveur) --
 base <- file.path(out_dir, "richesse_familles")
 
 ggplot2::ggsave(paste0(base, ".png"), p, width = 15, height = 8.5,
                 units = "in", dpi = GRAPHICS_DPI, bg = "white", limitsize = FALSE)
+log_mem("apres export PNG")
 ggplot2::ggsave(paste0(base, ".pdf"), p, width = 15, height = 8.5,
                 units = "in", bg = "white", limitsize = FALSE)
 
+log_mem("apres export PDF")
 expected <- paste0(base, c(".png", ".pdf"))
 if (!all(file.exists(expected))) {
   stop("ERREUR - Certains fichiers graphiques n'ont pas été générés.")
