@@ -14,8 +14,10 @@
 # - Silhouette PhyloPic au-dessus de chaque barre :
 #     1) silhouette de la famille
 #     2) sinon silhouette d'une espèce de la famille (secours)
-# - API PhyloPic v2 via httr2 (requêtes parallèles, sans rphylopic
-#   ni magick -> beaucoup moins de mémoire)
+# - API PhyloPic v2 via httr2 (requêtes parallèles, sans rphylopic).
+#   Les silhouettes sont réduites à SIL_MAX_PX pixels avant mise en
+#   cache : ggimage convertit chaque image en matrice de couleurs au
+#   rendu, la mémoire croît donc avec le carré de leur taille.
 # - Cache disque persistant (GRAPHICS_CACHE_DIR) + dossier "graine"
 #   optionnel (phylopic_seed/) livré avec le code, pour que le
 #   premier graphique après un déploiement soit rapide et fonctionne
@@ -27,8 +29,7 @@ graphics.off()
 options(stringsAsFactors = FALSE, timeout = 30)
 
 # ---------- 1. PACKAGES -------------------------------------
-packages <- c("readxl", "dplyr", "stringr", "janitor",
-              "ggplot2", "scales", "httr2", "ggimage")
+packages <- c("readxl", "dplyr", "ggplot2", "scales", "httr2", "ggimage")
 
 for (pkg in packages) {
   if (!requireNamespace(pkg, quietly = TRUE)) {
@@ -72,13 +73,25 @@ if (!dir.exists(out_dir)) dir.create(out_dir, recursive = TRUE)
 log_mem("packages charges")
 
 # ---------- 3. IMPORTATION ----------------------------------
+# Petits équivalents en R de base de janitor::clean_names et stringr
+# (évite de charger janitor/tidyr/lubridate/stringi : moins de mémoire).
+clean_names_base <- function(x) {
+  x <- gsub("[^a-z0-9]+", "_", tolower(x))
+  gsub("^_+|_+$", "", x)
+}
+squish <- function(x) trimws(gsub("[[:space:]]+", " ", as.character(x)))
+first_words <- function(x, n) {
+  vapply(strsplit(x, " ", fixed = TRUE),
+         function(p) paste(utils::head(p, n), collapse = " "), character(1))
+}
+
 sheets <- readxl::excel_sheets(excel_path)
 sheet_to_read <- if ("species" %in% tolower(sheets)) {
   sheets[tolower(sheets) == "species"][1]
 } else sheets[1]
 
-df <- readxl::read_excel(excel_path, sheet = sheet_to_read) |>
-  janitor::clean_names()
+df <- readxl::read_excel(excel_path, sheet = sheet_to_read)
+names(df) <- clean_names_base(names(df))
 
 # family et scientific_name sont indispensables ; le reste est optionnel
 needed <- c("family", "scientific_name")
@@ -96,11 +109,11 @@ invalides <- c("", "NA", "N/A", "N.A.", "NULL", "NONE", "-", "--", "?",
 
 taxa <- df |>
   dplyr::transmute(
-    Classe  = stringr::str_squish(as.character(class)),
-    Ordre   = stringr::str_squish(as.character(order)),
-    Famille = stringr::str_squish(as.character(family)),
-    Genre   = stringr::str_squish(as.character(genus)),
-    Espece  = stringr::str_squish(as.character(scientific_name))
+    Classe  = squish(class),
+    Ordre   = squish(order),
+    Famille = squish(family),
+    Genre   = squish(genus),
+    Espece  = squish(scientific_name)
   ) |>
   dplyr::mutate(dplyr::across(
     dplyr::everything(),
@@ -125,7 +138,7 @@ if (any(!is.na(taxa$Classe))) {
 taxa <- taxa |>
   dplyr::filter(!is.na(Famille), !is.na(Espece)) |>
   # genre manquant -> premier mot du nom scientifique
-  dplyr::mutate(Genre = dplyr::coalesce(Genre, stringr::word(Espece, 1))) |>
+  dplyr::mutate(Genre = dplyr::coalesce(Genre, first_words(Espece, 1))) |>
   # une espèce = une observation
   dplyr::distinct(Famille, Espece, .keep_all = TRUE)
 
@@ -172,6 +185,7 @@ dir.create(cache_dir, showWarnings = FALSE, recursive = TRUE)
 
 API          <- "https://api.phylopic.org"
 NEG_TTL_DAYS <- 30
+SIL_MAX_PX   <- 192   # taille max (px) des silhouettes mises en cache
 MAX_ACTIVE   <- 8
 
 safe_name <- function(x) gsub("[^A-Za-z0-9]", "_", x)
@@ -239,8 +253,8 @@ perform_json <- function(reqs) {
   })
 }
 
-# fichier raster dont la largeur est la plus proche de 256 px
-# (les silhouettes sont dessinées à ~0.6 pouce : 256 px suffisent)
+# fichier raster dont la largeur est la plus proche de SIL_MAX_PX
+# (les silhouettes sont dessinées à ~0.6 pouce : ~190 px suffisent)
 pick_raster <- function(files) {
   if (length(files) == 0) return(NA_character_)
   widths <- vapply(files, function(f) {
@@ -248,8 +262,23 @@ pick_raster <- function(files) {
     w <- suppressWarnings(as.numeric(strsplit(s, "x")[[1]][1]))
     if (length(w) == 0 || is.na(w)) 0 else w
   }, numeric(1))
-  href <- files[[which.min(abs(widths - 256))]]$href
+  href <- files[[which.min(abs(widths - SIL_MAX_PX))]]$href
   if (is.null(href)) NA_character_ else href
+}
+
+# Réduit une silhouette trop grande (TRUE si elle a été modifiée).
+# Traite aussi les fichiers déjà en cache : sans cela une image de
+# 512-1024 px fait exploser la mémoire au rendu (ggimage).
+shrink_png <- function(path) {
+  if (!requireNamespace("magick", quietly = TRUE)) return(FALSE)
+  tryCatch({
+    img  <- magick::image_read(path)
+    info <- magick::image_info(img)
+    if (max(info$width, info$height) <= SIL_MAX_PX) return(FALSE)
+    img <- magick::image_resize(img, paste0(SIL_MAX_PX, "x", SIL_MAX_PX))
+    magick::image_write(img, path = path, format = "png")
+    TRUE
+  }, error = function(e) FALSE)
 }
 
 # Cherche une image PhyloPic pour chaque nom (famille ou espèce).
@@ -352,7 +381,7 @@ if (length(todo) > 0 && !is.null(phylopic_build)) {
     fb <- which(status == "none")
     if (length(fb) > 0) {
       esp <- richesse$Espece_rep[match(todo[fb], families)]
-      esp <- stringr::word(esp, 1, 2)            # binomial : "Genre espece"
+      esp <- first_words(esp, 2)                 # binomial : "Genre espece"
       r2  <- find_images(esp)
       href[fb]   <- r2$href
       status[fb] <- r2$status
@@ -386,6 +415,11 @@ if (length(todo) > 0 && !is.null(phylopic_build)) {
     }
   }
 }
+
+have_png <- families[file.exists(png_path(families))]
+n_shrunk <- sum(vapply(png_path(have_png), shrink_png, logical(1)))
+cat("Silhouettes réduites à", SIL_MAX_PX, "px max :", n_shrunk, "\n")
+invisible(gc())
 
 richesse$Silhouette <- ifelse(file.exists(png_path(families)),
                               png_path(families), NA_character_)
