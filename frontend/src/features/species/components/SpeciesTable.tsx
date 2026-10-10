@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
-import { Badge, getIucnTone } from '@/components/ui/Badge'
+import { Badge } from '@/components/ui/Badge'
+import { getIucnTone } from '@/lib/iucn'
 import type { SpeciesListItem } from '../types'
 
 export function SpeciesTable({ species }: { species: SpeciesListItem[] }) {

@@ -1,10 +1,10 @@
-import type { ReactNode } from 'react'
-import { Navigate, useLocation } from 'react-router-dom'
+import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import { ROUTES } from '@/lib/constants'
 import { LoadingSpinner } from './LoadingSpinner'
 
-export function ProtectedRoute({ children }: { children: ReactNode }) {
+/** Layout route: renders its children only for signed-in users. */
+export function ProtectedRoute() {
   const { isAuthenticated, isLoading, user } = useAuth()
   const location = useLocation()
 
@@ -24,5 +24,5 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
     return <Navigate to={ROUTES.completeProfile} replace />
   }
 
-  return <>{children}</>
+  return <Outlet />
 }

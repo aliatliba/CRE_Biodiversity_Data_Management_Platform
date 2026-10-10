@@ -8,7 +8,6 @@ import {
 } from 'lucide-react'
 import axios from 'axios'
 import { useAuth } from '@/hooks/useAuth'
-import { AppLayout } from '@/components/layout/AppLayout'
 import { Card } from '@/components/ui/Card'
 import { LoadingSpinner } from '@/components/common/LoadingSpinner'
 import { ErrorState } from '@/components/common/ErrorState'
@@ -93,7 +92,7 @@ export function DashboardPage() {
     })) ?? []
 
   return (
-    <AppLayout title="Dashboard">
+    <>
       <p className="mb-6 text-sm text-ink-950/55">
         Welcome back,{' '}
         <span className="font-medium text-ink-950">
@@ -396,7 +395,7 @@ export function DashboardPage() {
           </Card>
         </div>
       )}
-    </AppLayout>
+    </>
   )
 }
 

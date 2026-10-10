@@ -1,7 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import axios from 'axios'
 import { UserRound, KeyRound, Palette } from 'lucide-react'
-import { AppLayout } from '@/components/layout/AppLayout'
 import { Card } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
@@ -77,7 +76,7 @@ export function ProfilePage() {
   }
 
   return (
-    <AppLayout title="Profile">
+    <>
       <div className="mx-auto flex max-w-2xl flex-col gap-6">
         <Card>
           <div className="flex items-start justify-between gap-4">
@@ -229,7 +228,7 @@ export function ProfilePage() {
           </div>
         </Card>
       </div>
-    </AppLayout>
+    </>
   )
 }
 

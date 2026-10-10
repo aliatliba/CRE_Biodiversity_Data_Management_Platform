@@ -13,11 +13,31 @@ export const ROUTES = {
   completeProfile: '/complete-profile',
   dashboard: '/dashboard',
   sites: '/sites',
+  siteDetail: '/sites/:id',
   species: '/species',
   addSpecies: '/species/new',
-  editSpecies: '/species/:id/edit',
+  speciesDetail: '/species/:id',
   protectedSpecies: '/protected-species',
+  graphics: '/graphics',
   users: '/users',
   exports: '/exports',
   profile: '/profile',
 } as const
+
+export const siteUrl = (id: number | string) => `/sites/${id}`
+export const speciesUrl = (id: number | string) => `/species/${id}`
+
+/**
+ * Link to the species list with filters in the URL, e.g.
+ * speciesListUrl({ site_id: 3, iucn_status: THREATENED_STATUSES_PARAM }).
+ */
+export function speciesListUrl(
+  filters: Record<string, string | number | null | undefined> = {},
+): string {
+  const params = new URLSearchParams()
+  for (const [key, value] of Object.entries(filters)) {
+    if (value !== null && value !== undefined && value !== '') params.set(key, String(value))
+  }
+  const query = params.toString()
+  return query ? `${ROUTES.species}?${query}` : ROUTES.species
+}

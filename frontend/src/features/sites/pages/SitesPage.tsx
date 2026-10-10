@@ -2,7 +2,6 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import axios from 'axios'
 import { MapPin, Plus, Trash2, Search } from 'lucide-react'
-import { AppLayout } from '@/components/layout/AppLayout'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -102,7 +101,7 @@ export function SitesPage() {
   }
 
   return (
-    <AppLayout title="Sites">
+    <>
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="relative w-full max-w-xs">
           <Search size={16} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-950/35" />
@@ -226,7 +225,7 @@ export function SitesPage() {
           </Button>
         </form>
       </Modal>
-    </AppLayout>
+    </>
   )
 }
 

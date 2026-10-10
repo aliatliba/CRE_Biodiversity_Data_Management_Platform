@@ -2,7 +2,6 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { Navigate } from 'react-router-dom'
 import axios from 'axios'
 import { Users as UsersIcon, Plus, Copy, Check, UserX, Trash2 } from 'lucide-react'
-import { AppLayout } from '@/components/layout/AppLayout'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -163,7 +162,7 @@ async function handleDelete(user: AppUser) {
   }
 
   return (
-    <AppLayout title="Users">
+    <>
       <div className="mb-6 flex items-center justify-between">
         <p className="text-sm text-ink-950/55">
           Every account here signs in with a temporary password and must set their own on first login.
@@ -342,7 +341,7 @@ async function handleDelete(user: AppUser) {
           </div>
         )}
       </Modal>
-    </AppLayout>
+    </>
   )
 }
 

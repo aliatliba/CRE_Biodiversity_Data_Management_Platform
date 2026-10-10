@@ -11,7 +11,6 @@ import {
   Trash2,
 } from 'lucide-react'
 
-import { AppLayout } from '@/components/layout/AppLayout'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -230,7 +229,7 @@ export function SiteDetailPage() {
       : []
 
   return (
-    <AppLayout title="Site detail">
+    <>
       <Link
         to="/sites"
         className="mb-5 inline-flex items-center gap-1.5 text-sm font-medium text-canopy-700 hover:underline"
@@ -569,7 +568,7 @@ export function SiteDetailPage() {
           </Button>
         </form>
       </Modal>
-    </AppLayout>
+    </>
   )
 }
 

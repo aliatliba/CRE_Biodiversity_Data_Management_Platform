@@ -1,4 +1,4 @@
-import { api, setTokens, clearTokens } from '@/services/api'
+import { api, setTokens, clearTokens, getRefreshToken } from '@/services/api'
 import type {
   ChangePasswordRequest,
   CompleteProfileRequest,
@@ -35,7 +35,7 @@ export async function completeProfile(payload: CompleteProfileRequest): Promise<
 }
 
 export async function logout(): Promise<void> {
-  const refreshToken = localStorage.getItem('canopy.refresh_token')
+  const refreshToken = getRefreshToken()
   clearTokens()
   if (refreshToken) {
     try {

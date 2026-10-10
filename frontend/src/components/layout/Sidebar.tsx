@@ -1,26 +1,8 @@
 import { NavLink } from 'react-router-dom'
-import {
-  LayoutGrid,
-  MapPin,
-  Leaf,
-  Users,
-  Download,
-  ShieldCheck,
-  BarChart3,
-} from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
+import { ROUTES } from '@/lib/constants'
 import { cn } from '@/lib/utils'
-
-const NAV_ITEMS = [
-  { to: '/dashboard', label: 'Dashboard', icon: LayoutGrid, adminOnly: false },
-  { to: '/sites', label: 'Sites', icon: MapPin, adminOnly: false },
-  { to: '/species', label: 'Species', icon: Leaf, adminOnly: false },
-  { to: '/protected-species', label: 'Protected list', icon: ShieldCheck, adminOnly: false },
-  { to: '/exports', label: 'Exports', icon: Download, adminOnly: false },
-  { to: '/graphics', label: 'Graphics', icon: BarChart3, adminOnly: false },
-  { to: '/users', label: 'Users', icon: Users, adminOnly: true },
-
-]
+import { visibleNavItems } from './navConfig'
 
 export function Sidebar() {
   const { user } = useAuth()
@@ -37,7 +19,7 @@ export function Sidebar() {
       </div>
 
       <nav className="flex flex-1 flex-col gap-1 overflow-hidden px-3">
-        {NAV_ITEMS.filter((item) => !item.adminOnly || isAdmin).map(({ to, label, icon: Icon }) => (
+        {visibleNavItems(isAdmin).map(({ to, label, icon: Icon }) => (
           <NavLink
             key={to}
             to={to}
@@ -57,7 +39,7 @@ export function Sidebar() {
       </nav>
 
       <NavLink
-        to="/profile"
+        to={ROUTES.profile}
         className={({ isActive }) =>
           cn(
             'mt-auto block border-t border-canopy-900/[0.08] px-6 py-5 transition-colors hover:bg-mist-100',

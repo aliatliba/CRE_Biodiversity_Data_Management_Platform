@@ -16,7 +16,6 @@ import {
   Trash2,
 } from 'lucide-react'
 
-import { AppLayout } from '@/components/layout/AppLayout'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
@@ -607,7 +606,7 @@ export default function AddSpeciesPage() {
     !isLookingUp
 
   return (
-    <AppLayout title="Log a species">
+    <>
       <div className="mx-auto w-full max-w-5xl">
         {/* =====================================================
             PAGE HEADER
@@ -1528,7 +1527,7 @@ Aquila chrysaetos`}
             </div>
           )}
       </div>
-    </AppLayout>
+    </>
   )
 }
 

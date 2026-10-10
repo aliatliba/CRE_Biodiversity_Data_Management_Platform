@@ -2,9 +2,9 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import axios from 'axios'
 import { ArrowLeft, Trash2, Pencil } from 'lucide-react'
-import { AppLayout } from '@/components/layout/AppLayout'
 import { Card } from '@/components/ui/Card'
-import { Badge, getIucnTone } from '@/components/ui/Badge'
+import { Badge } from '@/components/ui/Badge'
+import { getIucnTone } from '@/lib/iucn'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { LoadingSpinner } from '@/components/common/LoadingSpinner'
@@ -223,7 +223,7 @@ export function SpeciesDetailPage() {
   const completeness = species ? getCompletenessStatus(species) : null
 
   return (
-    <AppLayout title="Species record">
+    <>
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <Link
           to="/species"
@@ -423,7 +423,7 @@ export function SpeciesDetailPage() {
           </Card>
         </div>
       )}
-    </AppLayout>
+    </>
   )
 }
 

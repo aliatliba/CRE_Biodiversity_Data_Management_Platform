@@ -1,7 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import axios from 'axios'
 import { ShieldCheck, Plus, Trash2, Search } from 'lucide-react'
-import { AppLayout } from '@/components/layout/AppLayout'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
@@ -87,7 +86,7 @@ export function ProtectedSpeciesPage() {
   }
 
   return (
-    <AppLayout title="Protected species list">
+    <>
       <p className="mb-6 max-w-xl text-sm text-ink-950/55">
         Species on this list are automatically marked{' '}
         <span className="font-semibold text-canopy-800">Protected</span> under national status the
@@ -201,7 +200,7 @@ export function ProtectedSpeciesPage() {
           </Button>
         </form>
       </Modal>
-    </AppLayout>
+    </>
   )
 }
 

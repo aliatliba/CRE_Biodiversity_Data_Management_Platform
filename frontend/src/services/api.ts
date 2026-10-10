@@ -19,6 +19,13 @@ export function setTokens(accessToken: string, refreshToken: string): void {
   localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken)
 }
 
+/** Dispatched when the session can no longer be refreshed (see AuthProvider). */
+export const AUTH_LOGOUT_EVENT = 'auth:logout'
+
+function notifySessionExpired(): void {
+  window.dispatchEvent(new Event(AUTH_LOGOUT_EVENT))
+}
+
 export function clearTokens(): void {
   localStorage.removeItem(ACCESS_TOKEN_KEY)
   localStorage.removeItem(REFRESH_TOKEN_KEY)
@@ -55,6 +62,7 @@ api.interceptors.response.use(
     const refreshToken = getRefreshToken()
     if (!refreshToken) {
       clearTokens()
+      notifySessionExpired()
       return Promise.reject(error)
     }
 
@@ -82,6 +90,7 @@ api.interceptors.response.use(
     } catch (refreshError) {
       clearTokens()
       flushQueue(null)
+      notifySessionExpired()
       return Promise.reject(refreshError)
     } finally {
       isRefreshing = false

@@ -17,8 +17,12 @@ function getSystemTheme(): Theme {
 }
 
 function getStoredTheme(): Theme | null {
-  const stored = localStorage.getItem(STORAGE_KEY)
-  return stored === 'dark' || stored === 'light' ? stored : null
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY)
+    return stored === 'dark' || stored === 'light' ? stored : null
+  } catch {
+    return null
+  }
 }
 
 function applyTheme(theme: Theme) {
@@ -26,32 +30,51 @@ function applyTheme(theme: Theme) {
 }
 
 interface ThemeContextValue {
+  /** The theme currently shown (may be a temporary override, see `forceTheme`). */
   theme: Theme
   toggleTheme: () => void
+  /** Choose a theme and remember it as the user's preference. */
   setTheme: (theme: Theme) => void
+  /**
+   * Show `theme` without touching the stored preference (null = back to the
+   * preference). Used by public pages that are always light.
+   */
+  forceTheme: (theme: Theme | null) => void
 }
 
 const ThemeContext = createContext<ThemeContextValue | undefined>(undefined)
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>(() => getStoredTheme() ?? getSystemTheme())
+  // The user's preference: stored choice, otherwise follow the system.
+  const [preference, setPreference] = useState<Theme>(() => getStoredTheme() ?? getSystemTheme())
+  const [forced, setForced] = useState<Theme | null>(null)
+  const theme = forced ?? preference
 
   useEffect(() => {
     applyTheme(theme)
   }, [theme])
 
-  // Follow the system preference until the user explicitly picks a theme.
+  // Follow the system preference only while the user has not chosen a theme.
+  // The stored value is re-checked inside the handler, so a choice made after
+  // mount is respected too.
   useEffect(() => {
-    if (getStoredTheme()) return
+    if (!window.matchMedia) return
     const media = window.matchMedia('(prefers-color-scheme: dark)')
-    const handler = (e: MediaQueryListEvent) => setThemeState(e.matches ? 'dark' : 'light')
+    const handler = (event: MediaQueryListEvent) => {
+      if (getStoredTheme()) return
+      setPreference(event.matches ? 'dark' : 'light')
+    }
     media.addEventListener('change', handler)
     return () => media.removeEventListener('change', handler)
   }, [])
 
   const setTheme = useCallback((next: Theme) => {
-    localStorage.setItem(STORAGE_KEY, next)
-    setThemeState(next)
+    try {
+      localStorage.setItem(STORAGE_KEY, next)
+    } catch {
+      // storage unavailable: the choice still applies for this session
+    }
+    setPreference(next)
   }, [])
 
   const toggleTheme = useCallback(() => {
@@ -59,7 +82,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   }, [theme, setTheme])
 
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme, setTheme }}>
+    <ThemeContext.Provider value={{ theme, toggleTheme, setTheme, forceTheme: setForced }}>
       {children}
     </ThemeContext.Provider>
   )

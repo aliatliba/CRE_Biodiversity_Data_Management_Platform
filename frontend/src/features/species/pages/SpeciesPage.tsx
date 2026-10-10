@@ -1,113 +1,109 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { Leaf, Plus } from 'lucide-react'
+import { useQuery, keepPreviousData } from '@tanstack/react-query'
+import { ArrowLeft, Leaf, Plus } from 'lucide-react'
 
-import { AppLayout } from '@/components/layout/AppLayout'
 import { Button } from '@/components/ui/Button'
 import { Pagination } from '@/components/ui/Pagination'
 import { LoadingSpinner } from '@/components/common/LoadingSpinner'
 import { ErrorState } from '@/components/common/ErrorState'
 import { EmptyState } from '@/components/common/EmptyState'
 
-import * as siteService from '@/features/sites/services/siteService'
-import type { Site } from '@/features/sites/types'
+import { useDebouncedValue } from '@/hooks/useDebouncedValue'
+import { useSitesQuery } from '@/hooks/useSitesQuery'
+import { getErrorMessage } from '@/lib/errors'
+import { queryKeys } from '@/lib/queryKeys'
+import { ROUTES, siteUrl } from '@/lib/constants'
 
 import * as speciesService from '../services/speciesService'
-import type { SpeciesListItem, SpeciesFilters } from '../types'
+import type { SpeciesFilters } from '../types'
 import { EMPTY_SPECIES_FILTERS } from '../types'
 import { SpeciesTable } from '../components/SpeciesTable'
 import { SpeciesSearch } from '../components/SpeciesSearch'
 
 const DEFAULT_PAGE_SIZE = 15
 
+/** Filters that live in the URL (shareable / linkable from the dashboard and site pages). */
+const URL_FILTER_KEYS = ['site_id', 'national_status', 'iucn_status', 'search'] as const
+
+function filtersFromParams(params: URLSearchParams): SpeciesFilters {
+  const filters = { ...EMPTY_SPECIES_FILTERS }
+  for (const key of URL_FILTER_KEYS) filters[key] = params.get(key) ?? ''
+  return filters
+}
+
+function toListParams(filters: SpeciesFilters, page: number, pageSize: number) {
+  return {
+    page,
+    page_size: pageSize,
+    search: filters.search || undefined,
+    kingdom: filters.kingdom || undefined,
+    class_name: filters.class_name || undefined,
+    order_name: filters.order_name || undefined,
+    family: filters.family || undefined,
+    genus: filters.genus || undefined,
+    national_status: filters.national_status || undefined,
+    iucn_status: filters.iucn_status || undefined,
+    site_id: filters.site_id ? Number(filters.site_id) : undefined,
+  }
+}
+
+/** The one species list. Site / status scoping comes from the URL query string. */
 export function SpeciesPage() {
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
 
-  const [items, setItems] = useState<SpeciesListItem[]>([])
-  const [sites, setSites] = useState<Site[]>([])
-
+  // Filters are edited locally (so typing is instant) and mirrored to the URL.
+  const [filters, setFilters] = useState<SpeciesFilters>(() => filtersFromParams(searchParams))
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
-  const [pages, setPages] = useState(1)
-  const [total, setTotal] = useState(0)
 
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const debouncedFilters = useDebouncedValue(filters)
 
-  const [filters, setFilters] = useState<SpeciesFilters>(() => ({
-    ...EMPTY_SPECIES_FILTERS,
-    site_id: searchParams.get('site_id') ?? '',
-    national_status: searchParams.get('national_status') ?? '',
-    iucn_status: searchParams.get('iucn_status') ?? '',
-  }))
-
-  useEffect(() => {
-    siteService
-      .listSites()
-      .then(setSites)
-      .catch(() => setSites([]))
-  }, [])
-
-  async function load() {
-    setIsLoading(true)
-    setError(null)
-
-    try {
-      const result = await speciesService.listSpecies({
-        page,
-        page_size: pageSize,
-        search: filters.search || undefined,
-        kingdom: filters.kingdom || undefined,
-        class_name: filters.class_name || undefined,
-        order_name: filters.order_name || undefined,
-        family: filters.family || undefined,
-        genus: filters.genus || undefined,
-        national_status: filters.national_status || undefined,
-        iucn_status: filters.iucn_status || undefined,
-        site_id: filters.site_id
-          ? Number(filters.site_id)
-          : undefined,
-      })
-
-      setItems(result.items)
-      setPages(result.pages || 1)
-      setTotal(result.total)
-    } catch {
-      setError('Could not load species.')
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    load()
-
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, pageSize])
-
-  useEffect(() => {
+  function updateFilters(next: SpeciesFilters) {
+    setFilters(next)
     setPage(1)
 
-    const timeout = setTimeout(() => {
-      load()
-    }, 350)
+    const params = new URLSearchParams()
+    for (const key of URL_FILTER_KEYS) if (next[key]) params.set(key, next[key])
+    setSearchParams(params, { replace: true })
+  }
 
-    return () => clearTimeout(timeout)
+  const sitesQuery = useSitesQuery()
+  const sites = sitesQuery.data ?? []
 
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters])
+  const listParams = toListParams(debouncedFilters, page, pageSize)
+  const query = useQuery({
+    queryKey: queryKeys.species(listParams),
+    queryFn: () => speciesService.listSpecies(listParams),
+    placeholderData: keepPreviousData,
+  })
+
+  const items = query.data?.items ?? []
+  const scopedSite = filters.site_id
+    ? sites.find((site) => String(site.id) === filters.site_id)
+    : undefined
 
   return (
-    <AppLayout title="Species">
-      <div className="mb-6 flex flex-col gap-4">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <SpeciesSearch
-            filters={filters}
-            onChange={setFilters}
-            sites={sites}
-          />
+    <>
+      {filters.site_id && (
+        <Link
+          to={siteUrl(filters.site_id)}
+          className="mb-5 inline-flex items-center gap-1.5 text-sm font-medium text-canopy-700 hover:underline"
+        >
+          <ArrowLeft size={15} aria-hidden="true" />
+          Back to {scopedSite?.name ?? 'site'}
+        </Link>
+      )}
 
-          <Link to="/species/new" className="shrink-0">
+      <div className="mb-6 flex flex-col gap-4">
+        {scopedSite && (
+          <p className="text-sm text-ink-950/55">Showing species recorded at {scopedSite.name}.</p>
+        )}
+
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <SpeciesSearch filters={filters} onChange={updateFilters} sites={sites} />
+
+          <Link to={ROUTES.addSpecies} className="shrink-0">
             <Button className="w-full gap-2 sm:w-auto">
               <Plus size={16} />
               Log species
@@ -116,17 +112,20 @@ export function SpeciesPage() {
         </div>
       </div>
 
-      {isLoading && (
+      {query.isPending && (
         <div className="flex justify-center py-20">
           <LoadingSpinner className="h-7 w-7" />
         </div>
       )}
 
-      {!isLoading && error && (
-        <ErrorState message={error} onRetry={load} />
+      {query.isError && (
+        <ErrorState
+          message={getErrorMessage(query.error, 'Could not load species.')}
+          onRetry={() => query.refetch()}
+        />
       )}
 
-      {!isLoading && !error && items.length === 0 && (
+      {query.isSuccess && items.length === 0 && (
         <EmptyState
           icon={<Leaf size={22} />}
           title="No species found"
@@ -134,15 +133,15 @@ export function SpeciesPage() {
         />
       )}
 
-      {!isLoading && !error && items.length > 0 && (
-        <>
+      {query.isSuccess && items.length > 0 && (
+        <div className={query.isPlaceholderData ? 'opacity-60 transition-opacity' : undefined}>
           <SpeciesTable species={items} />
 
           <Pagination
             className="mt-5"
             page={page}
-            pages={pages}
-            total={total}
+            pages={query.data.pages || 1}
+            total={query.data.total}
             pageSize={pageSize}
             onPageChange={setPage}
             onPageSizeChange={(size) => {
@@ -150,11 +149,10 @@ export function SpeciesPage() {
               setPage(1)
             }}
           />
-        </>
+        </div>
       )}
-    </AppLayout>
+    </>
   )
 }
 
 export default SpeciesPage
-
