@@ -1,8 +1,7 @@
 import os
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse
-from sqlalchemy.orm import Session
 
 from app.core.dependencies import DBSession, ActiveUser
 from app.schemas.export import ExportRequest, ExportResponse

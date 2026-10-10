@@ -1,14 +1,13 @@
 from dataclasses import asdict
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query
 from sqlalchemy.orm import Session
 from typing import List
 
 from app.core.background import spawn
 from app.core.dependencies import DBSession, ActiveUser, AdminUser
 from app.core.utils import clean_and_dedupe_names
-from app.core.db import SessionLocal
-from app.core.job_store import Job, job_store
+from app.core.job_store import Job, job_store, run_job
 
 from app.services import species_service, site_service
 from app.services.bulk_import_service import ImportSummary, run_bulk_import
@@ -43,35 +42,30 @@ async def lookup_species(data: SpeciesLookupRequest, db: DBSession):
     return await species_service.lookup_species(db, data.scientific_name)
 
 
-async def _execute_lookup_batch(
-    job_id: str,
-    scientific_names: list[str],
-    site_id: int,
-) -> None:
-    job = job_store.get(job_id)
+def _base_job_fields(job: Job) -> dict:
+    """Fields shared by the lookup-batch and bulk-import job responses."""
+    return {
+        "job_id": job.id,
+        "status": job.status,
+        "total": job.total,
+        "processed": job.processed,
+        "started_at": job.started_at,
+        "finished_at": job.finished_at,
+        "error": job.error,
+    }
 
-    if job is None:
-        return
 
-    db: Session = SessionLocal()
-
+async def _execute_lookup_batch(job: Job, scientific_names: list[str], site_id: int) -> None:
     # Species finish out of order (bounded concurrency); keep job.items in input order.
     by_index: dict[int, dict] = {}
 
-    async def on_progress(
-        processed: int,
-        total: int,
-        item: dict,
-        index: int,
-    ) -> None:
+    async def on_progress(processed: int, total: int, item: dict, index: int) -> None:
         by_index[index] = item
         job.items = [by_index[i] for i in sorted(by_index)]
         job.processed = processed
         job.total = total
 
-    try:
-        job.status = "running"
-
+    async def work(db: Session) -> None:
         await species_service.lookup_species_batch(
             db=db,
             scientific_names=scientific_names,
@@ -80,34 +74,13 @@ async def _execute_lookup_batch(
             on_progress=on_progress,
         )
 
-        job.status = "completed"
-
-    except Exception as exc:
-        job.status = "failed"
-        job.error = str(exc)
-
-    finally:
-        from datetime import datetime, timezone
-
-        job.finished_at = datetime.now(timezone.utc)
-        db.close()
+    await run_job(job, work)
 
 
-def _lookup_job_to_response(
-    job: Job,
-) -> BatchSpeciesLookupJobResponse:
+def _lookup_job_to_response(job: Job) -> BatchSpeciesLookupJobResponse:
     return BatchSpeciesLookupJobResponse(
-        job_id=job.id,
-        status=job.status,
-        total=job.total,
-        processed=job.processed,
-        items=[
-            BatchSpeciesLookupItem(**item)
-            for item in job.items
-        ],
-        started_at=job.started_at,
-        finished_at=job.finished_at,
-        error=job.error,
+        **_base_job_fields(job),
+        items=[BatchSpeciesLookupItem(**item) for item in job.items],
     )
 
 
@@ -141,7 +114,7 @@ async def lookup_species_batch(
     job = job_store.create()
     job.total = len(names)
 
-    spawn(_execute_lookup_batch(job.id, names, data.site_id))
+    spawn(_execute_lookup_batch(job, names, data.site_id))
 
     return _lookup_job_to_response(job)
 
@@ -167,27 +140,17 @@ def get_lookup_batch_status(
 
 def _job_to_response(job: Job) -> BulkImportJobResponse:
     return BulkImportJobResponse(
-        job_id=job.id,
-        status=job.status,
-        total=job.total,
-        processed=job.processed,
+        **_base_job_fields(job),
         created=job.created,
         linked=job.linked,
         skipped=job.skipped,
         failed=job.failed,
         invalid=job.invalid,
         items=[BulkImportItemResponse(**item) for item in job.items],
-        started_at=job.started_at,
-        finished_at=job.finished_at,
-        error=job.error,
     )
 
 
-async def _execute_bulk_import(job_id: str, data: BulkImportRequest, user_id: int) -> None:
-    job = job_store.get(job_id)
-    if job is None:
-        return
-
+async def _execute_bulk_import(job: Job, data: BulkImportRequest, user_id: int) -> None:
     async def on_progress(summary: ImportSummary) -> None:
         job.processed = len(summary.items)
         job.created = summary.created
@@ -197,9 +160,7 @@ async def _execute_bulk_import(job_id: str, data: BulkImportRequest, user_id: in
         job.invalid = summary.invalid
         job.items = [asdict(item) for item in summary.items]
 
-    db: Session = SessionLocal()
-    try:
-        job.status = "running"
+    async def work(db: Session) -> None:
         await run_bulk_import(
             db=db,
             names=data.scientific_names,
@@ -209,15 +170,8 @@ async def _execute_bulk_import(job_id: str, data: BulkImportRequest, user_id: in
             dry_run=data.dry_run,
             on_progress=on_progress,
         )
-        job.status = "completed"
-    except Exception as exc:
-        job.status = "failed"
-        job.error = str(exc)
-    finally:
-        from datetime import datetime, timezone
 
-        job.finished_at = datetime.now(timezone.utc)
-        db.close()
+    await run_job(job, work)
 
 
 @router.post("/bulk-import", response_model=BulkImportJobResponse, status_code=202)
@@ -242,7 +196,7 @@ async def bulk_import_species(
     job = job_store.create()
     job.total = len(data.scientific_names)
 
-    spawn(_execute_bulk_import(job.id, data, user.id))
+    spawn(_execute_bulk_import(job, data, user.id))
 
     return _job_to_response(job)
 

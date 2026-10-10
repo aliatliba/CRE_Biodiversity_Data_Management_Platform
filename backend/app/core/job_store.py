@@ -1,35 +1,46 @@
-"""Process-local registry for tracking long-running bulk-import jobs.
+"""Process-local registry and runner for long-running background jobs.
 
-A bulk import of ~300 species, each requiring a network round trip plus a
-deliberate rate-limiting delay, can easily take several minutes — far too
-long to hold open a single HTTP request/response cycle. So the API kicks
-the work off as a background asyncio task and hands back a job id
-immediately; the client polls `GET /species/bulk-import/{job_id}` for
-progress.
+Bulk imports, batch species lookups and graphics generation can take minutes — far
+too long to hold one HTTP request open. The API creates a job, starts the work as a
+background asyncio task (``app.core.background.spawn``) and returns the job id
+immediately; the client polls the matching ``GET .../{job_id}`` endpoint.
 
-NOTE: this store is an in-memory dict, scoped to a single process. That's
-fine for a single `uvicorn` worker (the common case for this app — see
-Dockerfile), but if the API is ever run with multiple worker processes or
-multiple replicas behind a load balancer, a job started on one worker
-won't be visible from another. If that becomes a real deployment target,
-swap this for a Redis- or DB-backed store; `run_bulk_import`'s
-`on_progress` callback is already the only integration point that would
-need to change.
+NOTE: the store is an in-memory dict scoped to one process. That is fine for a single
+``uvicorn`` worker (see Dockerfile), but with several workers/replicas a job started on
+one would be invisible to the others. If that becomes a real deployment target, swap
+this for a Redis- or DB-backed store; ``JobStore`` and ``run_job`` are the only places
+that would need to change.
 """
 from __future__ import annotations
 
 import uuid
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
-from typing import Any
+from typing import Any, Generic, TypeVar
+
+import structlog
+from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
+from app.core.db import SessionLocal
+
+logger = structlog.get_logger()
 
 
 @dataclass
-class Job:
+class BaseJob:
     id: str
     status: str = "queued"  # queued | running | completed | failed
+    started_at: datetime | None = None
+    finished_at: datetime | None = None
+    error: str | None = None
+
+
+@dataclass
+class Job(BaseJob):
+    """Batch species lookup / bulk species import."""
+
     total: int = 0
     processed: int = 0
     created: int = 0
@@ -37,15 +48,26 @@ class Job:
     skipped: int = 0
     failed: int = 0
     invalid: int = 0
-    items: list[dict[str, Any]] = field(default_factory=list)
-    started_at: datetime | None = None
-    finished_at: datetime | None = None
-    error: str | None = None
+    items: list[Any] = field(default_factory=list)
 
 
-class InMemoryJobStore:
-    def __init__(self) -> None:
-        self._jobs: dict[str, Job] = {}
+@dataclass
+class GraphicsJob(BaseJob):
+    graphic_type: str = ""
+    site_id: int | None = None
+    site_name: str | None = None
+    total_species: int = 0
+    processed: int = 0
+    files: dict[str, str] = field(default_factory=dict)  # format -> path
+
+
+J = TypeVar("J", bound=BaseJob)
+
+
+class JobStore(Generic[J]):
+    def __init__(self, job_class: type[J]) -> None:
+        self._job_class = job_class
+        self._jobs: dict[str, J] = {}
 
     def purge_expired(self) -> None:
         """Drop finished jobs older than JOB_TTL_SECONDS so the dict cannot grow forever."""
@@ -58,14 +80,36 @@ class InMemoryJobStore:
         for job_id in expired:
             del self._jobs[job_id]
 
-    def create(self) -> Job:
+    def create(self, **fields: Any) -> J:
         self.purge_expired()
-        job = Job(id=str(uuid.uuid4()), started_at=datetime.now(timezone.utc))
+        job = self._job_class(id=str(uuid.uuid4()), started_at=datetime.now(timezone.utc), **fields)
         self._jobs[job.id] = job
         return job
 
-    def get(self, job_id: str) -> Job | None:
+    def get(self, job_id: str) -> J | None:
         return self._jobs.get(job_id)
 
 
-job_store = InMemoryJobStore()
+job_store: JobStore[Job] = JobStore(Job)
+graphics_job_store: JobStore[GraphicsJob] = JobStore(GraphicsJob)
+
+
+async def run_job(job: BaseJob, work: Callable[[Session], Awaitable[None]]) -> None:
+    """Run ``work(db)`` for ``job``: status transitions, own DB session, error capture.
+
+    The session is opened here and always closed, ``finished_at`` is always set, and an
+    exception marks the job ``failed`` (with the message) instead of vanishing inside
+    the background task.
+    """
+    db = SessionLocal()
+    try:
+        job.status = "running"
+        await work(db)
+        job.status = "completed"
+    except Exception as exc:
+        logger.error("job_failed", job_id=job.id, exc_info=exc)
+        job.status = "failed"
+        job.error = str(exc)
+    finally:
+        job.finished_at = datetime.now(timezone.utc)
+        db.close()

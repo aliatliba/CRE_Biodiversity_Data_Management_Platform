@@ -2,10 +2,10 @@ import asyncio
 from datetime import datetime, timezone
 from typing import Any
 
-from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 from starlette.concurrency import run_in_threadpool
 
+from app.core.exceptions import BadRequestError, ConflictError, ForbiddenError, NotFoundError
 from app.core.config import get_settings
 from app.core.utils import clean_and_dedupe_names
 from app.models.species import Species
@@ -272,10 +272,7 @@ def compute_national_status(db: Session, scientific_name: str) -> str:
 def create_species(db: Session, data: SpeciesCreate, user_id: int) -> Species:
     existing = check_duplicate(db, data.scientific_name)
     if existing:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Species already exists",
-        )
+        raise ConflictError("Species already exists")
 
     national_status = compute_national_status(db, data.scientific_name)
 
@@ -340,17 +337,11 @@ def _as_utc(value: datetime) -> datetime:
 def update_species(db: Session, species_id: int, data: SpeciesUpdate, user_id: int) -> Species:
     species = db.query(Species).filter(Species.id == species_id).first()
     if not species:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Species not found",
-        )
+        raise NotFoundError("Species not found")
 
     incoming_updated_at = _as_utc(datetime.fromisoformat(data.updated_at.replace("Z", "+00:00")))
     if _as_utc(species.updated_at) != incoming_updated_at:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Species was modified by another user. Please refresh and try again.",
-        )
+        raise ConflictError("Species was modified by another user. Please refresh and try again.")
 
     changes: dict[str, Any] = {}
     update_data = data.model_dump(exclude_unset=True)
@@ -358,20 +349,14 @@ def update_species(db: Session, species_id: int, data: SpeciesUpdate, user_id: i
 
     for field, new_value in update_data.items():
         if field not in PERMITTED_EDIT_FIELDS:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Field '{field}' is not permitted to be edited on an existing species.",
-            )
+            raise ForbiddenError(f"Field '{field}' is not permitted to be edited on an existing species.")
         old_value = getattr(species, field)
         if old_value != new_value:
             changes[field] = {"old": old_value, "new": new_value}
             setattr(species, field, new_value)
 
     if not changes:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="No changes detected",
-        )
+        raise BadRequestError("No changes detected")
 
     species.validated_by = user_id
     species.validated_at = datetime.now(timezone.utc)
@@ -392,10 +377,7 @@ def update_species(db: Session, species_id: int, data: SpeciesUpdate, user_id: i
 def get_species(db: Session, species_id: int) -> Species:
     species = db.query(Species).filter(Species.id == species_id).first()
     if not species:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Species not found",
-        )
+        raise NotFoundError("Species not found")
     return species
 
 
@@ -490,10 +472,7 @@ def list_species(
 def delete_species(db: Session, species_id: int) -> None:
     species = db.query(Species).filter(Species.id == species_id).first()
     if not species:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Species not found",
-        )
+        raise NotFoundError("Species not found")
     db.query(SiteSpecies).filter(SiteSpecies.species_id == species_id).delete(
         synchronize_session=False
     )
@@ -522,10 +501,7 @@ def associate_species_with_site(
         .first()
     )
     if existing:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Species is already associated with this site",
-        )
+        raise ConflictError("Species is already associated with this site")
     association = SiteSpecies(
         site_id=site_id,
         species_id=data.species_id,
@@ -549,9 +525,6 @@ def remove_site_species(db: Session, site_id: int, species_id: int) -> None:
         .first()
     )
     if not association:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Association not found",
-        )
+        raise NotFoundError("Association not found")
     db.delete(association)
     db.commit()

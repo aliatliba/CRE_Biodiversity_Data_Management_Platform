@@ -1,6 +1,6 @@
-from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
+from app.core.exceptions import ConflictError, NotFoundError
 from app.models.protected_species import ProtectedSpeciesList
 from app.models.species import Species
 from app.schemas.protected_species import ProtectedSpeciesCreate
@@ -43,10 +43,7 @@ def add_protected_species(
         .first()
     )
     if existing:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="This species is already on the protected list",
-        )
+        raise ConflictError("This species is already on the protected list")
     entry = ProtectedSpeciesList(
         scientific_name=data.scientific_name,
         source_reference=data.source_reference,
@@ -63,7 +60,7 @@ def add_protected_species(
 def remove_protected_species(db: Session, entry_id: int) -> None:
     entry = db.query(ProtectedSpeciesList).filter(ProtectedSpeciesList.id == entry_id).first()
     if not entry:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Entry not found")
+        raise NotFoundError("Entry not found")
     name = entry.scientific_name
     db.delete(entry)
     db.flush()

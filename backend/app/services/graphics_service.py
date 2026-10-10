@@ -12,7 +12,7 @@ from tempfile import TemporaryDirectory  # noqa: F401  (re-exported for the API)
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
-from app.core.graphics_job_store import GraphicsJob
+from app.core.job_store import GraphicsJob
 from app.scripts.graphics_registry import GraphicSpec, get_spec  # noqa: F401
 
 logger = logging.getLogger(__name__)

@@ -25,9 +25,9 @@ import asyncio
 from dataclasses import dataclass, field
 from typing import Any, Awaitable, Callable
 
-from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
+from app.core.exceptions import AppException
 from app.core.utils import clean_and_dedupe_names
 from app.models.site_species import SiteSpecies
 from app.schemas.species import SpeciesCreate
@@ -188,14 +188,14 @@ async def run_bulk_import(
                     result.status = "created"
                     result.species_id = species.id
                     summary.created += 1
-        except HTTPException as exc:
+        except AppException as exc:
             db.rollback()
             if exc.status_code == 409:
                 result.status = "skipped_duplicate"
                 summary.skipped += 1
             else:
                 result.status = "failed"
-                result.error = str(exc.detail)
+                result.error = exc.message
                 summary.failed += 1
         except Exception as exc:  # keep the batch going on unexpected per-item errors
             db.rollback()

@@ -1,5 +1,4 @@
-from fastapi import APIRouter, Depends, Query
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, Query
 from typing import List
 
 from app.core.dependencies import DBSession, ActiveUser, AdminUser

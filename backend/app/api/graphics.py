@@ -1,17 +1,16 @@
 from __future__ import annotations
 
 import asyncio
-from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse
+from sqlalchemy.orm import Session
 
 from app.core.background import spawn
 from app.core.config import get_settings
-from app.core.db import SessionLocal
 from app.core.dependencies import ActiveUser
-from app.core.graphics_job_store import graphics_job_store
+from app.core.job_store import GraphicsJob, graphics_job_store, run_job
 from app.core.utils import purge_old_entries
 from app.schemas.graphics import (
     GraphicsGenerateRequest,
@@ -23,51 +22,36 @@ from app.services import graphics_service
 
 router = APIRouter()
 
-# R is memory hungry: limit how many scripts run at the same time.
-_r_slots = asyncio.Semaphore(2)
+async def _execute_graphics_job(job: GraphicsJob, site_id: int, spec: GraphicSpec) -> None:
+    # R is memory hungry, but concurrency is already limited by graphics_service._R_SLOT.
+    async def work(db: Session) -> None:
+        with graphics_service.TemporaryDirectory(prefix=f"graphics_{job.id}_") as tmp:
+            input_excel = Path(tmp) / "input.xlsx"
 
+            site_name, total = await asyncio.to_thread(
+                graphics_service.build_site_excel, db, site_id, spec, input_excel
+            )
+            job.site_name = site_name
+            job.total_species = total
 
-async def _execute_graphics_job(job_id: str, site_id: int, spec: GraphicSpec) -> None:
-    job = graphics_job_store.get(job_id)
-    if job is None:
-        return
-
-    db = SessionLocal()
-    try:
-        async with _r_slots:
-            job.status = "running"
-            with graphics_service.TemporaryDirectory(prefix=f"graphics_{job_id}_") as tmp:
-                input_excel = Path(tmp) / "input.xlsx"
-
-                site_name, total = await asyncio.to_thread(
-                    graphics_service.build_site_excel, db, site_id, spec, input_excel
-                )
-                job.site_name = site_name
-                job.total_species = total
-
-                if total == 0:
-                    raise ValueError(
-                        f"This research site has no validated species "
-                        f"records usable for “{spec.label}”."
-                    )
-
-                output_dir = (
-                    graphics_service.GRAPHICS_DIR
-                    / f"{job_id}_{graphics_service._safe_filename(site_name)}"
-                )
-                files = await asyncio.to_thread(
-                    graphics_service.run_r_script, spec, input_excel, output_dir
+            if total == 0:
+                raise ValueError(
+                    f"This research site has no validated species "
+                    f"records usable for “{spec.label}”."
                 )
 
-            job.files = {fmt: str(path) for fmt, path in files.items()}
-            job.processed = total
-            job.status = "completed"
-    except Exception as exc:
-        job.status = "failed"
-        job.error = str(exc)
-    finally:
-        job.finished_at = datetime.now(timezone.utc)
-        db.close()
+            output_dir = (
+                graphics_service.GRAPHICS_DIR
+                / f"{job.id}_{graphics_service._safe_filename(site_name)}"
+            )
+            files = await asyncio.to_thread(
+                graphics_service.run_r_script, spec, input_excel, output_dir
+            )
+
+        job.files = {fmt: str(path) for fmt, path in files.items()}
+        job.processed = total
+
+    await run_job(job, work)
 
 
 @router.get("/types", response_model=list[GraphicTypeResponse])
@@ -92,9 +76,8 @@ async def generate_graphics(data: GraphicsGenerateRequest, user: ActiveUser):
         graphics_service.GRAPHICS_DIR,
         get_settings().graphics_retention_hours,
     )
-    job = graphics_job_store.create(spec.key)
-    job.site_id = data.site_id
-    spawn(_execute_graphics_job(job.id, data.site_id, spec))
+    job = graphics_job_store.create(graphic_type=spec.key, site_id=data.site_id)
+    spawn(_execute_graphics_job(job, data.site_id, spec))
     return graphics_service.graphics_job_response(job)
 
 

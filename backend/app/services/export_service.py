@@ -4,10 +4,11 @@ import os
 from datetime import datetime, timezone
 from typing import Any
 
-from fastapi import HTTPException, status
-from sqlalchemy.orm import Session
+import openpyxl
+from sqlalchemy.orm import Session, selectinload
 from sqlalchemy import func, or_
 
+from app.core.exceptions import BadRequestError, NotFoundError
 from app.core.config import get_settings
 from app.core.utils import purge_old_entries
 from app.models.export import Export
@@ -53,6 +54,7 @@ def _build_export_query(db: Session, filters: dict[str, Any] | None):
                 ", "
             ).label("site_names"),
         )
+        .options(selectinload(Species.validator))
         .join(SiteSpecies, SiteSpecies.species_id == Species.id)
         .join(Site, Site.id == SiteSpecies.site_id)
         .filter(Species.status == "validated")
@@ -172,105 +174,54 @@ def get_export_options(db: Session) -> dict[str, list]:
     }
 
 
+EXPORT_COLUMNS = [
+    "id", "scientific_name", "kingdom", "class_name", "order_name", "family",
+    "genus", "species_epithet", "common_name", "iucn_status", "iucn_trend",
+    "national_status", "guild", "ecosystem_service", "habitat", "typology",
+    "endemism", "potential_threats", "reference", "site_name",
+    "validated_by", "validated_at",
+]  # fmt: skip
+
+# Plain species attributes exported as-is, in column order.
+_SPECIES_ATTRS = EXPORT_COLUMNS[:19]
+
+
+def _row(species: Species, site_names: str | None) -> list[Any]:
+    """One export row (shared by CSV and XLSX); order follows EXPORT_COLUMNS."""
+    return [
+        *(getattr(species, attr) for attr in _SPECIES_ATTRS),
+        site_names or "",
+        species.validator.full_name if species.validator else "",
+        species.validated_at.isoformat() if species.validated_at else "",
+    ]
+
+
 def generate_csv(db: Session, filters: dict[str, Any] | None) -> str:
     _ensure_exports_dir()
-    query = _build_export_query(db, filters)
-    rows = query.all()
+    rows = _build_export_query(db, filters).all()
 
     output = io.StringIO()
     writer = csv.writer(output)
-    writer.writerow([
-        "id", "scientific_name", "kingdom", "class_name", "order_name", "family",
-        "genus", "species_epithet", "common_name", "iucn_status", "iucn_trend",
-        "national_status", "guild", "ecosystem_service", "habitat", "typology",
-        "endemism", "potential_threats", "reference", "site_name",
-        "validated_by", "validated_at",
-    ])
+    writer.writerow(EXPORT_COLUMNS)
     for species, site_names in rows:
-        writer.writerow([
-            species.id,
-            species.scientific_name,
-            species.kingdom,
-            species.class_name,
-            species.order_name,
-            species.family,
-            species.genus,
-            species.species_epithet,
-            species.common_name,
-            species.iucn_status,
-            species.iucn_trend,
-            species.national_status,
-            species.guild,
-            species.ecosystem_service,
-            species.habitat,
-            species.typology,
-            species.endemism,
-            species.potential_threats,
-            species.reference,
-            site_names or "",
-            species.validator.full_name if species.validator else "",
-            species.validated_at.isoformat()
-            if species.validated_at
-            else "",
-        ])
-    
-    return output.getvalue()
+        writer.writerow(_row(species, site_names))
+
+    # BOM so Excel opens the UTF-8 file with French accents intact.
+    return "\ufeff" + output.getvalue()
 
 
 def generate_xlsx(db: Session, filters: dict[str, Any] | None) -> bytes:
     _ensure_exports_dir()
-    try:
-        import openpyxl
-    except ImportError:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="XLSX generation requires openpyxl",
-        )
-
-    query = _build_export_query(db, filters)
-    rows = query.all()
+    rows = _build_export_query(db, filters).all()
 
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = "Species"
-    headers = [
-        "id", "scientific_name", "kingdom", "class_name", "order_name", "family",
-        "genus", "species_epithet", "common_name", "iucn_status", "iucn_trend",
-        "national_status", "guild", "ecosystem_service", "habitat", "typology",
-        "endemism", "potential_threats", "reference", "site_name",
-        "validated_by", "validated_at",
-    ]
-    ws.append(headers)
+    ws.append(EXPORT_COLUMNS)
     for species, site_names in rows:
-        ws.append([
-        species.id,
-        species.scientific_name,
-        species.kingdom,
-        species.class_name,
-        species.order_name,
-        species.family,
-        species.genus,
-        species.species_epithet,
-        species.common_name,
-        species.iucn_status,
-        species.iucn_trend,
-        species.national_status,
-        species.guild,
-        species.ecosystem_service,
-        species.habitat,
-        species.typology,
-        species.endemism,
-        species.potential_threats,
-        species.reference,
-        site_names or "",
-        species.validator.full_name if species.validator else "",
-        species.validated_at.isoformat()
-        if species.validated_at
-        else "",
-        ])
+        ws.append(_row(species, site_names))
     buffer = io.BytesIO()
     wb.save(buffer)
-    buffer.seek(0)
     return buffer.getvalue()
 
 
@@ -299,10 +250,7 @@ def create_export(db: Session, format: str, filters: dict[str, Any] | None, user
     else:
         export.status = "failed"
         db.commit()
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Unsupported export format",
-        )
+        raise BadRequestError("Unsupported export format")
 
     export.status = "done"
     export.file_path = filepath
@@ -315,10 +263,7 @@ def create_export(db: Session, format: str, filters: dict[str, Any] | None, user
 def get_export(db: Session, export_id: int) -> Export:
     export = db.query(Export).filter(Export.id == export_id).first()
     if not export:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Export not found",
-        )
+        raise NotFoundError("Export not found")
     return export
 
 
