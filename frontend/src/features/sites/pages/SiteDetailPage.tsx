@@ -31,7 +31,7 @@ import * as siteService from '../services/siteService'
 import type { Site } from '../types'
 
 import * as speciesService from '@/features/species/services/speciesService'
-import type { Species } from '@/features/species/types'
+import type { SpeciesListItem } from '@/features/species/types'
 import { SpeciesTable } from '@/features/species/components/SpeciesTable'
 
 import { StatCard } from '@/features/dashboard/components/StatCard'
@@ -46,7 +46,7 @@ export function SiteDetailPage() {
 
   const [site, setSite] = useState<Site | null>(null)
   const [stats, setStats] = useState<DashboardStats | null>(null)
-  const [species, setSpecies] = useState<Species[]>([])
+  const [species, setSpecies] = useState<SpeciesListItem[]>([])
 
   const [page, setPage] = useState(1)
   const [pages, setPages] = useState(1)

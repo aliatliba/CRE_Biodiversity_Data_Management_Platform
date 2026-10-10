@@ -13,7 +13,7 @@ import * as siteService from '@/features/sites/services/siteService'
 import type { Site } from '@/features/sites/types'
 
 import * as speciesService from '../services/speciesService'
-import type { Species, SpeciesFilters } from '../types'
+import type { SpeciesListItem, SpeciesFilters } from '../types'
 import { EMPTY_SPECIES_FILTERS } from '../types'
 import { SpeciesTable } from '../components/SpeciesTable'
 import { SpeciesSearch } from '../components/SpeciesSearch'
@@ -23,7 +23,7 @@ const DEFAULT_PAGE_SIZE = 15
 export function SpeciesPage() {
   const [searchParams] = useSearchParams()
 
-  const [items, setItems] = useState<Species[]>([])
+  const [items, setItems] = useState<SpeciesListItem[]>([])
   const [sites, setSites] = useState<Site[]>([])
 
   const [page, setPage] = useState(1)

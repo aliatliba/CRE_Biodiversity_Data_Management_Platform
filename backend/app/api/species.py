@@ -15,6 +15,7 @@ from app.core.pagination import PaginationParams, paginate,Page
 from app.schemas.species import (
     SpeciesCreate,
     SpeciesUpdate,
+    SpeciesListItem,
     SpeciesResponse,
     SpeciesLookupRequest,
     SpeciesDraft,
@@ -209,7 +210,7 @@ def get_bulk_import_status(job_id: str, user: AdminUser):
     return _job_to_response(job)
 
 
-@router.get("", response_model=Page[SpeciesResponse])
+@router.get("", response_model=Page[SpeciesListItem])
 def list_species(
     db: DBSession,
     user: ActiveUser,

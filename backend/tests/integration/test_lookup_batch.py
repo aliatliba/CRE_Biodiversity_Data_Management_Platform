@@ -60,3 +60,37 @@ def test_batch_endpoint_job_roundtrip(client, admin_headers, fake_providers):
     )
     assert r.status_code == 202
     assert r.json()["total"] == 2
+
+
+def test_provider_results_are_cached(client, admin_headers, fake_providers):
+    fake_providers.data["gbif"] = {"canonicalName": "Panthera leo", "kingdom": "Animalia"}
+    for _ in range(2):
+        r = client.post(
+            "/api/v1/species/lookup",
+            json={"scientific_name": "Panthera leo"},
+            headers=admin_headers,
+        )
+        assert r.status_code == 200
+    gbif_calls = [c for c in fake_providers.calls if c[0] == "gbif"]
+    assert len(gbif_calls) == 1  # second lookup served from the cache
+
+
+def test_errors_are_not_cached(client, admin_headers, fake_providers):
+    fake_providers.errors["iucn"] = "boom"
+    client.post("/api/v1/species/lookup", json={"scientific_name": "Panthera leo"}, headers=admin_headers)
+    fake_providers.errors.clear()
+    r = client.post(
+        "/api/v1/species/lookup", json={"scientific_name": "Panthera leo"}, headers=admin_headers
+    )
+    assert r.json()["provider_errors"] == {}
+    assert len([c for c in fake_providers.calls if c[0] == "iucn"]) == 2
+
+
+def test_powo_skipped_for_non_plants(client, admin_headers, fake_providers):
+    fake_providers.data["gbif"] = {"canonicalName": "Panthera leo", "kingdom": "Animalia"}
+    client.post("/api/v1/species/lookup", json={"scientific_name": "Panthera leo"}, headers=admin_headers)
+    assert not [c for c in fake_providers.calls if c[0] == "powo"]
+
+    fake_providers.data["gbif"] = {"canonicalName": "Quercus suber", "kingdom": "Plantae"}
+    client.post("/api/v1/species/lookup", json={"scientific_name": "Quercus suber"}, headers=admin_headers)
+    assert [c for c in fake_providers.calls if c[0] == "powo"]

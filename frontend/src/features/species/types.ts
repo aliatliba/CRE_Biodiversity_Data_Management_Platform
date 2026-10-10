@@ -34,6 +34,12 @@ export interface Species {
   updated_at: string
 }
 
+/** Slim row returned by GET /species (the table view). */
+export type SpeciesListItem = Pick<
+  Species,
+  'id' | 'scientific_name' | 'common_name' | 'family' | 'kingdom' | 'iucn_status' | 'national_status'
+>
+
 export interface Page<T> {
   items: T[]
   total: number

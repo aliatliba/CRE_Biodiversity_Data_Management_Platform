@@ -4,6 +4,7 @@ import type {
   Page,
   Species,
   SpeciesCreateInput,
+  SpeciesListItem,
   SpeciesLookupDraft,
   SpeciesUpdateInput,
   ValidationHistoryEntry,
@@ -25,8 +26,8 @@ export interface ListParams {
   page_size?: number
 }
 
-export async function listSpecies(params: ListParams = {}): Promise<Page<Species>> {
-  const { data } = await api.get<Page<Species>>('/species', { params })
+export async function listSpecies(params: ListParams = {}): Promise<Page<SpeciesListItem>> {
+  const { data } = await api.get<Page<SpeciesListItem>>('/species', { params })
   return data
 }
 

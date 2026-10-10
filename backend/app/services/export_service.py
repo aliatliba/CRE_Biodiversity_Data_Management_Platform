@@ -6,13 +6,13 @@ from typing import Any
 
 import openpyxl
 from sqlalchemy.orm import Session, selectinload
-from sqlalchemy import func, or_
+from sqlalchemy import func
 
 from app.core.exceptions import BadRequestError, NotFoundError
 from app.core.config import get_settings
 from app.core.utils import purge_old_entries
 from app.models.export import Export
-from app.models.species import Species
+from app.models.species import Species, name_search_filter
 from app.models.site_species import SiteSpecies
 from app.models.site import Site
 
@@ -92,13 +92,7 @@ def _build_export_query(db: Session, filters: dict[str, Any] | None):
 
     # Search
     if filters.get("search"):
-        pattern = f"%{filters['search']}%"
-        query = query.filter(
-            or_(
-                Species.scientific_name.ilike(pattern),
-                Species.common_name.ilike(pattern),
-            )
-        )
+        query = query.filter(name_search_filter(filters["search"]))
 
     # Conservation filters
     if filters.get("iucn_status"):

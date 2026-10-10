@@ -17,16 +17,16 @@ export interface DashboardStats {
 
   top_families: { family: string; count: number }[]
 
-  // Kept for API compatibility.
-  total_associations: number
+  // Only returned with ?include_extra=true (not displayed by the frontend).
+  total_associations?: number
 
-  completeness_breakdown: {
+  completeness_breakdown?: {
     complete: number
     missing_taxonomy: number
     missing_conservation: number
   }
 
-  validations_last_30_days: number
+  validations_last_30_days?: number
 
   site?: {
     id: number

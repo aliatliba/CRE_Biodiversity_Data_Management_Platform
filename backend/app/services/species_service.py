@@ -2,13 +2,14 @@ import asyncio
 from datetime import datetime, timezone
 from typing import Any
 
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, load_only
 from starlette.concurrency import run_in_threadpool
 
 from app.core.exceptions import BadRequestError, ConflictError, ForbiddenError, NotFoundError
 from app.core.config import get_settings
+from app.core.ttl_cache import TTLCache
 from app.core.utils import clean_and_dedupe_names
-from app.models.species import Species
+from app.models.species import Species, name_search_filter
 from app.models.site_species import SiteSpecies
 from app.models.validation_history import SpeciesValidationHistory
 from app.models.protected_species import ProtectedSpeciesList
@@ -18,7 +19,7 @@ from app.schemas.species import (
     SpeciesUpdate,
     SiteSpeciesCreate,
 )
-from app.integrations.base import describe_error
+from app.integrations.base import ExternalProviderClient, ProviderResult, describe_error
 from app.integrations.wikidata_client import WikidataClient
 from app.integrations.gbif_client import GbifClient
 from app.integrations.iucn_client import IucnClient
@@ -69,6 +70,27 @@ def _as_runner(db: "Session | DbRunner") -> DbRunner:
     return db if isinstance(db, DbRunner) else DbRunner(db)
 
 
+# Provider answers keyed by "<source>:<name>" (successful answers only, never errors),
+# so re-looking-up a species (batch retries, the review step, ...) does not hit the APIs again.
+_provider_cache: TTLCache[ProviderResult] = TTLCache(get_settings().provider_cache_ttl_seconds)
+
+
+async def _search_cached(client: ExternalProviderClient, scientific_name: str) -> ProviderResult:
+    key = f"{client.source}:{scientific_name.casefold()}"
+    cached = _provider_cache.get(key)
+    if cached is not None:
+        return cached
+    result = await client.search(scientific_name)
+    if result.error is None:
+        _provider_cache.set(key, result)
+    return result
+
+
+def _skips_powo(kingdom: str | None) -> bool:
+    """POWO (Kew) only covers plants: skip it when GBIF says the taxon is something else."""
+    return bool(kingdom) and kingdom.strip().casefold() != "plantae"
+
+
 async def fetch_provider_draft(scientific_name: str) -> dict[str, Any]:
     """Query the external providers and merge their answers into a draft.
 
@@ -76,13 +98,17 @@ async def fetch_provider_draft(scientific_name: str) -> dict[str, Any]:
     Provider failures are reported in ``provider_errors`` instead of looking like "no data".
     """
     gbif = GbifClient()
-    gbif_result = await gbif.search(scientific_name)
+    gbif_result = await _search_cached(gbif, scientific_name)
     resolved_name = gbif_result.data.get("canonicalName") or scientific_name
     is_synonym = "_resolved_from_synonym" in gbif_result.data
 
-    other_clients = [WikidataClient(), IucnClient(), PowoClient(), InaturalistClient()]
+    other_clients: list[ExternalProviderClient] = [WikidataClient(), IucnClient()]
+    if not _skips_powo(gbif_result.data.get("kingdom")):
+        other_clients.append(PowoClient())
+    other_clients.append(InaturalistClient())
+
     other_results = await asyncio.gather(
-        *[c.search(resolved_name) for c in other_clients],
+        *[_search_cached(c, resolved_name) for c in other_clients],
         return_exceptions=True,
     )
 
@@ -405,11 +431,7 @@ def _apply_species_filters(
     if status:
         query = query.filter(Species.status == status)
     if search:
-        pattern = f"%{search}%"
-        query = query.filter(
-            (Species.scientific_name.ilike(pattern))
-            | (Species.common_name.ilike(pattern))
-        )
+        query = query.filter(name_search_filter(search))
     if kingdom:
         query = query.filter(Species.kingdom.ilike(f"%{kingdom}%"))
     if class_name:
@@ -445,7 +467,18 @@ def list_species(
     page_size: int = 20,
 
 ) -> tuple[list[Species], int]:
-    query = db.query(Species)
+    # Only the columns of SpeciesListItem: skips the JSONB / long-text columns.
+    query = db.query(Species).options(
+        load_only(
+            Species.id,
+            Species.scientific_name,
+            Species.common_name,
+            Species.family,
+            Species.kingdom,
+            Species.iucn_status,
+            Species.national_status,
+        )
+    )
     query = _apply_species_filters(
         query,
         status=status,

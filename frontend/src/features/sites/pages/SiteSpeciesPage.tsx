@@ -12,7 +12,7 @@ import * as siteService from '../services/siteService'
 import type { Site } from '../types'
 
 import * as speciesService from '@/features/species/services/speciesService'
-import type { Species } from '@/features/species/types'
+import type { SpeciesListItem } from '@/features/species/types'
 import { SpeciesTable } from '@/features/species/components/SpeciesTable'
 
 const DEFAULT_PAGE_SIZE = 15
@@ -43,7 +43,7 @@ export function SiteSpeciesPage({ mode }: { mode: SiteSpeciesMode }) {
   const content = MODE_CONTENT[mode]
 
   const [site, setSite] = useState<Site | null>(null)
-  const [items, setItems] = useState<Species[]>([])
+  const [items, setItems] = useState<SpeciesListItem[]>([])
 
   const [search, setSearch] = useState('')
 

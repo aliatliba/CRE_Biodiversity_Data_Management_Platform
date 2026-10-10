@@ -100,6 +100,7 @@ def fake_providers(monkeypatch):
     from app.services import species_service
 
     fake = FakeProviders()
+    species_service._provider_cache.clear()
     for attr, source in {
         "GbifClient": "gbif",
         "WikidataClient": "wikidata",

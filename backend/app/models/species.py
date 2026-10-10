@@ -8,7 +8,10 @@ from sqlalchemy import (
     DateTime,
     Index,
     CheckConstraint,
-    Text
+    Text,
+    cast,
+    literal_column,
+    or_,
 )
 from sqlalchemy.dialects.postgresql import CITEXT, JSONB
 from sqlalchemy.orm import relationship
@@ -62,4 +65,29 @@ class Species(Base):
         CheckConstraint("status IN ('draft', 'validated')", name="ck_species_status"),
         Index("ix_species_family_genus", "family", "genus"),
         Index("ix_species_status", "status"),
+        Index("ix_species_iucn_status", "iucn_status"),
+        Index("ix_species_national_status", "national_status"),
+        Index("ix_species_kingdom", "kingdom"),
+        # Trigram indexes for ILIKE '%term%' search. scientific_name is CITEXT, which
+        # has no trigram operator class, so it is indexed (and searched) as text.
+        Index(
+            "ix_species_scientific_name_trgm",
+            literal_column("(scientific_name::text) gin_trgm_ops"),
+            postgresql_using="gin",
+        ),
+        Index(
+            "ix_species_common_name_trgm",
+            "common_name",
+            postgresql_using="gin",
+            postgresql_ops={"common_name": "gin_trgm_ops"},
+        ),
+    )
+
+
+def name_search_filter(term: str):
+    """Case-insensitive substring match on scientific or common name (uses the trigram indexes)."""
+    pattern = f"%{term}%"
+    return or_(
+        cast(Species.scientific_name, Text).ilike(pattern),
+        Species.common_name.ilike(pattern),
     )

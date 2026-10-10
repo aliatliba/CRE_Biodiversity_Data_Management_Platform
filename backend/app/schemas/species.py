@@ -143,6 +143,19 @@ class SpeciesResponse(BaseModel):
     validated_at: datetime | None
     updated_at: datetime
 
+class SpeciesListItem(BaseModel):
+    """Slim row for GET /species (table view); detail endpoints return SpeciesResponse."""
+
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    scientific_name: str
+    common_name: str | None
+    family: str | None
+    kingdom: str | None
+    iucn_status: str | None
+    national_status: str
+
+
 class BatchSpeciesLookupItem(BaseModel):
     input_scientific_name: str
     draft: SpeciesDraft | None = None

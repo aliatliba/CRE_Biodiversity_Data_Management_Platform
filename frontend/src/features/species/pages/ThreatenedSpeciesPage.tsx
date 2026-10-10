@@ -9,7 +9,7 @@ import { ErrorState } from '@/components/common/ErrorState'
 import { EmptyState } from '@/components/common/EmptyState'
 
 import * as speciesService from '../services/speciesService'
-import type { Species } from '../types'
+import type { SpeciesListItem } from '../types'
 import { SpeciesTable } from '../components/SpeciesTable'
 
 const DEFAULT_PAGE_SIZE = 15
@@ -21,7 +21,7 @@ const THREATENED_IUCN_STATUS = 'CR,EN,VU'
  * the site-scoped SiteSpeciesPage (threatened mode), minus the site scoping.
  */
 export function ThreatenedSpeciesPage() {
-  const [items, setItems] = useState<Species[]>([])
+  const [items, setItems] = useState<SpeciesListItem[]>([])
 
   const [search, setSearch] = useState('')
 
