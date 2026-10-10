@@ -20,8 +20,10 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any
+
+from app.core.config import get_settings
 
 
 @dataclass
@@ -45,7 +47,19 @@ class InMemoryJobStore:
     def __init__(self) -> None:
         self._jobs: dict[str, Job] = {}
 
+    def purge_expired(self) -> None:
+        """Drop finished jobs older than JOB_TTL_SECONDS so the dict cannot grow forever."""
+        cutoff = datetime.now(timezone.utc) - timedelta(seconds=get_settings().job_ttl_seconds)
+        expired = [
+            job_id
+            for job_id, job in self._jobs.items()
+            if job.finished_at is not None and job.finished_at < cutoff
+        ]
+        for job_id in expired:
+            del self._jobs[job_id]
+
     def create(self) -> Job:
+        self.purge_expired()
         job = Job(id=str(uuid.uuid4()), started_at=datetime.now(timezone.utc))
         self._jobs[job.id] = job
         return job

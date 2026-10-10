@@ -1,7 +1,18 @@
-from app.integrations.base import ExternalProviderClient, HttpClientMixin, ProviderResult
+import logging
+
+from app.integrations.base import (
+    ExternalProviderClient,
+    HttpClientMixin,
+    ProviderResult,
+    describe_error,
+)
+
+logger = logging.getLogger(__name__)
 
 
 class InaturalistClient(ExternalProviderClient, HttpClientMixin):
+    source = "inaturalist"
+
     def __init__(self):
         HttpClientMixin.__init__(self, "https://api.inaturalist.org/v1")
 
@@ -12,14 +23,18 @@ class InaturalistClient(ExternalProviderClient, HttpClientMixin):
             data = resp.json()
             results = data.get("results", [])
             if not results:
-                return ProviderResult(source="inaturalist", data={})
+                return ProviderResult(source=self.source, data={})
             taxon = results[0]
-            return ProviderResult(source="inaturalist", data={
-                "kingdom": taxon.get("kingdom_name"),
-                "class": taxon.get("class_name"),
-                "family": taxon.get("family_name"),
-            })
-        except Exception:
-            return ProviderResult(source="inaturalist", data={})
-        finally:
-            await self.close()
+            return ProviderResult(
+                source=self.source,
+                data={
+                    "kingdom": taxon.get("kingdom_name"),
+                    "class": taxon.get("class_name"),
+                    "family": taxon.get("family_name"),
+                },
+            )
+        except Exception as exc:
+            logger.warning(
+                "iNaturalist lookup failed for %s: %s", scientific_name, describe_error(exc)
+            )
+            return ProviderResult(source=self.source, data={}, error=describe_error(exc))

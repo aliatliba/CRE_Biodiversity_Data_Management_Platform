@@ -3,7 +3,6 @@ from typing import Any
 
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
-from sqlalchemy import func
 
 from app.core.security import (
     verify_password,
@@ -22,7 +21,7 @@ _revoked_refresh_tokens: set[str] = set()
 
 
 def authenticate_user(db: Session, login: LoginRequest) -> User:
-    user = db.query(User).filter(func.lower(User.email) == func.lower(login.email)).first()
+    user = db.query(User).filter(User.email == login.email).first()
     if not user or not verify_password(login.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -87,7 +86,7 @@ def revoke_refresh_token(refresh_token: str) -> None:
 
 
 def create_user(db: Session, email: str, password: str, full_name: str, role_id: int,phone: str | None = None,) -> User:
-    existing = db.query(User).filter(func.lower(User.email) == func.lower(email)).first()
+    existing = db.query(User).filter(User.email == email).first()
     if existing:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,

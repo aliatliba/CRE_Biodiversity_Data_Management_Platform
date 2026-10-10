@@ -39,6 +39,7 @@ from dataclasses import asdict
 from pathlib import Path
 
 from app.core.db import SessionLocal
+from app.integrations.base import close_http_client
 from app.services.bulk_import_service import MAX_BATCH_SIZE, ImportSummary, run_bulk_import
 
 
@@ -105,6 +106,7 @@ async def _amain(args: argparse.Namespace) -> int:
         )
     finally:
         db.close()
+        await close_http_client()
 
     print(
         f"\nDone. created={summary.created} linked={summary.linked} skipped={summary.skipped} "

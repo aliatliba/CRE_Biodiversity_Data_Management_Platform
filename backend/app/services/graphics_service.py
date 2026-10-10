@@ -59,9 +59,7 @@ def build_site_excel(
     output_path: Path,
 ) -> tuple[str, int]:
     """Export the site's species to the Excel layout the R script expects."""
-    # Imported lazily: keeps pandas out of the API's idle memory footprint
-    # when nothing else has loaded it yet.
-    import pandas as pd
+    from openpyxl import Workbook
 
     from app.models.site import Site
     from app.models.site_species import SiteSpecies
@@ -108,9 +106,14 @@ def build_site_excel(
             f"data this graphic needs ({details})."
         )
 
-    pd.DataFrame(records, columns=list(spec.columns)).to_excel(
-        output_path, index=False, sheet_name="Species"
-    )
+    headers = list(spec.columns)
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.title = "Species"
+    sheet.append(headers)
+    for record in records:
+        sheet.append([record.get(h) for h in headers])
+    workbook.save(output_path)
     return site.name, len(records)
 
 

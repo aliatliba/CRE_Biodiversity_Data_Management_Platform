@@ -1,9 +1,14 @@
+import asyncio
 import logging
 from typing import Any
 
 from app.core.config import get_settings
-
-from app.integrations.base import ExternalProviderClient, HttpClientMixin, ProviderResult
+from app.integrations.base import (
+    ExternalProviderClient,
+    HttpClientMixin,
+    ProviderResult,
+    describe_error,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -112,167 +117,86 @@ def _extract_trend(detail: dict[str, Any]) -> str | None:
 
 
 class IucnClient(ExternalProviderClient, HttpClientMixin):
+    source = "iucn"
 
     def __init__(self):
-        HttpClientMixin.__init__(
-            self,
-            "https://api.iucnredlist.org/api/v4"
-        )
-
+        HttpClientMixin.__init__(self, "https://api.iucnredlist.org/api/v4")
         self.token = get_settings().iucn_api_token
 
+    async def _fetch_detail(
+        self, chosen: dict[str, Any], scope_name: str, headers: dict[str, str]
+    ) -> dict[str, Any]:
+        assessment_id = chosen["assessment_id"]
+        response = await self.get(f"/assessment/{assessment_id}", headers=headers)
+        response.raise_for_status()
+        detail = response.json()
+        return {
+            "assessment_id": assessment_id,
+            "scope": scope_name,
+            "scope_code": chosen.get("_scope_code"),
+            "year": _year(chosen),
+            "category": _extract_category(detail),
+            "population_trend": _extract_trend(detail),
+        }
+
     async def search(self, scientific_name: str) -> ProviderResult:
+        if not self.token:
+            logger.warning("IUCN API token not set")
+            return ProviderResult(
+                source=self.source, data={}, error="IUCN API token is not configured"
+            )
 
         try:
-
-            if not self.token:
-                logger.warning("IUCN API token not set")
-
-                return ProviderResult(
-                    source="iucn",
-                    data={}
-                )
-
             parts = scientific_name.strip().split(maxsplit=1)
-
             genus_name = parts[0] if parts else scientific_name
             species_name = parts[1] if len(parts) > 1 else ""
-
             headers = {
                 "Authorization": f"Bearer {self.token}",
                 "Accept": "application/json",
             }
 
-            # --------------------------------------------------
             # 1. Find taxon assessments
-            # --------------------------------------------------
-
             response = await self.get(
                 "/taxa/scientific_name",
-                params={
-                    "genus_name": genus_name,
-                    "species_name": species_name,
-                },
+                params={"genus_name": genus_name, "species_name": species_name},
                 headers=headers,
             )
-
             response.raise_for_status()
-
-            data = response.json()
-
-            assessments = data.get("assessments", [])
-
+            assessments = response.json().get("assessments", [])
             if not assessments:
-                return ProviderResult(
-                    source="iucn",
-                    data={
-                        "assessments": []
-                    }
-                )
+                return ProviderResult(source=self.source, data={"assessments": []})
 
-            # --------------------------------------------------
             # 2. Group assessments by relevant scope
-            # --------------------------------------------------
-
             grouped: dict[str, list[dict[str, Any]]] = {
                 "Global": [],
                 "Europe": [],
                 "Mediterranean": [],
             }
-
             for assessment in assessments:
-
                 scope_name, scope_code = _identify_scope(assessment)
-
                 if scope_name:
                     assessment["_scope_name"] = scope_name
                     assessment["_scope_code"] = scope_code
-
                     grouped[scope_name].append(assessment)
 
-            # --------------------------------------------------
-            # 3. Select latest assessment per scope
-            # --------------------------------------------------
-
-            selected: list[dict[str, Any]] = []
-
-            for scope_name in (
-                "Global",
-                "Europe",
-                "Mediterranean",
-            ):
-
-                candidates = grouped[scope_name]
-
+            # 3. Select the latest assessment per scope (prefer ones flagged "latest")
+            chosen_by_scope: list[tuple[str, dict[str, Any]]] = []
+            for scope_name, candidates in grouped.items():
                 if not candidates:
                     continue
+                latest = [a for a in candidates if a.get("latest") is True]
+                chosen = max(latest or candidates, key=_year)
+                if chosen.get("assessment_id"):
+                    chosen_by_scope.append((scope_name, chosen))
 
-                # Prefer assessments marked latest.
-                latest = [
-                    assessment
-                    for assessment in candidates
-                    if assessment.get("latest") is True
-                ]
-
-                if latest:
-                    chosen = max(
-                        latest,
-                        key=_year
-                    )
-                else:
-                    chosen = max(
-                        candidates,
-                        key=_year
-                    )
-
-                assessment_id = chosen.get("assessment_id")
-
-                if not assessment_id:
-                    continue
-
-                # --------------------------------------------------
-                # 4. Get full assessment details
-                # --------------------------------------------------
-
-                detail_response = await self.get(
-                    f"/assessment/{assessment_id}",
-                    headers=headers,
-                )
-
-                detail_response.raise_for_status()
-
-                detail = detail_response.json()
-
-                selected.append(
-                    {
-                        "assessment_id": assessment_id,
-                        "scope": scope_name,
-                        "scope_code": chosen.get("_scope_code"),
-                        "year": _year(chosen),
-                        "category": _extract_category(detail),
-                        "population_trend": _extract_trend(detail),
-                    }
-                )
-
-            # --------------------------------------------------
-            # 5. Return assessments WITHOUT selecting one
-            # --------------------------------------------------
-
-            return ProviderResult(
-                source="iucn",
-                data={
-                    "assessments": selected
-                }
+            # 4. Fetch the full assessment details concurrently
+            selected = await asyncio.gather(
+                *[self._fetch_detail(chosen, scope, headers) for scope, chosen in chosen_by_scope]
             )
+
+            # 5. Return the assessments WITHOUT selecting one
+            return ProviderResult(source=self.source, data={"assessments": list(selected)})
 
         except Exception as exc:
-
-            logger.warning("IUCN lookup failed for %s: %s", scientific_name, exc)
-
-            return ProviderResult(
-                source="iucn",
-                data={}
-            )
-
-        finally:
-            await self.close()
+            logger.warning("IUCN lookup failed for %s: %s", scientific_name, describe_error(exc))
+            return ProviderResult(source=self.source, data={}, error=describe_error(exc))

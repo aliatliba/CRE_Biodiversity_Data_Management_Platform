@@ -69,12 +69,12 @@ export async function createSpecies(payload: SpeciesCreateInput): Promise<Specie
 }
 
 export async function associateSpeciesWithSite(siteId: number, speciesId: number, notes?: string) {
-  const { data } = await api.post(`/species/${siteId}/species`, { species_id: speciesId, notes })
+  const { data } = await api.post(`/sites/${siteId}/species`, { species_id: speciesId, notes })
   return data
 }
 
 export async function removeSpeciesFromSite(siteId: number, speciesId: number): Promise<void> {
-  await api.delete(`/species/${siteId}/species/${speciesId}`)
+  await api.delete(`/sites/${siteId}/species/${speciesId}`)
 }
 
 export async function startLookupSpeciesBatch(

@@ -1223,6 +1223,40 @@ Aquila chrysaetos`}
                         )}
 
                       {/* -----------------------------------------
+                          PROVIDER WARNINGS (e.g. IUCN unreachable)
+                      ------------------------------------------ */}
+                      {draft?.provider_errors &&
+                        Object.keys(draft.provider_errors).length > 0 && (
+                          <div
+                            role="status"
+                            className="mt-5 rounded-lg border border-amber-200 bg-amber-50 px-3.5 py-3 text-sm text-amber-900"
+                          >
+                            <div className="flex gap-2">
+                              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                              <div>
+                                <p className="font-semibold">
+                                  {draft.provider_errors.iucn
+                                    ? 'IUCN lookup failed — conservation status may be missing'
+                                    : 'Some data sources could not be reached'}
+                                </p>
+                                <ul className="mt-1 list-disc pl-4 text-xs leading-5">
+                                  {Object.entries(draft.provider_errors).map(
+                                    ([provider, message]) => (
+                                      <li key={provider}>
+                                        <span className="font-medium uppercase">
+                                          {provider}
+                                        </span>
+                                        : {message}
+                                      </li>
+                                    ),
+                                  )}
+                                </ul>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                      {/* -----------------------------------------
                           LOOKUP ERROR
                       ------------------------------------------ */}
                       {item.error && (

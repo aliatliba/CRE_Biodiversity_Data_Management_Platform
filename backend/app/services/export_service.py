@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func, or_
 
 from app.core.config import get_settings
+from app.core.utils import purge_old_entries
 from app.models.export import Export
 from app.models.species import Species
 from app.models.site_species import SiteSpecies
@@ -32,6 +33,7 @@ def _parse_dt(value: Any) -> datetime | None:
 
 def _ensure_exports_dir() -> None:
     os.makedirs(EXPORTS_DIR, exist_ok=True)
+    purge_old_entries(EXPORTS_DIR, get_settings().exports_retention_hours)
 
 
 def _build_export_query(db: Session, filters: dict[str, Any] | None):

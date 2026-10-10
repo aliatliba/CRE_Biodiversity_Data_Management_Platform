@@ -1,11 +1,12 @@
-import asyncio
 from dataclasses import asdict
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from typing import List
 
+from app.core.background import spawn
 from app.core.dependencies import DBSession, ActiveUser, AdminUser
+from app.core.utils import clean_and_dedupe_names
 from app.core.db import SessionLocal
 from app.core.job_store import Job, job_store
 
@@ -21,8 +22,6 @@ from app.schemas.species import (
     BatchSpeciesLookupRequest,
     BatchSpeciesLookupItem,
     BatchSpeciesLookupJobResponse,
-    SiteSpeciesCreate,
-    SiteSpeciesResponse,
     ValidationHistoryResponse,
     BulkImportRequest,
     BulkImportJobResponse,
@@ -41,8 +40,7 @@ def check_species(scientific_name: str, db: DBSession):
 
 @router.post("/lookup", response_model=SpeciesDraft)
 async def lookup_species(data: SpeciesLookupRequest, db: DBSession):
-    draft = await species_service.lookup_species(db, data.scientific_name)
-    return draft
+    return await species_service.lookup_species(db, data.scientific_name)
 
 
 async def _execute_lookup_batch(
@@ -57,14 +55,19 @@ async def _execute_lookup_batch(
 
     db: Session = SessionLocal()
 
+    # Species finish out of order (bounded concurrency); keep job.items in input order.
+    by_index: dict[int, dict] = {}
+
     async def on_progress(
         processed: int,
         total: int,
         item: dict,
+        index: int,
     ) -> None:
+        by_index[index] = item
+        job.items = [by_index[i] for i in sorted(by_index)]
         job.processed = processed
         job.total = total
-        job.items.append(item)
 
     try:
         job.status = "running"
@@ -125,23 +128,7 @@ async def lookup_species_batch(
     The frontend can poll /lookup-batch/{job_id} for real-time progress.
     """
 
-    # Clean and deduplicate here before creating the job.
-    names: list[str] = []
-    seen: set[str] = set()
-
-    for raw_name in data.scientific_names:
-        name = (raw_name or "").strip()
-
-        if not name:
-            continue
-
-        key = name.casefold()
-
-        if key in seen:
-            continue
-
-        seen.add(key)
-        names.append(name)
+    names = clean_and_dedupe_names(data.scientific_names)
 
     if not names:
         raise HTTPException(
@@ -154,13 +141,7 @@ async def lookup_species_batch(
     job = job_store.create()
     job.total = len(names)
 
-    asyncio.create_task(
-        _execute_lookup_batch(
-            job.id,
-            names,
-            data.site_id,
-        )
-    )
+    spawn(_execute_lookup_batch(job.id, names, data.site_id))
 
     return _lookup_job_to_response(job)
 
@@ -261,7 +242,7 @@ async def bulk_import_species(
     job = job_store.create()
     job.total = len(data.scientific_names)
 
-    asyncio.create_task(_execute_bulk_import(job.id, data, user.id))
+    spawn(_execute_bulk_import(job.id, data, user.id))
 
     return _job_to_response(job)
 
@@ -347,26 +328,3 @@ def update_species(
 def delete_species(species_id: int, db: DBSession, user: AdminUser):
     species_service.delete_species(db, species_id)
     return {"detail": "Species deleted"}
-
-
-@router.post("/{site_id}/species", response_model=SiteSpeciesResponse, status_code=201)
-def associate_species(
-    site_id: int,
-    data: SiteSpeciesCreate,
-    db: DBSession,
-    user: ActiveUser,
-):
-    return species_service.associate_species_with_site(db, site_id, data, user.id)
-
-
-@router.get("/{site_id}/species", response_model=List[SiteSpeciesResponse])
-def list_site_species(site_id: int, db: DBSession, user: ActiveUser):
-    return species_service.list_species_for_site(db, site_id)
-
-
-@router.delete("/{site_id}/species/{species_id}")
-def remove_site_species(
-    site_id: int, species_id: int, db: DBSession, user: ActiveUser
-):
-    species_service.remove_site_species(db, site_id, species_id)
-    return {"detail": "Association removed"}

@@ -46,11 +46,14 @@ class SpeciesLookupRequest(BaseModel):
 
 class SpeciesDraft(BaseModel):
     scientific_name: str
+    input_scientific_name: str | None = None
     taxonomy: Taxonomy
     conservation: ConservationStatus
     traits: EcologicalTraits
     field_sources: dict[str, Any]
     national_status: str = "Non Protected"
+    # provider name -> error message, for providers that could not be queried
+    provider_errors: dict[str, str] = Field(default_factory=dict)
 
 
 class BatchSpeciesLookupRequest(BaseModel):

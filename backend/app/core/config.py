@@ -27,6 +27,16 @@ class Settings(BaseSettings):
     graphics_max_rss_mb: int = 350
     graphics_max_concurrent: int = 1
 
+    # Housekeeping: finished jobs / generated files older than this are purged.
+    job_ttl_seconds: int = 3600
+    exports_retention_hours: int = 24
+    graphics_retention_hours: int = 24
+
+    # Batch species lookup: species processed in parallel (providers stay throttled
+    # by the per-species delay) and provider-result cache lifetime.
+    lookup_batch_concurrency: int = 3
+    provider_cache_ttl_seconds: int = 86400
+
     @property
     def cors_origins_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]

@@ -38,7 +38,7 @@ def test_endpoints_serialize_null_user_references(client, admin_headers, db_sess
     assert r.status_code == 200
     assert all(h["validated_by"] is None for h in r.json())
 
-    r = client.get(f"/api/v1/species/{site['id']}/species", headers=admin_headers)
+    r = client.get(f"/api/v1/sites/{site['id']}/species", headers=admin_headers)
     assert r.status_code == 200
     assert r.json()[0]["recorded_by"] is None
 

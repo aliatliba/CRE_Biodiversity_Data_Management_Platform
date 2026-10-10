@@ -1,3 +1,5 @@
+import os
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
@@ -35,7 +37,7 @@ def get_export(export_id: int, db: DBSession, user: ActiveUser):
 def download_export(export_id: int, db: DBSession, user: ActiveUser):
     export = export_service.get_export(db, export_id)
 
-    if export.status != "done" or not export.file_path:
+    if export.status != "done" or not export.file_path or not os.path.exists(export.file_path):
         raise HTTPException(
             status_code=404,
             detail="Export file not ready or not found",

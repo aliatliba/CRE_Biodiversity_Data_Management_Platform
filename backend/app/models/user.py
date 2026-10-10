@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 
+from sqlalchemy.dialects.postgresql import CITEXT
 from sqlalchemy import Column, BigInteger, String, ForeignKey, Boolean, DateTime, SmallInteger
 from sqlalchemy.orm import relationship
 
@@ -10,11 +11,11 @@ class User(Base):
     __tablename__ = "users"
 
     id = Column(BigInteger, primary_key=True)
-    email = Column(String, unique=True, nullable=False)
+    email = Column(CITEXT, unique=True, nullable=False)
     hashed_password = Column(String(255), nullable=False)
     full_name = Column(String(150), nullable=False)
     phone = Column(String(30), nullable=True)
-    role_id = Column(SmallInteger, ForeignKey("roles.id"), nullable=False)
+    role_id = Column(SmallInteger, ForeignKey("roles.id"), nullable=False, index=True)
     is_active = Column(Boolean, nullable=False, default=True)
     must_change_password = Column(Boolean, nullable=False, default=True)
     created_at = Column(

@@ -7,9 +7,12 @@ from pathlib import Path
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse
 
+from app.core.background import spawn
+from app.core.config import get_settings
 from app.core.db import SessionLocal
 from app.core.dependencies import ActiveUser
 from app.core.graphics_job_store import graphics_job_store
+from app.core.utils import purge_old_entries
 from app.schemas.graphics import (
     GraphicsGenerateRequest,
     GraphicsJobResponse,
@@ -84,9 +87,14 @@ async def generate_graphics(data: GraphicsGenerateRequest, user: ActiveUser):
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
+    await asyncio.to_thread(
+        purge_old_entries,
+        graphics_service.GRAPHICS_DIR,
+        get_settings().graphics_retention_hours,
+    )
     job = graphics_job_store.create(spec.key)
     job.site_id = data.site_id
-    asyncio.create_task(_execute_graphics_job(job.id, data.site_id, spec))
+    spawn(_execute_graphics_job(job.id, data.site_id, spec))
     return graphics_service.graphics_job_response(job)
 
 

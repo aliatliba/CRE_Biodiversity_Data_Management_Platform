@@ -75,6 +75,8 @@ export interface SpeciesLookupDraft {
 
   field_sources: Record<string, string | FieldSource | null>
   national_status: string
+  /** provider name -> error message, for providers that could not be queried */
+  provider_errors?: Record<string, string>
 }
 
 export interface SpeciesCreateInput {

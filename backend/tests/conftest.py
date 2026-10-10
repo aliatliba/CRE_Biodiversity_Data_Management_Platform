@@ -56,6 +56,61 @@ def _disable_rate_limiter():
     limiter.reset()
 
 
+class FakeProviders:
+    """Canned provider answers; anything not configured returns "no data"."""
+
+    def __init__(self):
+        self.data: dict[str, dict] = {}
+        self.errors: dict[str, str] = {}
+        self.calls: list[tuple[str, str]] = []
+        self.delay = 0.0
+
+    def client_class(self, source: str):
+        fake = self
+
+        class _Client:
+            def __init__(self):
+                self.source = source
+
+            async def search(self, scientific_name: str):
+                import asyncio
+
+                from app.integrations.base import ProviderResult
+
+                fake.calls.append((source, scientific_name))
+                if fake.delay:
+                    await asyncio.sleep(fake.delay)
+                if source in fake.errors:
+                    return ProviderResult(source, {}, error=fake.errors[source])
+                return ProviderResult(source, dict(fake.data.get(source, {})))
+
+        _Client.__name__ = {
+            "gbif": "GbifClient",
+            "wikidata": "WikidataClient",
+            "iucn": "IucnClient",
+            "powo": "PowoClient",
+            "inaturalist": "InaturalistClient",
+        }[source]
+        return _Client
+
+
+@pytest.fixture(autouse=True)
+def fake_providers(monkeypatch):
+    """No test may reach the real GBIF / IUCN / POWO / Wikidata / iNaturalist APIs."""
+    from app.services import species_service
+
+    fake = FakeProviders()
+    for attr, source in {
+        "GbifClient": "gbif",
+        "WikidataClient": "wikidata",
+        "IucnClient": "iucn",
+        "PowoClient": "powo",
+        "InaturalistClient": "inaturalist",
+    }.items():
+        monkeypatch.setattr(species_service, attr, fake.client_class(source))
+    return fake
+
+
 @pytest.fixture
 def db_session():
     """Session bound to an outer transaction that is always rolled back.

@@ -2,14 +2,17 @@ import json
 from contextlib import asynccontextmanager
 from pathlib import Path
 
+import structlog
 from fastapi import FastAPI
+from fastapi.responses import JSONResponse
+from sqlalchemy import text
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from sqlalchemy.exc import IntegrityError
 from fastapi.middleware.cors import CORSMiddleware  # add this import
 
 from app.api import router as api_router
-from app.core.db import init_extensions, SessionLocal
+from app.core.db import SessionLocal, engine, init_extensions
 from app.core.config import get_settings
 from app.core.logging import configure_logging
 from app.core.exceptions import (
@@ -19,10 +22,14 @@ from app.core.exceptions import (
     AppException,
 )
 from app.core.limiter import limiter
+from app.integrations.base import close_http_client, init_http_client
 from app.models.role import Role
 from app.models.user import User
 from app.models.protected_species import ProtectedSpeciesList
+from app.models.species import Species
 from app.core.security import get_password_hash
+
+logger = structlog.get_logger()
 
 PROTECTED_SPECIES_SEED_FILE = (
     Path(__file__).resolve().parent / "data" / "protected_species_dz.json"
@@ -36,7 +43,11 @@ async def lifespan(app: FastAPI):
     if settings.environment != "test":
         init_extensions()
         seed_database()
-    yield
+    init_http_client()
+    try:
+        yield
+    finally:
+        await close_http_client()
 
 
 app = FastAPI(
@@ -67,6 +78,12 @@ app.include_router(api_router)
 
 @app.get("/health")
 def health():
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+    except Exception as exc:
+        logger.error("health_check_failed", error=str(exc))
+        return JSONResponse(status_code=503, content={"status": "unavailable"})
     return {"status": "ok"}
 
 
@@ -115,10 +132,6 @@ def seed_protected_species(db, admin_user: User) -> None:
     if not PROTECTED_SPECIES_SEED_FILE.exists():
         return
 
-    already_seeded = db.query(ProtectedSpeciesList.id).first() is not None
-    if already_seeded:
-        return
-
     with open(PROTECTED_SPECIES_SEED_FILE, encoding="utf-8") as f:
         species_data = json.load(f)
 
@@ -145,4 +158,10 @@ def seed_protected_species(db, admin_user: User) -> None:
 
     if new_rows:
         db.bulk_save_objects(new_rows)
+        db.flush()
+        # Species recorded before their name was on the list must pick up the status.
+        db.query(Species).filter(
+            Species.scientific_name.in_([r.scientific_name for r in new_rows]),
+            Species.national_status != "Protected",
+        ).update({Species.national_status: "Protected"}, synchronize_session=False)
         db.commit()

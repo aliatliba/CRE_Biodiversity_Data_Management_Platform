@@ -3,7 +3,9 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
+
+from app.core.config import get_settings
 
 
 @dataclass
@@ -25,7 +27,18 @@ class GraphicsJobStore:
     def __init__(self) -> None:
         self._jobs: dict[str, GraphicsJob] = {}
 
+    def purge_expired(self) -> None:
+        cutoff = datetime.now(timezone.utc) - timedelta(seconds=get_settings().job_ttl_seconds)
+        expired = [
+            job_id
+            for job_id, job in self._jobs.items()
+            if job.finished_at is not None and job.finished_at < cutoff
+        ]
+        for job_id in expired:
+            del self._jobs[job_id]
+
     def create(self, graphic_type: str) -> GraphicsJob:
+        self.purge_expired()
         job = GraphicsJob(
             id=str(uuid.uuid4()),
             graphic_type=graphic_type,
