@@ -5,27 +5,27 @@ from typing import Any
 from sqlalchemy.orm import Session, load_only
 from starlette.concurrency import run_in_threadpool
 
-from app.core.exceptions import BadRequestError, ConflictError, ForbiddenError, NotFoundError
 from app.core.config import get_settings
+from app.core.exceptions import BadRequestError, ConflictError, ForbiddenError, NotFoundError
 from app.core.ttl_cache import TTLCache
 from app.core.utils import clean_and_dedupe_names
-from app.models.species import Species, name_search_filter
-from app.models.site_species import SiteSpecies
-from app.models.validation_history import SpeciesValidationHistory
-from app.models.protected_species import ProtectedSpeciesList
-from app.schemas.species import (
-    SpeciesResponse,
-    SpeciesCreate,
-    SpeciesUpdate,
-    SiteSpeciesCreate,
-)
 from app.integrations.base import ExternalProviderClient, ProviderResult, describe_error
-from app.integrations.wikidata_client import WikidataClient
 from app.integrations.gbif_client import GbifClient
-from app.integrations.iucn_client import IucnClient
-from app.integrations.powo_client import PowoClient
 from app.integrations.inaturalist_client import InaturalistClient
+from app.integrations.iucn_client import IucnClient
 from app.integrations.mapper import normalize_provider_result
+from app.integrations.powo_client import PowoClient
+from app.integrations.wikidata_client import WikidataClient
+from app.models.protected_species import ProtectedSpeciesList
+from app.models.site_species import SiteSpecies
+from app.models.species import Species, name_search_filter
+from app.models.validation_history import SpeciesValidationHistory
+from app.schemas.species import (
+    SiteSpeciesCreate,
+    SpeciesCreate,
+    SpeciesResponse,
+    SpeciesUpdate,
+)
 
 PERMITTED_EDIT_FIELDS = {
     # Taxonomy

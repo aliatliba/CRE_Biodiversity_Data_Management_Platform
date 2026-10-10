@@ -1,8 +1,9 @@
-from fastapi import APIRouter, Query
 from typing import List
 
-from app.core.dependencies import DBSession, ActiveUser, AdminUser
-from app.schemas.site import SiteCreate, SiteUpdate, SiteResponse
+from fastapi import APIRouter, Query
+
+from app.core.dependencies import ActiveUser, AdminUser, DBSession
+from app.schemas.site import SiteCreate, SiteResponse, SiteUpdate
 from app.schemas.species import SiteSpeciesCreate, SiteSpeciesResponse
 from app.services import site_service, species_service
 

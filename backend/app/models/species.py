@@ -1,13 +1,13 @@
 from datetime import datetime, timezone
 
 from sqlalchemy import (
-    Column,
     BigInteger,
-    String,
-    ForeignKey,
-    DateTime,
-    Index,
     CheckConstraint,
+    Column,
+    DateTime,
+    ForeignKey,
+    Index,
+    String,
     Text,
     cast,
     literal_column,

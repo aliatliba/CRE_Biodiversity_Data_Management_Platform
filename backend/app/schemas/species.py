@@ -1,5 +1,6 @@
-from typing import Any
 from datetime import datetime
+from typing import Any
+
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -201,7 +202,7 @@ class SiteSpeciesResponse(BaseModel):
     species_id: int
     recorded_by: int | None
     notes: str | None
-    
+
 class BulkImportRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     scientific_names: list[str] = Field(..., min_length=1, max_length=300)

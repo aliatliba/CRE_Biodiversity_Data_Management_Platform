@@ -4,30 +4,30 @@ from pathlib import Path
 
 import structlog
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware  # add this import
 from fastapi.responses import JSONResponse
-from sqlalchemy import text
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
+from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
-from fastapi.middleware.cors import CORSMiddleware  # add this import
 
 from app.api import router as api_router
-from app.core.db import SessionLocal, engine, init_extensions
 from app.core.config import get_settings
-from app.core.logging import configure_logging
+from app.core.db import SessionLocal, engine, init_extensions
 from app.core.exceptions import (
-    app_exception_handler,
-    integrity_error_handler,
-    generic_exception_handler,
     AppException,
+    app_exception_handler,
+    generic_exception_handler,
+    integrity_error_handler,
 )
 from app.core.limiter import limiter
-from app.integrations.base import close_http_client, init_http_client
-from app.models.role import Role
-from app.models.user import User
-from app.models.protected_species import ProtectedSpeciesList
-from app.models.species import Species
+from app.core.logging import configure_logging
 from app.core.security import get_password_hash
+from app.integrations.base import close_http_client, init_http_client
+from app.models.protected_species import ProtectedSpeciesList
+from app.models.role import Role
+from app.models.species import Species
+from app.models.user import User
 
 logger = structlog.get_logger()
 

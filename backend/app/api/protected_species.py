@@ -1,7 +1,8 @@
-from fastapi import APIRouter, Query
 from typing import List
 
-from app.core.dependencies import DBSession, CurrentUser, AdminUser
+from fastapi import APIRouter, Query
+
+from app.core.dependencies import AdminUser, CurrentUser, DBSession
 from app.schemas.protected_species import ProtectedSpeciesCreate, ProtectedSpeciesResponse
 from app.services import protected_species_service
 

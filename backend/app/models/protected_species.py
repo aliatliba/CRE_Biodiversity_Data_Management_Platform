@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 
+from sqlalchemy import BigInteger, Column, DateTime, ForeignKey, Text
 from sqlalchemy.dialects.postgresql import CITEXT
-from sqlalchemy import Column, BigInteger, Text, ForeignKey, DateTime
 from sqlalchemy.orm import relationship
 
 from app.core.db import Base

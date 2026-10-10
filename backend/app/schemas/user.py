@@ -33,7 +33,7 @@ class UserResponse(BaseModel):
     role_id: int
     is_active: bool
     must_change_password: bool
-    
+
 
 class CompleteProfileRequest(BaseModel):
     """Submitted by a user on their first login to set a permanent password

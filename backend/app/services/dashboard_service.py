@@ -1,12 +1,14 @@
-from sqlalchemy.orm import Session
-from sqlalchemy import func, or_
 from datetime import datetime, timedelta, timezone
 
+from sqlalchemy import func, or_
+from sqlalchemy.orm import Session
+
 from app.core.exceptions import NotFoundError
-from app.models.species import Species
 from app.models.site import Site
 from app.models.site_species import SiteSpecies
+from app.models.species import Species
 from app.models.validation_history import SpeciesValidationHistory
+
 
 def _taxonomy_incomplete_filter():
     return or_(

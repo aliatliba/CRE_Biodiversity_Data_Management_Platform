@@ -21,12 +21,12 @@ from app.core.config import get_settings  # noqa: E402
 
 get_settings.cache_clear()
 
-from app.main import app  # noqa: E402
 from app.core.db import Base  # noqa: E402
 from app.core.dependencies import get_db  # noqa: E402
+from app.core.security import get_password_hash  # noqa: E402
+from app.main import app  # noqa: E402
 from app.models.role import Role  # noqa: E402
 from app.models.user import User  # noqa: E402
-from app.core.security import get_password_hash  # noqa: E402
 
 engine = create_engine(TEST_DATABASE_URL)
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

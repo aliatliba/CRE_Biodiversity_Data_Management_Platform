@@ -42,11 +42,11 @@ def test_new_species_picks_up_existing_protected_entry(client, admin_headers):
 
 
 def test_seed_inserts_only_missing_names(db_session):
+    import json
+
     from app.main import PROTECTED_SPECIES_SEED_FILE, seed_protected_species  # noqa: F401
     from app.models.role import Role
     from app.models.user import User
-
-    import json
 
     seed = json.load(open(PROTECTED_SPECIES_SEED_FILE, encoding="utf-8"))
     names = {item["scientific_name"].strip().lower() for item in seed}

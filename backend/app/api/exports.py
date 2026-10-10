@@ -3,7 +3,7 @@ import os
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse
 
-from app.core.dependencies import DBSession, ActiveUser
+from app.core.dependencies import ActiveUser, DBSession
 from app.schemas.export import ExportRequest, ExportResponse
 from app.services import export_service
 

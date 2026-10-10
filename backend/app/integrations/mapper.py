@@ -1,4 +1,5 @@
 from typing import Any
+
 from app.integrations.base import ProviderResult
 
 
@@ -30,7 +31,7 @@ def normalize_provider_result(result: ProviderResult, provider_name: str) -> dic
         _set("taxonomy", "genus", data.get("genus"))
         _set("taxonomy", "species_epithet", data.get("specificEpithet"))
         _set("taxonomy", "common_name", data.get("vernacularName"))
-        
+
 
     elif "wikidata" in source_key:
         _set("taxonomy", "common_name", data.get("common_name"))
