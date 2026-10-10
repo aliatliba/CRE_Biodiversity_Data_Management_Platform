@@ -21,4 +21,4 @@ class SiteResponse(BaseModel):
     name: str
     code: str | None
     description: str | None
-    created_by: int
+    created_by: int | None

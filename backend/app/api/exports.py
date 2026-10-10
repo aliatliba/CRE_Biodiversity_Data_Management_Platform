@@ -11,7 +11,7 @@ router = APIRouter()
 
 @router.post("", response_model=ExportResponse, status_code=201)
 def create_export(data: ExportRequest, db: DBSession, user: ActiveUser):
-    filters = data.filters.model_dump() if data.filters else None
+    filters = data.filters.model_dump(mode="json", exclude_none=True) if data.filters else None
 
     return export_service.create_export(
         db,

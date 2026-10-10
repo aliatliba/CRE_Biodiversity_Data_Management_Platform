@@ -1,21 +1,32 @@
 import os
-import pytest
-from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
 
-from app.main import app
-from app.core.db import Base
-from app.core.dependencies import get_db
-from app.core.config import get_settings
-from app.models.role import Role
-from app.models.user import User
-from app.core.security import get_password_hash
-
+# --- Test isolation -----------------------------------------------------------
+# These MUST be set before any ``app.*`` import: ``app.core.db`` builds its engine
+# from get_settings() at import time and ``lifespan`` seeds the database unless
+# ENVIRONMENT == "test". Without this the suite would run against whatever
+# DATABASE_URL is in .env (i.e. the dev database).
 TEST_DATABASE_URL = os.environ.get(
     "TEST_DATABASE_URL",
-    "postgresql+psycopg2://biodiversity:biodiversity@localhost:5432/biodiversity_test_db"
+    "postgresql+psycopg2://biodiversity:biodiversity@localhost:5432/biodiversity_test_db",
 )
+os.environ["ENVIRONMENT"] = "test"
+os.environ["DATABASE_URL"] = TEST_DATABASE_URL
+
+import pytest  # noqa: E402
+from fastapi.testclient import TestClient  # noqa: E402
+from sqlalchemy import create_engine, text  # noqa: E402
+from sqlalchemy.orm import sessionmaker  # noqa: E402
+
+from app.core.config import get_settings  # noqa: E402
+
+get_settings.cache_clear()
+
+from app.main import app  # noqa: E402
+from app.core.db import Base  # noqa: E402
+from app.core.dependencies import get_db  # noqa: E402
+from app.models.role import Role  # noqa: E402
+from app.models.user import User  # noqa: E402
+from app.core.security import get_password_hash  # noqa: E402
 
 engine = create_engine(TEST_DATABASE_URL)
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -23,21 +34,45 @@ TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engin
 
 @pytest.fixture(scope="session", autouse=True)
 def setup_test_db():
+    with engine.begin() as conn:
+        conn.execute(text("CREATE EXTENSION IF NOT EXISTS pg_trgm"))
+        conn.execute(text("CREATE EXTENSION IF NOT EXISTS citext"))
     Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
     yield
     Base.metadata.drop_all(bind=engine)
 
 
+@pytest.fixture(autouse=True)
+def _disable_rate_limiter():
+    """Logins in fixtures would otherwise trip the 5/minute login limit.
+    Tests that exercise the limiter enable it explicitly."""
+    from app.core.limiter import limiter
+
+    limiter.enabled = False
+    limiter.reset()
+    yield
+    limiter.enabled = False
+    limiter.reset()
+
+
 @pytest.fixture
 def db_session():
+    """Session bound to an outer transaction that is always rolled back.
+
+    ``join_transaction_mode="create_savepoint"`` makes the app's own
+    ``commit()`` calls release a SAVEPOINT instead of committing the outer
+    transaction, so no state leaks between tests.
+    """
     connection = engine.connect()
     transaction = connection.begin()
-    session = TestingSessionLocal(bind=connection)
-    yield session
-    session.close()
-    transaction.rollback()
-    connection.close()
+    session = TestingSessionLocal(bind=connection, join_transaction_mode="create_savepoint")
+    try:
+        yield session
+    finally:
+        session.close()
+        transaction.rollback()
+        connection.close()
 
 
 @pytest.fixture
@@ -83,6 +118,7 @@ def admin_user(db_session, admin_role):
         hashed_password=get_password_hash("admin123"),
         full_name="Test Admin",
         role_id=admin_role.id,
+        must_change_password=False,
     )
     db_session.add(user)
     db_session.commit()
@@ -97,6 +133,7 @@ def researcher_user(db_session, researcher_role):
         hashed_password=get_password_hash("researcher123"),
         full_name="Test Researcher",
         role_id=researcher_role.id,
+        must_change_password=False,
     )
     db_session.add(user)
     db_session.commit()

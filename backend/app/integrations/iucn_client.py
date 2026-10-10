@@ -1,7 +1,11 @@
-import os
+import logging
 from typing import Any
 
+from app.core.config import get_settings
+
 from app.integrations.base import ExternalProviderClient, HttpClientMixin, ProviderResult
+
+logger = logging.getLogger(__name__)
 
 
 def _get_scopes(assessment: dict[str, Any]) -> list[dict[str, Any]]:
@@ -115,14 +119,14 @@ class IucnClient(ExternalProviderClient, HttpClientMixin):
             "https://api.iucnredlist.org/api/v4"
         )
 
-        self.token = os.environ.get("IUCN_API_TOKEN", "")
+        self.token = get_settings().iucn_api_token
 
     async def search(self, scientific_name: str) -> ProviderResult:
 
         try:
 
             if not self.token:
-                print("IUCN API token not set")
+                logger.warning("IUCN API token not set")
 
                 return ProviderResult(
                     source="iucn",
@@ -263,10 +267,7 @@ class IucnClient(ExternalProviderClient, HttpClientMixin):
 
         except Exception as exc:
 
-            print(
-                f"IUCN lookup failed for "
-                f"{scientific_name}: {exc}"
-            )
+            logger.warning("IUCN lookup failed for %s: %s", scientific_name, exc)
 
             return ProviderResult(
                 source="iucn",

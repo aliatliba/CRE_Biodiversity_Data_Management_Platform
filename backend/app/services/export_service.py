@@ -8,13 +8,26 @@ from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy import func, or_
 
+from app.core.config import get_settings
 from app.models.export import Export
 from app.models.species import Species
 from app.models.site_species import SiteSpecies
 from app.models.site import Site
 
 
-EXPORTS_DIR = os.environ.get("EXPORTS_DIR", "./exports")
+EXPORTS_DIR = get_settings().exports_dir
+
+
+def _parse_dt(value: Any) -> datetime | None:
+    """Filters are stored as JSON, so datetimes come back as ISO strings."""
+    if value is None or value == "":
+        return None
+    if isinstance(value, datetime):
+        return value
+    parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed
 
 
 def _ensure_exports_dir() -> None:
@@ -23,6 +36,8 @@ def _ensure_exports_dir() -> None:
 
 def _build_export_query(db: Session, filters: dict[str, Any] | None):
     filters = filters or {}
+    date_from = _parse_dt(filters.get("date_from"))
+    date_to = _parse_dt(filters.get("date_to"))
 
     site_ids = filters.get("site_ids")
 
@@ -98,15 +113,11 @@ def _build_export_query(db: Session, filters: dict[str, Any] | None):
         )
 
     # Validation date filters
-    if filters.get("date_from"):
-        query = query.filter(
-            Species.validated_at >= filters["date_from"]
-        )
+    if date_from:
+        query = query.filter(Species.validated_at >= date_from)
 
-    if filters.get("date_to"):
-        query = query.filter(
-            Species.validated_at <= filters["date_to"]
-        )
+    if date_to:
+        query = query.filter(Species.validated_at <= date_to)
 
     # Critical part:
     # group everything by species so each species appears exactly once.

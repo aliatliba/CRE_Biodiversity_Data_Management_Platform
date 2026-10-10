@@ -309,6 +309,15 @@ def create_species(db: Session, data: SpeciesCreate, user_id: int) -> Species:
     return species
 
 
+def _as_utc(value: datetime) -> datetime:
+    """Compare timestamps as instants. Naive values are assumed to be UTC; aware
+    values keep their offset (a DB session in a non-UTC time zone returns +01:00,
+    which must not be relabelled as UTC)."""
+    if value.tzinfo is None:
+        return value.replace(tzinfo=timezone.utc)
+    return value.astimezone(timezone.utc)
+
+
 def update_species(db: Session, species_id: int, data: SpeciesUpdate, user_id: int) -> Species:
     species = db.query(Species).filter(Species.id == species_id).first()
     if not species:
@@ -317,8 +326,8 @@ def update_species(db: Session, species_id: int, data: SpeciesUpdate, user_id: i
             detail="Species not found",
         )
 
-    incoming_updated_at = datetime.fromisoformat(data.updated_at.replace("Z", "+00:00"))
-    if species.updated_at.replace(tzinfo=timezone.utc) != incoming_updated_at:
+    incoming_updated_at = _as_utc(datetime.fromisoformat(data.updated_at.replace("Z", "+00:00")))
+    if _as_utc(species.updated_at) != incoming_updated_at:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Species was modified by another user. Please refresh and try again.",

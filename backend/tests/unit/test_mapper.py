@@ -20,13 +20,20 @@ def test_gbif_normalization():
 
 
 def test_iucn_normalization():
-    result = ProviderResult("iucn", {
-        "category": "VU",
-        "population_trend": "Decreasing",
-    })
+    assessments = [
+        {
+            "assessment_id": 1,
+            "scope": "Global",
+            "scope_code": "1",
+            "year": 2020,
+            "category": "VU",
+            "population_trend": "Decreasing",
+        }
+    ]
+    result = ProviderResult("iucn", {"assessments": assessments})
     mapped = normalize_provider_result(result, "IucnClient")
-    assert mapped["conservation"]["iucn_status"] == "VU"
-    assert mapped["conservation"]["iucn_trend"] == "Decreasing"
+    assert mapped["conservation"]["iucn_assessments"] == assessments
+    assert mapped["field_sources"]["iucn_assessments"]["source"] == "iucn"
 
 
 def test_empty_result():

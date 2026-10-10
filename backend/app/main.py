@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI
+from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from sqlalchemy.exc import IntegrityError
 from fastapi.middleware.cors import CORSMiddleware  # add this import
@@ -56,7 +57,7 @@ app.add_middleware(
 
 # Register exception handlers
 app.add_exception_handler(AppException, app_exception_handler)
-app.add_exception_handler(RateLimitExceeded, app_exception_handler)
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_exception_handler(IntegrityError, integrity_error_handler)
 app.add_exception_handler(Exception, generic_exception_handler)
 

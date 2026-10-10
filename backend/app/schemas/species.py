@@ -135,7 +135,7 @@ class SpeciesResponse(BaseModel):
     potential_threats: str | None
     reference: str | None
     status: str
-    created_by: int
+    created_by: int | None
     validated_by: int | None
     validated_at: datetime | None
     updated_at: datetime
@@ -168,7 +168,7 @@ class ValidationHistoryResponse(BaseModel):
     species_id: int
     action: str
     changed_fields: dict[str, Any]
-    validated_by: int
+    validated_by: int | None
     validated_at: datetime
 
 
@@ -183,7 +183,7 @@ class SiteSpeciesResponse(BaseModel):
     id: int
     site_id: int
     species_id: int
-    recorded_by: int
+    recorded_by: int | None
     notes: str | None
     
 class BulkImportRequest(BaseModel):

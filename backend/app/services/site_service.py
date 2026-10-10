@@ -45,11 +45,18 @@ def update_site(db: Session, site_id: int, data: SiteUpdate) -> Site:
 
 def delete_site(db: Session, site_id: int, force: bool = False) -> None:
     site = get_site(db, site_id)
-    has_associations = db.query(SiteSpecies).filter(SiteSpecies.site_id == site_id).first()
-    if has_associations and not force:
+    associations = db.query(SiteSpecies).filter(SiteSpecies.site_id == site_id)
+    if not force and associations.first() is not None:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Site has species associations. Use force=true to delete anyway.",
         )
-    db.delete(site)
-    db.commit()
+    # Single transaction: remove the association rows first (site_species.site_id
+    # has no ON DELETE CASCADE), then the site itself.
+    try:
+        associations.delete(synchronize_session=False)
+        db.delete(site)
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
