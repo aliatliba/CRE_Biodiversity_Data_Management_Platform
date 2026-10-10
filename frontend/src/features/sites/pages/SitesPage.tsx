@@ -84,8 +84,16 @@ export function SitesPage() {
     } catch (err) {
       if (axios.isAxiosError(err) && err.response?.status === 409) {
         if (confirm('This site has species linked to it. Delete anyway?')) {
-          await siteService.deleteSite(site.id, true)
-          setSites((prev) => prev.filter((s) => s.id !== site.id))
+          try {
+            await siteService.deleteSite(site.id, true)
+            setSites((prev) => prev.filter((s) => s.id !== site.id))
+          } catch (forceErr) {
+            alert(
+              axios.isAxiosError(forceErr) && typeof forceErr.response?.data?.detail === 'string'
+                ? forceErr.response.data.detail
+                : 'Could not delete site.'
+            )
+          }
         }
       } else {
         alert('Could not delete site.')
@@ -223,5 +231,3 @@ export function SitesPage() {
 }
 
 export default SitesPage
-
-MapPin

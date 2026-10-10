@@ -2,7 +2,7 @@ export interface ProtectedSpeciesEntry {
   id: number
   scientific_name: string
   source_reference: string | null
-  added_by: number
+  added_by: number | null
   created_at: string
 }
 

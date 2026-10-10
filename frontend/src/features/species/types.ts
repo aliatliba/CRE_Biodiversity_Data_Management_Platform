@@ -28,7 +28,7 @@ export interface Species {
   potential_threats: string | null
   reference: string | null
   status: string
-  created_by: number
+  created_by: number | null
   validated_by: number | null
   validated_at: string | null
   updated_at: string
@@ -149,7 +149,7 @@ export interface ValidationHistoryEntry {
   species_id: number
   action: string
   changed_fields: Record<string, unknown>
-  validated_by: number
+  validated_by: number | null
   validated_at: string
 }
 

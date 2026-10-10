@@ -3,7 +3,7 @@ export interface Site {
   name: string
   code: string | null
   description: string | null
-  created_by: number
+  created_by: number | null
 }
 
 export interface SiteCreateInput {
