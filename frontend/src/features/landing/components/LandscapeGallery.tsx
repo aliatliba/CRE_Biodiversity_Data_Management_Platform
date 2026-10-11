@@ -11,28 +11,28 @@ const SCENES = [
     id: 'cedar',
     title: 'Cedar forest',
     region: 'Djurdjura ',
-    src: '/assests/landing/djurdjura.jpeg',
+    src: '/assets/landing/djurdjura.jpeg',
   },
 
   {
     id: 'steppe',
     title: 'Desert oasis lake',
     region: 'Ouargla',
-    src: '/assests/landing/ouargla.jpg',
+    src: '/assets/landing/ouargla.jpg',
   },
 
     {
     id: 'wetland',
     title: 'Coastal wetlands',
     region: 'El Kala',
-    src: '/assests/landing/tonga.jpg',
+    src: '/assets/landing/tonga.jpg',
   },
 
   {
     id: 'sahara',
     title: 'Saharan plateau',
     region: "Tassili n'Ajjer",
-    src: '/assests/landing/tassili.webp',
+    src: '/assets/landing/tassili.webp',
   },
 ]
 

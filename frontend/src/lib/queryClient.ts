@@ -11,3 +11,6 @@ export function createQueryClient(): QueryClient {
     },
   })
 }
+
+/** App-wide client (a singleton so AuthProvider can clear it on sign-out). */
+export const queryClient = createQueryClient()

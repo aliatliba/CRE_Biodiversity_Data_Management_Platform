@@ -1,117 +1,82 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
-import axios from 'axios'
-import { MapPin, Plus, Trash2, Search } from 'lucide-react'
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { MapPin, Plus, Trash2 } from 'lucide-react'
+import { Alert } from '@/components/ui/Alert'
+import { SearchInput } from '@/components/ui/SearchInput'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
 import { LoadingSpinner } from '@/components/common/LoadingSpinner'
 import { ErrorState } from '@/components/common/ErrorState'
+import { EmptyState } from '@/components/common/EmptyState'
 import { useAuth } from '@/hooks/useAuth'
+import { useDebouncedValue } from '@/hooks/useDebouncedValue'
+import { getErrorMessage } from '@/lib/errors'
+import { siteUrl } from '@/lib/constants'
+import { queryKeys } from '@/lib/queryKeys'
 import * as siteService from '../services/siteService'
+import { DeleteSiteDialogs } from '../components/DeleteSiteDialogs'
 import type { Site } from '../types'
 
 export function SitesPage() {
   const { user } = useAuth()
+  const queryClient = useQueryClient()
   const isAdmin = user?.role === 'admin'
 
-  const [sites, setSites] = useState<Site[]>([])
   const [search, setSearch] = useState('')
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const debouncedSearch = useDebouncedValue(search.trim())
 
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [form, setForm] = useState({ name: '', code: '', description: '' })
   const [formError, setFormError] = useState<string | null>(null)
-  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [siteToDelete, setSiteToDelete] = useState<Site | null>(null)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
 
-  async function load(query?: string) {
-    setIsLoading(true)
-    setError(null)
-    try {
-      const data = await siteService.listSites(query)
-      setSites(data)
-    } catch {
-      setError('Could not load sites.')
-    } finally {
-      setIsLoading(false)
-    }
-  }
+  // Without a search term this is the shared ['sites'] query used everywhere.
+  const query = useQuery({
+    queryKey: debouncedSearch ? [...queryKeys.sites, { search: debouncedSearch }] : queryKeys.sites,
+    queryFn: () => siteService.listSites(debouncedSearch || undefined),
+    placeholderData: keepPreviousData,
+  })
+  const sites = query.data ?? []
 
-  useEffect(() => {
-    load()
-  }, [])
+  const createMutation = useMutation({
+    mutationFn: () =>
+      siteService.createSite({
+        name: form.name.trim(),
+        code: form.code.trim() || undefined,
+        description: form.description.trim() || undefined,
+      }),
+    onSuccess: () => {
+      setIsModalOpen(false)
+      setForm({ name: '', code: '', description: '' })
+      void queryClient.invalidateQueries({ queryKey: queryKeys.sites })
+    },
+    onError: (err) => setFormError(getErrorMessage(err, 'Could not create site.')),
+  })
 
-  useEffect(() => {
-    const timeout = setTimeout(() => load(search || undefined), 350)
-    return () => clearTimeout(timeout)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search])
-
-  async function handleCreate(event: FormEvent) {
+  function handleCreate(event: FormEvent) {
     event.preventDefault()
     setFormError(null)
     if (!form.name.trim()) {
       setFormError('Site name is required.')
       return
     }
-    setIsSubmitting(true)
-    try {
-      await siteService.createSite({
-        name: form.name.trim(),
-        code: form.code.trim() || undefined,
-        description: form.description.trim() || undefined,
-      })
-      setIsModalOpen(false)
-      setForm({ name: '', code: '', description: '' })
-      load(search || undefined)
-    } catch (err) {
-      setFormError(
-        axios.isAxiosError(err) ? (err.response?.data?.detail ?? 'Could not create site.') : 'Could not create site.'
-      )
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
-
-  async function handleDelete(site: Site) {
-    if (!confirm(`Delete "${site.name}"? This can't be undone.`)) return
-    try {
-      await siteService.deleteSite(site.id)
-      setSites((prev) => prev.filter((s) => s.id !== site.id))
-    } catch (err) {
-      if (axios.isAxiosError(err) && err.response?.status === 409) {
-        if (confirm('This site has species linked to it. Delete anyway?')) {
-          try {
-            await siteService.deleteSite(site.id, true)
-            setSites((prev) => prev.filter((s) => s.id !== site.id))
-          } catch (forceErr) {
-            alert(
-              axios.isAxiosError(forceErr) && typeof forceErr.response?.data?.detail === 'string'
-                ? forceErr.response.data.detail
-                : 'Could not delete site.'
-            )
-          }
-        }
-      } else {
-        alert('Could not delete site.')
-      }
-    }
+    createMutation.mutate()
   }
 
   return (
     <>
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="relative w-full max-w-xs">
-          <Search size={16} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-950/35" />
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search sites…"
-            className="h-11 w-full rounded-xl border border-mist-200 bg-paper-0 pl-10 pr-4 text-sm outline-none transition-colors focus:border-canopy-600"
-          />
-        </div>
+        <SearchInput
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search sites…"
+          aria-label="Search sites"
+          wrapperClassName="max-w-xs"
+        />
         {isAdmin && (
           <Button
             onClick={() => setIsModalOpen(true)}
@@ -123,18 +88,33 @@ export function SitesPage() {
         )}
       </div>
 
-      {isLoading && (
+      {deleteError && <Alert className="mb-4">{deleteError}</Alert>}
+
+      {query.isPending && (
         <div className="flex justify-center py-20">
           <LoadingSpinner className="h-7 w-7" />
         </div>
       )}
 
-      {!isLoading && error && <ErrorState message={error} onRetry={() => load(search || undefined)} />}
+      {query.isError && (
+        <ErrorState
+          message={getErrorMessage(query.error, 'Could not load sites.')}
+          onRetry={() => query.refetch()}
+        />
+      )}
 
-      {!isLoading && !error && sites.length > 0 && (
+      {query.isSuccess && sites.length === 0 && (
+        <EmptyState
+          icon={<MapPin size={22} />}
+          title={debouncedSearch ? 'No matching sites' : 'No sites yet'}
+          description={debouncedSearch ? 'Try a different search term.' : 'Create the first survey site to start logging species.'}
+        />
+      )}
+
+      {query.isSuccess && sites.length > 0 && (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {sites.map((site) => (
-            <Link key={site.id} to={`/sites/${site.id}`}>
+            <Link key={site.id} to={siteUrl(site.id)}>
               <Card className="flex h-full min-h-[210px] flex-col transition-colors hover:border-canopy-700/30 hover:bg-mist-100/40">
                 {/* Header */}
                 <div className="flex items-start justify-between gap-3">
@@ -154,7 +134,8 @@ export function SitesPage() {
                       onClick={(e) => {
                         e.preventDefault()
                         e.stopPropagation()
-                        handleDelete(site)
+                        setDeleteError(null)
+                        setSiteToDelete(site)
                       }}
                       aria-label={`Delete ${site.name}`}
                       className="shrink-0 rounded-full p-1.5 text-ink-950/30 transition-colors hover:bg-red-50 hover:text-red-600"
@@ -215,16 +196,18 @@ export function SitesPage() {
               className="w-full resize-none rounded-xl border border-canopy-900/12 bg-paper-0 px-4 py-3 text-[15px] text-ink-950 outline-none transition-all placeholder:text-ink-950/35 focus:border-canopy-600 focus:ring-2 focus:ring-canopy-600/10"
             />
           </div>
-          {formError && (
-            <div role="alert" className="rounded-lg border border-red-200 bg-red-50 px-3.5 py-2.5 text-sm font-medium text-red-700">
-              {formError}
-            </div>
-          )}
-          <Button type="submit" isLoading={isSubmitting} className="mt-1 w-full">
+          {formError && <Alert>{formError}</Alert>}
+          <Button type="submit" isLoading={createMutation.isPending} className="mt-1 w-full">
             Create site
           </Button>
         </form>
       </Modal>
+
+      <DeleteSiteDialogs
+        site={siteToDelete}
+        onClose={() => setSiteToDelete(null)}
+        onError={setDeleteError}
+      />
     </>
   )
 }

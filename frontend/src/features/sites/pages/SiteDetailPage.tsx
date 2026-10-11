@@ -1,16 +1,9 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import axios from 'axios'
-import { motion } from 'framer-motion'
-import {
-  ArrowLeft,
-  Edit2,
-  Leaf,
-  MapPin,
-  ShieldCheck,
-  Trash2,
-} from 'lucide-react'
+import { useMutation, useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query'
+import { ArrowLeft, Edit2, Leaf, MapPin, ShieldCheck, Trash2 } from 'lucide-react'
 
+import { Alert } from '@/components/ui/Alert'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -21,234 +14,146 @@ import { ErrorState } from '@/components/common/ErrorState'
 import { EmptyState } from '@/components/common/EmptyState'
 import { AnimatedBarChart } from '@/components/charts/AnimatedBarChart'
 import { AnimatedPieChart } from '@/components/charts/AnimatedPieChart'
+import { ChartCard } from '@/components/charts/ChartCard'
 import { useAuth } from '@/hooks/useAuth'
+import { toChartData } from '@/lib/chartData'
+import { ROUTES, speciesListUrl } from '@/lib/constants'
+import { getErrorMessage } from '@/lib/errors'
+import { IUCN_COLORS, THREATENED_STATUSES_PARAM } from '@/lib/iucn'
+import { queryKeys } from '@/lib/queryKeys'
 
 import * as dashboardService from '@/features/dashboard/services/dashboardService'
-import type { DashboardStats } from '@/features/dashboard/types'
-
-import * as siteService from '../services/siteService'
-import type { Site } from '../types'
-
-import * as speciesService from '@/features/species/services/speciesService'
-import type { SpeciesListItem } from '@/features/species/types'
-import { SpeciesTable } from '@/features/species/components/SpeciesTable'
-
 import { StatCard } from '@/features/dashboard/components/StatCard'
 
+import * as siteService from '../services/siteService'
+import { DeleteSiteDialogs } from '../components/DeleteSiteDialogs'
+
+import * as speciesService from '@/features/species/services/speciesService'
+import { SpeciesTable } from '@/features/species/components/SpeciesTable'
+
 const PAGE_SIZE = 15
+const COMPOSITION_LABELS = ['Fauna', 'Flora', 'Micro-organisms', 'Fungi']
 
 export function SiteDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const { user } = useAuth()
   const isAdmin = user?.role === 'admin'
 
-  const [site, setSite] = useState<Site | null>(null)
-  const [stats, setStats] = useState<DashboardStats | null>(null)
-  const [species, setSpecies] = useState<SpeciesListItem[]>([])
+  const siteId = Number(id)
+  const validId = Number.isFinite(siteId)
 
   const [page, setPage] = useState(1)
-  const [pages, setPages] = useState(1)
-  const [total, setTotal] = useState(0)
-
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
   const [isEditOpen, setIsEditOpen] = useState(false)
-  const [editForm, setEditForm] = useState({
-    name: '',
-    code: '',
-    description: '',
-  })
+  const [editForm, setEditForm] = useState({ name: '', code: '', description: '' })
   const [editError, setEditError] = useState<string | null>(null)
-  const [isSaving, setIsSaving] = useState(false)
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
 
-  const siteId = Number(id)
+  const siteQuery = useQuery({
+    queryKey: queryKeys.site(siteId),
+    queryFn: () => siteService.getSite(siteId),
+    enabled: validId,
+  })
 
-  async function loadSpeciesList() {
-    const result = await speciesService.listSpecies({
-      site_id: siteId,
-      page,
-      page_size: PAGE_SIZE,
-    })
+  const statsQuery = useQuery({
+    queryKey: queryKeys.dashboard(siteId),
+    queryFn: () => dashboardService.getStats(siteId),
+    enabled: validId,
+  })
 
-    setSpecies(result.items)
-    setPages(result.pages || 1)
-    setTotal(result.total)
+  // One species fetch for the table; the page param is part of the key.
+  const speciesParams = { site_id: siteId, page, page_size: PAGE_SIZE }
+  const speciesQuery = useQuery({
+    queryKey: queryKeys.species(speciesParams),
+    queryFn: () => speciesService.listSpecies(speciesParams),
+    enabled: validId,
+    placeholderData: keepPreviousData,
+  })
+
+  const site = siteQuery.data
+  const stats = statsQuery.data
+  const species = speciesQuery.data?.items ?? []
+
+  const isPending = siteQuery.isPending || statsQuery.isPending
+  const loadError = siteQuery.error ?? statsQuery.error
+
+  function refetchAll() {
+    void siteQuery.refetch()
+    void statsQuery.refetch()
+    void speciesQuery.refetch()
   }
 
-  async function load() {
-    if (!id) return
-
-    setIsLoading(true)
-    setError(null)
-
-    try {
-      const [siteData, statsData] = await Promise.all([
-        siteService.getSite(siteId),
-        dashboardService.getStats(siteId),
-      ])
-
-      setSite(siteData)
-      setStats(statsData)
-
-      setEditForm({
-        name: siteData.name,
-        code: siteData.code ?? '',
-        description: siteData.description ?? '',
-      })
-
-      await loadSpeciesList()
-    } catch {
-      setError('Could not load this site.')
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    load()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id])
-
-  useEffect(() => {
-    if (!id) return
-
-    loadSpeciesList().catch(() => {})
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, id])
-
-  async function handleEdit(event: FormEvent) {
-    event.preventDefault()
-
+  function openEdit() {
     if (!site) return
-
+    setEditForm({
+      name: site.name,
+      code: site.code ?? '',
+      description: site.description ?? '',
+    })
     setEditError(null)
-    setIsSaving(true)
+    setIsEditOpen(true)
+  }
 
-    try {
-      const updated = await siteService.updateSite(site.id, {
+  const updateMutation = useMutation({
+    mutationFn: () =>
+      siteService.updateSite(siteId, {
         name: editForm.name.trim(),
         code: editForm.code.trim() || undefined,
         description: editForm.description.trim() || undefined,
-      })
-
-      setSite(updated)
+      }),
+    onSuccess: () => {
       setIsEditOpen(false)
+      void queryClient.invalidateQueries({ queryKey: queryKeys.sites })
+      void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard(siteId) })
+    },
+    onError: (err) => setEditError(getErrorMessage(err, 'Could not update site.')),
+  })
 
-      const statsData = await dashboardService.getStats(siteId)
-      setStats(statsData)
-    } catch (err) {
-      setEditError(
-        axios.isAxiosError(err)
-          ? (err.response?.data?.detail ?? 'Could not update site.')
-          : 'Could not update site.'
-      )
-    } finally {
-      setIsSaving(false)
-    }
+  function handleEdit(event: FormEvent) {
+    event.preventDefault()
+    setEditError(null)
+    updateMutation.mutate()
   }
 
-  async function handleDelete() {
-    if (!site) return
-
-    if (!confirm(`Delete "${site.name}"? This can't be undone.`)) return
-
-    try {
-      await siteService.deleteSite(site.id)
-      navigate('/sites')
-    } catch (err) {
-      if (axios.isAxiosError(err) && err.response?.status === 409) {
-        if (confirm('This site has species linked to it. Delete anyway?')) {
-          try {
-            await siteService.deleteSite(site.id, true)
-            navigate('/sites')
-          } catch (forceErr) {
-            alert(
-              axios.isAxiosError(forceErr) && typeof forceErr.response?.data?.detail === 'string'
-                ? forceErr.response.data.detail
-                : 'Could not delete site.'
-            )
-          }
-        }
-      } else {
-        alert('Could not delete site.')
-      }
-    }
-  }
-
-  /*
-   * Dashboard-style datasets
-   * ---------------------------------------------
-   * All of these remain scoped to the current site
-   * because stats comes from getStats(siteId).
-   */
-
-  const biodiversityCompositionData = stats
-    ? [
-        {
-          label: 'Fauna',
-          value: stats.biodiversity_composition['Fauna'] ?? 0,
-        },
-        {
-          label: 'Flora',
-          value: stats.biodiversity_composition['Flora'] ?? 0,
-        },
-        {
-          label: 'Micro-organisms',
-          value:
-            stats.biodiversity_composition['Micro-organisms'] ?? 0,
-        },
-        {
-          label: 'Fungi',
-          value: stats.biodiversity_composition['Fungi'] ?? 0,
-        },
-      ]
-    : []
-
-  const iucnData = stats
-    ? Object.entries(stats.iucn_breakdown).map(([label, value]) => ({
-        label: label.toLowerCase() === 'unknown' ? 'NE' : label,
-        value,
-      }))
-    : []
-
-  const statusData = stats
-    ? Object.entries(stats.status_breakdown).map(([label, value]) => ({
-        label,
-        value,
-      }))
-    : []
-
+  const compositionData = COMPOSITION_LABELS.map((label) => ({
+    label,
+    value: stats?.biodiversity_composition[label] ?? 0,
+  }))
+  const iucnData = toChartData(stats?.iucn_breakdown)
+  const statusData = toChartData(stats?.status_breakdown)
   const familyData =
     stats && stats.total_species > 0
-      ? stats.top_families.map((family) => ({
-          label: family.family,
-          value: family.count ,
-        }))
+      ? stats.top_families.map((family) => ({ label: family.family, value: family.count }))
       : []
 
   return (
     <>
       <Link
-        to="/sites"
+        to={ROUTES.sites}
         className="mb-5 inline-flex items-center gap-1.5 text-sm font-medium text-canopy-700 hover:underline"
       >
         <ArrowLeft size={15} />
         Back to sites
       </Link>
 
-      {isLoading && (
+      {isPending && validId && (
         <div className="flex justify-center py-20">
           <LoadingSpinner className="h-7 w-7" />
         </div>
       )}
 
-      {!isLoading && error && (
-        <ErrorState message={error} onRetry={load} />
+      {(!validId || (loadError && !site)) && (
+        <ErrorState
+          message={getErrorMessage(loadError, 'Could not load this site.')}
+          onRetry={refetchAll}
+        />
       )}
 
-      {!isLoading && !error && site && stats && (
+      {deleteError && <Alert className="mb-4">{deleteError}</Alert>}
+
+      {site && stats && (
         <div className="flex flex-col gap-6">
 
           {/* -------------------------------------------------
@@ -278,7 +183,7 @@ export function SiteDetailPage() {
                 <Button
                   variant="secondary"
                   className="gap-2"
-                  onClick={() => setIsEditOpen(true)}
+                  onClick={openEdit}
                 >
                   <Edit2 size={15} />
                   Edit
@@ -287,7 +192,10 @@ export function SiteDetailPage() {
                 <Button
                   variant="ghost"
                   className="gap-2 text-red-600 hover:bg-red-50"
-                  onClick={handleDelete}
+                  onClick={() => {
+                    setDeleteError(null)
+                    setIsDeleteOpen(true)
+                  }}
                 >
                   <Trash2 size={15} />
                   Delete
@@ -310,7 +218,7 @@ export function SiteDetailPage() {
             />
 
             <Link
-              to={`/sites/${siteId}/species/protected`}
+              to={speciesListUrl({ site_id: siteId, national_status: 'Protected' })}
               className="block rounded-2xl transition-transform duration-200 hover:-translate-y-0.5"
             >
               <StatCard
@@ -322,7 +230,7 @@ export function SiteDetailPage() {
             </Link>
 
             <Link
-              to={`/sites/${siteId}/species/threatened`}
+              to={speciesListUrl({ site_id: siteId, iucn_status: THREATENED_STATUSES_PARAM })}
               className="block rounded-2xl transition-transform duration-200 hover:-translate-y-0.5"
             >
               <StatCard
@@ -339,122 +247,52 @@ export function SiteDetailPage() {
           ------------------------------------------------- */}
 
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-            {/* Biodiversity composition */}
-            <motion.div
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.45, delay: 0.1 }}
-              className="min-w-0"
+            <ChartCard
+              title="Biodiversity composition"
+              subtitle="Species composition recorded at this site"
+              delay={0.1}
             >
-              <Card className="h-full min-w-0 overflow-hidden">
-                <h2 className="font-display text-sm font-bold text-canopy-950">
-                  Biodiversity composition
-                </h2>
+              <AnimatedPieChart data={compositionData} delay={0.15} showValues />
+            </ChartCard>
 
-                <p className="mt-1 text-xs text-ink-950/50">
-                  Species composition recorded at this site
-                </p>
-
-                <div className="mt-5">
-                  <AnimatedPieChart
-                    data={biodiversityCompositionData}
-                    delay={0.15}
-                    showValues
-                  />
-                </div>
-              </Card>
-            </motion.div>
-
-            {/* IUCN status */}
-            <motion.div
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.45, delay: 0.15 }}
-              className="min-w-0"
+            <ChartCard
+              title="IUCN status breakdown"
+              subtitle="Conservation status of species at this site"
+              delay={0.15}
             >
-              <Card className="h-full min-w-0 overflow-hidden">
-                <h2 className="font-display text-sm font-bold text-canopy-950">
-                  IUCN status breakdown
-                </h2>
+              <AnimatedPieChart data={iucnData} delay={0.2} showValues colorMap={IUCN_COLORS} />
+            </ChartCard>
 
-                <p className="mt-1 text-xs text-ink-950/50">
-                  Conservation status of species at this site
-                </p>
-
-                <div className="mt-5">
-                  <AnimatedPieChart
-                    data={iucnData}
-                    delay={0.2}
-                    showValues
-                  />
-                </div>
-              </Card>
-            </motion.div>
-
-            {/* National status */}
-            <motion.div
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.45, delay: 0.2 }}
-              className="min-w-0"
+            <ChartCard
+              title="National status"
+              subtitle="Protected and non-protected species at this site"
+              delay={0.2}
             >
-              <Card className="h-full min-w-0 overflow-hidden">
-                <h2 className="font-display text-sm font-bold text-canopy-950">
-                  National status
-                </h2>
+              <AnimatedPieChart data={statusData} delay={0.25} showValues />
+            </ChartCard>
 
-                <p className="mt-1 text-xs text-ink-950/50">
-                  Protected and non-protected species at this site
-                </p>
-
-                <div className="mt-5">
-                  <AnimatedPieChart
-                    data={statusData}
-                    delay={0.25}
-                    showValues
-                  />
-                </div>
-              </Card>
-            </motion.div>
-
-            {/* Top families */}
-            <motion.div
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.45, delay: 0.25 }}
-              className="min-w-0"
+            <ChartCard
+              title="Top families"
+              subtitle="Number of species in each family"
+              delay={0.25}
             >
-              <Card className="h-full min-w-0 overflow-hidden">
-                <h2 className="font-display text-sm font-bold text-canopy-950">
-                  Top families
-                </h2>
-
-                <p className="mt-1 text-xs text-ink-950/50">
-                  Percentage of species represented by each family
-                </p>
-
-                <div className="mt-5">
-                  <AnimatedBarChart
-                    data={familyData}
-                    colors={[
-                      '#3C8D69',
-                      '#47A377',
-                      '#52BA85',
-                      '#63B98D',
-                      '#77C99E',
-                      '#8AD2AD',
-                      '#9BD9BA',
-                      '#ABDFC4',
-                      '#BAE4CC',
-                      '#C7E9D4',
-                    ]}
-                    delay={0.3}
-                    showValues
-                  />
-                </div>
-              </Card>
-            </motion.div>
-
+              <AnimatedBarChart
+                data={familyData}
+                colors={[
+                  '#3C8D69',
+                  '#47A377',
+                  '#52BA85',
+                  '#63B98D',
+                  '#77C99E',
+                  '#8AD2AD',
+                  '#9BD9BA',
+                  '#ABDFC4',
+                  '#BAE4CC',
+                  '#C7E9D4',
+                ]}
+                delay={0.3}
+              />
+            </ChartCard>
           </div>
 
           {/* -------------------------------------------------
@@ -473,7 +311,7 @@ export function SiteDetailPage() {
                 </p>
               </div>
 
-              <Link to="/species/new">
+              <Link to={ROUTES.addSpecies}>
                 <Button size="md" className="w-full gap-2 sm:w-auto">
                   <Leaf size={15} />
                   Log species
@@ -481,7 +319,12 @@ export function SiteDetailPage() {
               </Link>
             </div>
 
-            {species.length === 0 ? (
+            {speciesQuery.isError ? (
+              <ErrorState
+                message={getErrorMessage(speciesQuery.error, 'Could not load species.')}
+                onRetry={() => speciesQuery.refetch()}
+              />
+            ) : species.length === 0 && !speciesQuery.isPending ? (
               <EmptyState
                 icon={<Leaf size={22} />}
                 title="No species at this site"
@@ -494,8 +337,8 @@ export function SiteDetailPage() {
                 <Pagination
                   className="mt-5"
                   page={page}
-                  pages={pages}
-                  total={total}
+                  pages={speciesQuery.data?.pages || 1}
+                  total={speciesQuery.data?.total ?? 0}
                   pageSize={PAGE_SIZE}
                   onPageChange={setPage}
                 />
@@ -550,24 +393,23 @@ export function SiteDetailPage() {
             }
           />
 
-          {editError && (
-            <div
-              role="alert"
-              className="rounded-lg border border-red-200 bg-red-50 px-3.5 py-2.5 text-sm font-medium text-red-700"
-            >
-              {editError}
-            </div>
-          )}
+          {editError && <Alert>{editError}</Alert>}
 
           <Button
             type="submit"
-            isLoading={isSaving}
+            isLoading={updateMutation.isPending}
             className="w-full"
           >
             Save changes
           </Button>
         </form>
       </Modal>
+      <DeleteSiteDialogs
+        site={isDeleteOpen && site ? site : null}
+        onClose={() => setIsDeleteOpen(false)}
+        onDeleted={() => navigate(ROUTES.sites)}
+        onError={setDeleteError}
+      />
     </>
   )
 }

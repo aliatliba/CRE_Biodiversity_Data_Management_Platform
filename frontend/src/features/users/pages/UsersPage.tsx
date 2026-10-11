@@ -1,8 +1,10 @@
-import { useEffect, useState, type FormEvent } from 'react'
-import { Navigate } from 'react-router-dom'
-import axios from 'axios'
+import { useState, type FormEvent } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Users as UsersIcon, Plus, Copy, Check, UserX, Trash2 } from 'lucide-react'
+import { Alert } from '@/components/ui/Alert'
 import { Badge } from '@/components/ui/Badge'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+import { Select } from '@/components/ui/Select'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
@@ -10,51 +12,47 @@ import { LoadingSpinner } from '@/components/common/LoadingSpinner'
 import { ErrorState } from '@/components/common/ErrorState'
 import { EmptyState } from '@/components/common/EmptyState'
 import { useAuth } from '@/hooks/useAuth'
+import { getErrorMessage } from '@/lib/errors'
+import { queryKeys } from '@/lib/queryKeys'
 import * as userService from '../services/userService'
-import type { AppUser, Role } from '../types'
+import type { AppUser } from '../types'
 
 function generateTempPassword(): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789'
-  let out = ''
-  for (let i = 0; i < 12; i++) out += chars[Math.floor(Math.random() * chars.length)]
-  return out
+  const bytes = crypto.getRandomValues(new Uint8Array(12))
+  return Array.from(bytes, (b) => chars[b % chars.length]).join('')
 }
 
 export function UsersPage() {
+  // Admin-only: the route is wrapped in <AdminRoute>, so no role check is needed here.
   const { user: currentUser } = useAuth()
-  if (currentUser && currentUser.role !== 'admin') {
-    return <Navigate to="/dashboard" replace />
-  }
-
-  const [users, setUsers] = useState<AppUser[]>([])
-  const [roles, setRoles] = useState<Role[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const queryClient = useQueryClient()
 
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [form, setForm] = useState({ email: '', full_name: '', phone: '', role_id: '', password: generateTempPassword() })
   const [formError, setFormError] = useState<string | null>(null)
-  const [isSubmitting, setIsSubmitting] = useState(false)
   const [createdCredentials, setCreatedCredentials] = useState<{ email: string; password: string } | null>(null)
   const [copied, setCopied] = useState(false)
+  const [userToDeactivate, setUserToDeactivate] = useState<AppUser | null>(null)
+  const [userToDelete, setUserToDelete] = useState<AppUser | null>(null)
+  const [actionError, setActionError] = useState<string | null>(null)
 
-  async function load() {
-    setIsLoading(true)
-    setError(null)
-    try {
-      const [userList, roleList] = await Promise.all([userService.listUsers(), userService.listRoles()])
-      setUsers(userList)
-      setRoles(roleList)
-    } catch {
-      setError('Could not load users.')
-    } finally {
-      setIsLoading(false)
-    }
+  const usersQuery = useQuery({ queryKey: queryKeys.users, queryFn: userService.listUsers })
+  const rolesQuery = useQuery({ queryKey: queryKeys.roles, queryFn: userService.listRoles })
+
+  const users = usersQuery.data ?? []
+  const roles = rolesQuery.data ?? []
+  const isPending = usersQuery.isPending || rolesQuery.isPending
+  const loadError = usersQuery.error ?? rolesQuery.error
+
+  function refetch() {
+    void usersQuery.refetch()
+    void rolesQuery.refetch()
   }
 
-  useEffect(() => {
-    load()
-  }, [])
+  function invalidateUsers() {
+    void queryClient.invalidateQueries({ queryKey: queryKeys.users })
+  }
 
   function roleName(roleId: number): string {
     return roles.find((r) => r.id === roleId)?.name ?? `role #${roleId}`
@@ -67,98 +65,57 @@ export function UsersPage() {
     setIsModalOpen(true)
   }
 
-  async function handleCreate(event: FormEvent) {
+  const createMutation = useMutation({
+    mutationFn: () =>
+      userService.createUser({
+        email: form.email.trim(),
+        password: form.password,
+        full_name: form.full_name.trim(),
+        role_id: Number(form.role_id),
+        phone: form.phone.trim() || undefined,
+      }),
+    onSuccess: () => {
+      setCreatedCredentials({ email: form.email.trim(), password: form.password })
+      invalidateUsers()
+    },
+    onError: (err) => setFormError(getErrorMessage(err, 'Could not create user.')),
+  })
+
+  const deactivateMutation = useMutation({
+    mutationFn: (target: AppUser) => userService.deactivateUser(target.id),
+    onSuccess: invalidateUsers,
+    onError: (err) => setActionError(getErrorMessage(err, 'Could not deactivate this user.')),
+    onSettled: () => setUserToDeactivate(null),
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: (target: AppUser) => userService.deleteUser(target.id),
+    onSuccess: invalidateUsers,
+    onError: (err) => setActionError(getErrorMessage(err, 'Could not delete this user.')),
+    onSettled: () => setUserToDelete(null),
+  })
+
+  function handleCreate(event: FormEvent) {
     event.preventDefault()
     setFormError(null)
     if (!form.email.trim() || !form.full_name.trim() || !form.role_id) {
       setFormError('Email, full name, and role are required.')
       return
     }
-    setIsSubmitting(true)
-    try {
-      await userService.createUser({
-        email: form.email.trim(),
-        password: form.password,
-        full_name: form.full_name.trim(),
-        role_id: Number(form.role_id),
-        phone: form.phone.trim() || undefined,
-      })
-      setCreatedCredentials({ email: form.email.trim(), password: form.password })
-      load()
-    } catch (err) {
-      setFormError(
-        axios.isAxiosError(err) ? (err.response?.data?.detail ?? 'Could not create user.') : 'Could not create user.'
-      )
-    } finally {
-      setIsSubmitting(false)
-    }
+    createMutation.mutate()
   }
 
-async function handleDeactivate(user: AppUser) {
-  if (
-    !confirm(
-      `Deactivate ${user.full_name}? They'll no longer be able to sign in.`
-    )
-  ) {
-    return
-  }
-
-  try {
-    await userService.deactivateUser(user.id)
-
-    setUsers((prev) =>
-      prev.map((u) =>
-        u.id === user.id
-          ? { ...u, is_active: false }
-          : u
-      )
-    )
-  } catch (err) {
-    alert(
-      axios.isAxiosError(err)
-        ? (err.response?.data?.detail ?? 'Could not deactivate this user.')
-        : 'Could not deactivate this user.'
-    )
-  }
-}
-
-async function handleDelete(user: AppUser) {
-  if (user.is_active) {
-    alert('The user must be deactivated before they can be deleted.')
-    return
-  }
-
-  const confirmed = confirm(
-    `Permanently delete ${user.full_name}?\n\n` +
-    `This will permanently remove their account. ` +
-    `Their biodiversity records will be preserved, but the user will no longer be associated with them.\n\n` +
-    `This action cannot be undone.`
-  )
-
-  if (!confirmed) return
-
-  try {
-    await userService.deleteUser(user.id)
-
-    setUsers((prev) =>
-      prev.filter((u) => u.id !== user.id)
-    )
-  } catch (err) {
-    alert(
-      axios.isAxiosError(err)
-        ? (err.response?.data?.detail ?? 'Could not delete this user.')
-        : 'Could not delete this user.'
-    )
-  }
-}
-
-  function copyCredentials() {
+  async function copyCredentials() {
     if (!createdCredentials) return
-    navigator.clipboard.writeText(
-      `Email: ${createdCredentials.email}\nTemporary password: ${createdCredentials.password}`
-    )
-    setCopied(true)
-    setTimeout(() => setCopied(false), 1800)
+    try {
+      await navigator.clipboard.writeText(
+        `Email: ${createdCredentials.email}\nTemporary password: ${createdCredentials.password}`,
+      )
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1800)
+    } catch {
+      setFormError('Could not copy to the clipboard. Select the text and copy it manually.')
+    }
   }
 
   return (
@@ -173,19 +130,23 @@ async function handleDelete(user: AppUser) {
         </Button>
       </div>
 
-      {isLoading && (
+      {actionError && <Alert className="mb-4">{actionError}</Alert>}
+
+      {isPending && (
         <div className="flex justify-center py-20">
           <LoadingSpinner className="h-7 w-7" />
         </div>
       )}
 
-      {!isLoading && error && <ErrorState message={error} onRetry={load} />}
+      {loadError && !isPending && (
+        <ErrorState message={getErrorMessage(loadError, 'Could not load users.')} onRetry={refetch} />
+      )}
 
-      {!isLoading && !error && users.length === 0 && (
+      {!isPending && !loadError && users.length === 0 && (
         <EmptyState icon={<UsersIcon size={22} />} title="No users yet" description="Create the first researcher account." />
       )}
 
-      {!isLoading && !error && users.length > 0 && (
+      {!isPending && !loadError && users.length > 0 && (
         <div className="overflow-hidden rounded-2xl border border-canopy-900/10 bg-paper-0">
           <table className="w-full text-left text-sm">
             <thead>
@@ -224,7 +185,10 @@ async function handleDelete(user: AppUser) {
                       <>
                         {u.is_active ? (
                           <button
-                            onClick={() => handleDeactivate(u)}
+                            onClick={() => {
+                              setActionError(null)
+                              setUserToDeactivate(u)
+                            }}
                             className="inline-flex h-8 w-8 items-center justify-center rounded-full text-ink-950/45 transition-colors hover:bg-red-50 hover:text-red-600 sm:h-auto sm:w-auto sm:gap-1.5 sm:px-2.5 sm:py-1"
                             aria-label={`Deactivate ${u.full_name}`}
                             title={`Deactivate ${u.full_name}`}
@@ -234,7 +198,10 @@ async function handleDelete(user: AppUser) {
                           </button>
                         ) : (
                           <button
-                            onClick={() => handleDelete(u)}
+                            onClick={() => {
+                              setActionError(null)
+                              setUserToDelete(u)
+                            }}
                             className="inline-flex h-8 w-8 items-center justify-center rounded-full text-ink-950/45 transition-colors hover:bg-red-50 hover:text-red-600 sm:h-auto sm:w-auto sm:gap-1.5 sm:px-2.5 sm:py-1"
                             aria-label={`Delete ${u.full_name}`}
                             title={`Permanently delete ${u.full_name}`}
@@ -284,22 +251,20 @@ async function handleDelete(user: AppUser) {
               value={form.phone}
               onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
             />
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-semibold uppercase tracking-[0.08em] text-canopy-900/70">Role</label>
-              <select
-                value={form.role_id}
-                onChange={(e) => setForm((f) => ({ ...f, role_id: e.target.value }))}
-                className="h-12 rounded-xl border border-mist-200 bg-paper-0 px-4 text-[15px] outline-none transition-colors focus:border-canopy-600"
-                required
-              >
-                <option value="">Select a role…</option>
-                {roles.map((role) => (
-                  <option key={role.id} value={role.id} className="capitalize">
-                    {role.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <Select
+              label="Role"
+              name="role"
+              value={form.role_id}
+              onChange={(e) => setForm((f) => ({ ...f, role_id: e.target.value }))}
+              required
+            >
+              <option value="">Select a role…</option>
+              {roles.map((role) => (
+                <option key={role.id} value={role.id} className="capitalize">
+                  {role.name}
+                </option>
+              ))}
+            </Select>
             <div className="flex items-end gap-2">
               <div className="flex-1">
                 <Input label="Temporary password" value={form.password} readOnly />
@@ -313,13 +278,9 @@ async function handleDelete(user: AppUser) {
               </Button>
             </div>
 
-            {formError && (
-              <div role="alert" className="rounded-lg border border-red-200 bg-red-50 px-3.5 py-2.5 text-sm font-medium text-red-700">
-                {formError}
-              </div>
-            )}
+            {formError && <Alert>{formError}</Alert>}
 
-            <Button type="submit" isLoading={isSubmitting} className="mt-1 w-full">
+            <Button type="submit" isLoading={createMutation.isPending} className="mt-1 w-full">
               Create user
             </Button>
           </form>
@@ -341,6 +302,28 @@ async function handleDelete(user: AppUser) {
           </div>
         )}
       </Modal>
+
+      <ConfirmDialog
+        isOpen={userToDeactivate !== null}
+        title={`Deactivate ${userToDeactivate?.full_name ?? ''}?`}
+        description="They'll no longer be able to sign in."
+        confirmLabel="Deactivate"
+        destructive
+        isLoading={deactivateMutation.isPending}
+        onConfirm={() => userToDeactivate && deactivateMutation.mutate(userToDeactivate)}
+        onCancel={() => setUserToDeactivate(null)}
+      />
+
+      <ConfirmDialog
+        isOpen={userToDelete !== null}
+        title={`Permanently delete ${userToDelete?.full_name ?? ''}?`}
+        description="This removes their account. Their biodiversity records are kept but will no longer be linked to them. This can't be undone."
+        confirmLabel="Delete"
+        destructive
+        isLoading={deleteMutation.isPending}
+        onConfirm={() => userToDelete && deleteMutation.mutate(userToDelete)}
+        onCancel={() => setUserToDelete(null)}
+      />
     </>
   )
 }

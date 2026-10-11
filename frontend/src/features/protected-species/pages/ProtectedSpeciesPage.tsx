@@ -1,6 +1,9 @@
-import { useEffect, useState, type FormEvent } from 'react'
-import axios from 'axios'
-import { ShieldCheck, Plus, Trash2, Search } from 'lucide-react'
+import { useState, type FormEvent } from 'react'
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { ShieldCheck, Plus, Trash2 } from 'lucide-react'
+import { Alert } from '@/components/ui/Alert'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+import { SearchInput } from '@/components/ui/SearchInput'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
@@ -8,81 +11,71 @@ import { LoadingSpinner } from '@/components/common/LoadingSpinner'
 import { ErrorState } from '@/components/common/ErrorState'
 import { EmptyState } from '@/components/common/EmptyState'
 import { useAuth } from '@/hooks/useAuth'
+import { useDebouncedValue } from '@/hooks/useDebouncedValue'
+import { getErrorMessage } from '@/lib/errors'
+import { queryKeys } from '@/lib/queryKeys'
 import * as protectedSpeciesService from '../services/protectedSpeciesService'
 import type { ProtectedSpeciesEntry } from '../types'
 
 export function ProtectedSpeciesPage() {
   const { user } = useAuth()
+  const queryClient = useQueryClient()
   const isAdmin = user?.role === 'admin'
 
-  const [entries, setEntries] = useState<ProtectedSpeciesEntry[]>([])
   const [search, setSearch] = useState('')
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const debouncedSearch = useDebouncedValue(search.trim())
 
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [form, setForm] = useState({ scientific_name: '', source_reference: '' })
   const [formError, setFormError] = useState<string | null>(null)
-  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [entryToRemove, setEntryToRemove] = useState<ProtectedSpeciesEntry | null>(null)
+  const [actionError, setActionError] = useState<string | null>(null)
 
-  async function load(query?: string) {
-    setIsLoading(true)
-    setError(null)
-    try {
-      const data = await protectedSpeciesService.listProtectedSpecies(query)
-      setEntries(data)
-    } catch {
-      setError('Could not load the protected species list.')
-    } finally {
-      setIsLoading(false)
-    }
+  const query = useQuery({
+    queryKey: queryKeys.protectedSpecies(debouncedSearch),
+    queryFn: () => protectedSpeciesService.listProtectedSpecies(debouncedSearch || undefined),
+    placeholderData: keepPreviousData,
+  })
+  const entries = query.data ?? []
+
+  function invalidate() {
+    void queryClient.invalidateQueries({ queryKey: ['protected-species'] })
   }
 
-  useEffect(() => {
-    load()
-  }, [])
+  const createMutation = useMutation({
+    mutationFn: () =>
+      protectedSpeciesService.addProtectedSpecies({
+        scientific_name: form.scientific_name.trim(),
+        source_reference: form.source_reference.trim() || undefined,
+      }),
+    onSuccess: () => {
+      setIsModalOpen(false)
+      setForm({ scientific_name: '', source_reference: '' })
+      invalidate()
+    },
+    onError: (err) => setFormError(getErrorMessage(err, 'Could not add this species.')),
+  })
 
-  useEffect(() => {
-    const timeout = setTimeout(() => load(search || undefined), 350)
-    return () => clearTimeout(timeout)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search])
+  const removeMutation = useMutation({
+    mutationFn: (entry: ProtectedSpeciesEntry) => protectedSpeciesService.removeProtectedSpecies(entry.id),
+    onSuccess: () => {
+      setEntryToRemove(null)
+      invalidate()
+    },
+    onError: (err) => {
+      setEntryToRemove(null)
+      setActionError(getErrorMessage(err, 'Could not remove this entry.'))
+    },
+  })
 
-  async function handleCreate(event: FormEvent) {
+  function handleCreate(event: FormEvent) {
     event.preventDefault()
     setFormError(null)
     if (!form.scientific_name.trim()) {
       setFormError('Scientific name is required.')
       return
     }
-    setIsSubmitting(true)
-    try {
-      await protectedSpeciesService.addProtectedSpecies({
-        scientific_name: form.scientific_name.trim(),
-        source_reference: form.source_reference.trim() || undefined,
-      })
-      setIsModalOpen(false)
-      setForm({ scientific_name: '', source_reference: '' })
-      load(search || undefined)
-    } catch (err) {
-      setFormError(
-        axios.isAxiosError(err)
-          ? (err.response?.data?.detail ?? 'Could not add this species.')
-          : 'Could not add this species.'
-      )
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
-
-  async function handleRemove(entry: ProtectedSpeciesEntry) {
-    if (!confirm(`Remove "${entry.scientific_name}" from the protected list?`)) return
-    try {
-      await protectedSpeciesService.removeProtectedSpecies(entry.id)
-      setEntries((prev) => prev.filter((e) => e.id !== entry.id))
-    } catch {
-      alert('Could not remove this entry.')
-    }
+    createMutation.mutate()
   }
 
   return (
@@ -94,15 +87,13 @@ export function ProtectedSpeciesPage() {
       </p>
 
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="relative w-full max-w-xs">
-          <Search size={16} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-950/35" />
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search protected list…"
-            className="h-11 w-full rounded-xl border border-mist-200 bg-paper-0 pl-10 pr-4 text-sm outline-none transition-colors focus:border-canopy-600"
-          />
-        </div>
+        <SearchInput
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search protected list…"
+          aria-label="Search protected list"
+          wrapperClassName="max-w-xs"
+        />
         {isAdmin && (
           <Button onClick={() => setIsModalOpen(true)} className="gap-2">
             <Plus size={16} />
@@ -111,15 +102,22 @@ export function ProtectedSpeciesPage() {
         )}
       </div>
 
-      {isLoading && (
+      {actionError && <Alert className="mb-4">{actionError}</Alert>}
+
+      {query.isPending && (
         <div className="flex justify-center py-20">
           <LoadingSpinner className="h-7 w-7" />
         </div>
       )}
 
-      {!isLoading && error && <ErrorState message={error} onRetry={() => load(search || undefined)} />}
+      {query.isError && (
+        <ErrorState
+          message={getErrorMessage(query.error, 'Could not load the protected species list.')}
+          onRetry={() => query.refetch()}
+        />
+      )}
 
-      {!isLoading && !error && entries.length === 0 && (
+      {query.isSuccess && entries.length === 0 && (
         <EmptyState
           icon={<ShieldCheck size={22} />}
           title="Nothing on the protected list yet"
@@ -131,7 +129,7 @@ export function ProtectedSpeciesPage() {
         />
       )}
 
-      {!isLoading && !error && entries.length > 0 && (
+      {query.isSuccess && entries.length > 0 && (
         <div className="overflow-hidden rounded-2xl border border-canopy-900/10 bg-paper-0">
           <table className="w-full text-left text-sm">
             <thead>
@@ -155,7 +153,10 @@ export function ProtectedSpeciesPage() {
                   {isAdmin && (
                     <td className="px-5 py-3.5 text-right">
                       <button
-                        onClick={() => handleRemove(entry)}
+                        onClick={() => {
+                          setActionError(null)
+                          setEntryToRemove(entry)
+                        }}
                         aria-label={`Remove ${entry.scientific_name}`}
                         className="rounded-full p-1.5 text-ink-950/30 transition-colors hover:bg-red-50 hover:text-red-600"
                       >
@@ -190,16 +191,23 @@ export function ProtectedSpeciesPage() {
             onChange={(e) => setForm((f) => ({ ...f, source_reference: e.target.value }))}
             placeholder="National decree, IUCN listing, etc."
           />
-          {formError && (
-            <div role="alert" className="rounded-lg border border-red-200 bg-red-50 px-3.5 py-2.5 text-sm font-medium text-red-700">
-              {formError}
-            </div>
-          )}
-          <Button type="submit" isLoading={isSubmitting} className="mt-1 w-full">
+          {formError && <Alert>{formError}</Alert>}
+          <Button type="submit" isLoading={createMutation.isPending} className="mt-1 w-full">
             Add to list
           </Button>
         </form>
       </Modal>
+
+      <ConfirmDialog
+        isOpen={entryToRemove !== null}
+        title={`Remove "${entryToRemove?.scientific_name ?? ''}"?`}
+        description="It will no longer be flagged as Protected when logged."
+        confirmLabel="Remove"
+        destructive
+        isLoading={removeMutation.isPending}
+        onConfirm={() => entryToRemove && removeMutation.mutate(entryToRemove)}
+        onCancel={() => setEntryToRemove(null)}
+      />
     </>
   )
 }

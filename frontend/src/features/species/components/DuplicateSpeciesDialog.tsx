@@ -2,6 +2,8 @@ import { Link } from 'react-router-dom'
 import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
+import { getIucnTone } from '@/lib/iucn'
+import { speciesUrl } from '@/lib/constants'
 import type { Species } from '../types'
 
 interface DuplicateSpeciesDialogProps {
@@ -33,7 +35,7 @@ export function DuplicateSpeciesDialog({
           <p className="font-display italic font-semibold text-canopy-950">{species.scientific_name}</p>
           {species.common_name && <p className="text-sm text-ink-950/55">{species.common_name}</p>}
           <div className="mt-2 flex flex-wrap gap-2">
-            {species.iucn_status && <Badge tone="warning">{species.iucn_status}</Badge>}
+            {species.iucn_status && <Badge tone={getIucnTone(species.iucn_status)}>{species.iucn_status}</Badge>}
             <Badge tone={species.national_status === 'Protected' ? 'accent' : 'neutral'}>
               {species.national_status}
             </Badge>
@@ -54,7 +56,7 @@ export function DuplicateSpeciesDialog({
         </div>
 
         <Link
-          to={`/species/${species.id}`}
+          to={speciesUrl(species.id)}
           className="text-center text-xs font-medium text-canopy-700 underline underline-offset-4"
         >
           View full record

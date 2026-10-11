@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
+import { queryClient } from '@/lib/queryClient'
 import { AUTH_LOGOUT_EVENT, getAccessToken } from '@/services/api'
 import * as authService from '@/features/auth/services/authService'
 import type { LoginRequest, UserProfile } from '@/features/auth/types'
@@ -41,7 +42,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // The API layer fires this when a refresh fails: drop the user so
   // ProtectedRoute sends them back to the login page.
   useEffect(() => {
-    const onSessionExpired = () => setUser(null)
+    const onSessionExpired = () => {
+      queryClient.clear()
+      setUser(null)
+    }
     window.addEventListener(AUTH_LOGOUT_EVENT, onSessionExpired)
     return () => window.removeEventListener(AUTH_LOGOUT_EVENT, onSessionExpired)
   }, [])
@@ -54,8 +58,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const signOut = useCallback(async () => {
-    await authService.logout()
-    setUser(null)
+    try {
+      await authService.logout()
+    } finally {
+      // Never leave one user's cached data around for the next sign-in.
+      queryClient.clear()
+      setUser(null)
+    }
   }, [])
 
   return (

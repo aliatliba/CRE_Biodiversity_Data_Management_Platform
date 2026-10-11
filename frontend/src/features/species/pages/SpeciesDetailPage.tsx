@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import axios from 'axios'
 import { ArrowLeft, Trash2, Pencil } from 'lucide-react'
@@ -10,6 +11,11 @@ import { Button } from '@/components/ui/Button'
 import { LoadingSpinner } from '@/components/common/LoadingSpinner'
 import { ErrorState } from '@/components/common/ErrorState'
 import { useAuth } from '@/hooks/useAuth'
+import { getErrorMessage } from '@/lib/errors'
+import { queryKeys } from '@/lib/queryKeys'
+import { ROUTES } from '@/lib/constants'
+import { Alert } from '@/components/ui/Alert'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import {
   getCompletenessLabel,
   getCompletenessStatus,
@@ -20,7 +26,6 @@ import type {
   FieldSource,
   Species,
   SpeciesUpdateInput,
-  ValidationHistoryEntry,
 } from '../types'
 import { ValidationHistory } from '../components/ValidationHistory'
 import { SourceBadge } from '../components/SourceBadge'
@@ -103,55 +108,60 @@ export function SpeciesDetailPage() {
   const { user } = useAuth()
   const isAdmin = user?.role === 'admin'
 
-  const [species, setSpecies] = useState<Species | null>(null)
-  const [history, setHistory] = useState<ValidationHistoryEntry[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [isDeleting, setIsDeleting] = useState(false)
+  const speciesId = Number(id)
+  const queryClient = useQueryClient()
+
+  const speciesQuery = useQuery({
+    queryKey: queryKeys.speciesDetail(speciesId),
+    queryFn: () => speciesService.getSpecies(speciesId),
+    enabled: Number.isFinite(speciesId),
+  })
+  const historyQuery = useQuery({
+    queryKey: [...queryKeys.speciesDetail(speciesId), 'history'],
+    queryFn: () => speciesService.getSpeciesHistory(speciesId),
+    enabled: Number.isFinite(speciesId),
+  })
+
+  const species = speciesQuery.data
+  const history = historyQuery.data ?? []
 
   const [isEditing, setIsEditing] = useState(false)
   const [form, setForm] = useState<EditableFields | null>(null)
-  const [isSaving, setIsSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
 
-  async function load() {
-    if (!id) return
-    setIsLoading(true)
-    setError(null)
-    try {
-      const [sp, hist] = await Promise.all([
-        speciesService.getSpecies(Number(id)),
-        speciesService.getSpeciesHistory(Number(id)),
-      ])
-      setSpecies(sp)
-      setHistory(hist)
-    } catch {
-      setError('Could not load this species.')
-    } finally {
-      setIsLoading(false)
-    }
-  }
+  const deleteMutation = useMutation({
+    mutationFn: () => speciesService.deleteSpecies(speciesId),
+    onSuccess: () => {
+      setConfirmDelete(false)
+      void queryClient.invalidateQueries({ queryKey: queryKeys.speciesAll })
+      void queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+      navigate(ROUTES.species)
+    },
+    onError: (err) => {
+      setConfirmDelete(false)
+      setDeleteError(getErrorMessage(err, 'Could not delete species.'))
+    },
+  })
 
-  useEffect(() => {
-    load()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id])
-
-  async function handleDelete() {
-    if (!species) return
-    if (!confirm(`Delete "${species.scientific_name}" permanently? This can't be undone.`)) return
-
-    setIsDeleting(true)
-
-    try {
-      await speciesService.deleteSpecies(species.id)
-      navigate('/species')
-    } catch {
-      alert('Could not delete species.')
-    } finally {
-      setIsDeleting(false)
-    }
-  }
+  const saveMutation = useMutation({
+    mutationFn: (payload: SpeciesUpdateInput) => speciesService.updateSpecies(speciesId, payload),
+    onSuccess: (updated) => {
+      queryClient.setQueryData(queryKeys.speciesDetail(speciesId), updated)
+      void queryClient.invalidateQueries({ queryKey: [...queryKeys.speciesDetail(speciesId), 'history'] })
+      void queryClient.invalidateQueries({ queryKey: queryKeys.speciesAll })
+      setIsEditing(false)
+      setForm(null)
+    },
+    onError: (err) => {
+      if (axios.isAxiosError(err) && err.response?.status === 409) {
+        setSaveError('This record was updated elsewhere. Refresh and try again.')
+      } else {
+        setSaveError(getErrorMessage(err, 'Could not save these changes.'))
+      }
+    },
+  })
 
   function startEditing() {
     if (!species) return
@@ -170,53 +180,30 @@ export function SpeciesDetailPage() {
     setForm((prev) => (prev ? { ...prev, [key]: value } : prev))
   }
 
-  async function handleSave() {
+  function handleSave() {
     if (!species || !form) return
 
-    setIsSaving(true)
     setSaveError(null)
 
-    try {
-      const payload: SpeciesUpdateInput = {
-        updated_at: species.updated_at,
+    const payload: SpeciesUpdateInput = { updated_at: species.updated_at }
+    let changedAny = false
+
+    ;(Object.keys(form) as Array<keyof EditableFields>).forEach((key) => {
+      const original = (species[key as keyof Species] ?? '') as string
+      const next = form[key] ?? ''
+
+      if (next !== original) {
+        payload[key] = next || null
+        changedAny = true
       }
+    })
 
-      let changedAny = false
-
-      ;(Object.keys(form) as Array<keyof EditableFields>).forEach((key) => {
-        const original = (species[key as keyof Species] ?? '') as string
-        const next = form[key] ?? ''
-
-        if (next !== original) {
-          payload[key] = next || null
-          changedAny = true
-        }
-      })
-
-      if (!changedAny) {
-        setIsEditing(false)
-        return
-      }
-
-      const updated = await speciesService.updateSpecies(species.id, payload)
-      setSpecies(updated)
-
-      const hist = await speciesService.getSpeciesHistory(species.id)
-      setHistory(hist)
-
+    if (!changedAny) {
       setIsEditing(false)
-      setForm(null)
-    } catch (err) {
-      if (axios.isAxiosError(err) && err.response?.status === 409) {
-        setSaveError('This record was updated elsewhere. Refresh and try again.')
-      } else if (axios.isAxiosError(err) && err.response?.data?.detail) {
-        setSaveError(String(err.response.data.detail))
-      } else {
-        setSaveError('Could not save these changes.')
-      }
-    } finally {
-      setIsSaving(false)
+      return
     }
+
+    saveMutation.mutate(payload)
   }
 
   const sources = species?.field_sources ?? {}
@@ -226,7 +213,7 @@ export function SpeciesDetailPage() {
     <>
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <Link
-          to="/species"
+          to={ROUTES.species}
           className="inline-flex items-center gap-1.5 text-sm font-medium text-canopy-700 hover:underline"
         >
           <ArrowLeft size={15} />
@@ -249,8 +236,10 @@ export function SpeciesDetailPage() {
               <Button
                 variant="ghost"
                 className="gap-2 text-red-600 hover:bg-red-50"
-                onClick={handleDelete}
-                isLoading={isDeleting}
+                onClick={() => {
+                  setDeleteError(null)
+                  setConfirmDelete(true)
+                }}
               >
                 <Trash2 size={15} />
                 Delete
@@ -260,15 +249,22 @@ export function SpeciesDetailPage() {
         )}
       </div>
 
-      {isLoading && (
+      {speciesQuery.isPending && Number.isFinite(speciesId) && (
         <div className="flex justify-center py-20">
           <LoadingSpinner className="h-7 w-7" />
         </div>
       )}
 
-      {!isLoading && error && <ErrorState message={error} onRetry={load} />}
+      {deleteError && <Alert className="mb-4">{deleteError}</Alert>}
 
-      {!isLoading && !error && species && completeness && (
+      {(speciesQuery.isError || !Number.isFinite(speciesId)) && (
+        <ErrorState
+          message={getErrorMessage(speciesQuery.error, 'Could not load this species.')}
+          onRetry={() => speciesQuery.refetch()}
+        />
+      )}
+
+      {species && completeness && (
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1.4fr_1fr]">
           <div className="flex flex-col gap-6">
             <Card>
@@ -405,10 +401,10 @@ export function SpeciesDetailPage() {
                     </div>
                   )}
                   <div className="flex gap-3">
-                    <Button onClick={handleSave} isLoading={isSaving}>
+                    <Button onClick={handleSave} isLoading={saveMutation.isPending}>
                       Save changes
                     </Button>
-                    <Button variant="secondary" onClick={cancelEditing} disabled={isSaving}>
+                    <Button variant="secondary" onClick={cancelEditing} disabled={saveMutation.isPending}>
                       Cancel
                     </Button>
                   </div>
@@ -423,6 +419,17 @@ export function SpeciesDetailPage() {
           </Card>
         </div>
       )}
+
+      <ConfirmDialog
+        isOpen={confirmDelete}
+        title={`Delete "${species?.scientific_name ?? 'this species'}"?`}
+        description="This permanently removes the record and can't be undone."
+        confirmLabel="Delete"
+        destructive
+        isLoading={deleteMutation.isPending}
+        onConfirm={() => deleteMutation.mutate()}
+        onCancel={() => setConfirmDelete(false)}
+      />
     </>
   )
 }
