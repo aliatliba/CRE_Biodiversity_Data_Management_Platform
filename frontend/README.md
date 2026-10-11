@@ -1,32 +1,40 @@
-# React + TypeScript + Vite
+# Biodiversity Platform — Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+React 19 + TypeScript + Vite, Tailwind v4, TanStack Query, React Router (data router with layout routes, lazy-loaded pages).
 
-Currently, two official plugins are available:
+## Quick start
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```bash
+npm install
+npm run dev        # http://localhost:5173
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+| Variable | Default | Description |
+|---|---|---|
+| `VITE_API_URL` | `http://localhost:8000` | Backend base URL (inlined at build time) |
+
+## Scripts
+
+| Script | What it does |
+|---|---|
+| `npm run dev` | Dev server |
+| `npm run build` | `tsc -b` + production build |
+| `npm run typecheck` | `tsc -b` only (a bare `tsc --noEmit` checks nothing in this project layout) |
+| `npm run lint` | oxlint |
+| `npm test` | Vitest + React Testing Library |
+| `npm run gen:api` | Regenerate `src/types/api.d.ts` from the running backend's OpenAPI schema |
+
+## Structure
+
+- `src/router.tsx` — all routes. `ProtectedRoute` → `AppLayout` (shell, title from route `handle.title`) → pages; `AdminRoute` guards admin pages.
+- `src/features/<name>/` — pages, components, services and types per feature.
+- `src/components/ui` — shared primitives (Modal, ConfirmDialog, Alert, Select, SearchInput, Combobox…).
+- `src/lib` — `iucn.ts` (categories/colours), `errors.ts` (`getErrorMessage`), `download.ts`, `queryKeys.ts`, `constants.ts` (routes and URL helpers).
+- `src/types/api.d.ts` — generated; run `npm run gen:api` after backend schema changes (types in `features/*/types.ts` are still hand-written).
+
+## Conventions
+
+- Server data goes through TanStack Query with keys from `lib/queryKeys.ts`; the cache is cleared on sign-out and session expiry.
+- The species list is a single page whose filters live in the URL, e.g. `/species?site_id=3&iucn_status=CR,EN,VU`.
+- Use `ConfirmDialog` instead of `window.confirm`, and `getErrorMessage` for any caught error.
+- Static images live in `public/assets/`.

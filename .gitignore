@@ -26,3 +26,24 @@ dist-ssr
 *.sw?
 
 /data
+
+# Env files (keep the example)
+.env.*
+!.env.example
+
+# Python / backend
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.venv/
+venv/
+*.egg-info/
+
+# Generated output (backend only; the frontend features/exports and graphics folders are source code)
+/backend/exports/
+/backend/graphics/
+
+# Build / test
+*.tsbuildinfo
+coverage/
