@@ -39,62 +39,6 @@ const toneClasses: Record<Tone, string> = {
   'iucn-ne': 'bg-white text-black border border-black/15',
 }
 
-export type IucnStatus =
-  | 'EX'
-  | 'EW'
-  | 'CR'
-  | 'EN'
-  | 'VU'
-  | 'NT'
-  | 'LC'
-  | 'DD'
-  | 'NE'
-
-/**
- * Maps an IUCN Red List category to its official visual badge tone.
- *
- * Unknown/null statuses fall back to the application's neutral badge.
- */
-export function getIucnTone(
-  status: string | null | undefined
-): Tone {
-  if (!status) return 'neutral'
-
-  const normalized = status.trim().toUpperCase()
-
-  switch (normalized) {
-    case 'EX':
-      return 'iucn-ex'
-
-    case 'EW':
-      return 'iucn-ew'
-
-    case 'CR':
-      return 'iucn-cr'
-
-    case 'EN':
-      return 'iucn-en'
-
-    case 'VU':
-      return 'iucn-vu'
-
-    case 'NT':
-      return 'iucn-nt'
-
-    case 'LC':
-      return 'iucn-lc'
-
-    case 'DD':
-      return 'iucn-dd'
-
-    case 'NE':
-      return 'iucn-ne'
-
-    default:
-      return 'neutral'
-  }
-}
-
 interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
   tone?: Tone
 }

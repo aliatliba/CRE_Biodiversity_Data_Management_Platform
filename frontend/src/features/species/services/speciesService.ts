@@ -4,6 +4,7 @@ import type {
   Page,
   Species,
   SpeciesCreateInput,
+  SpeciesListItem,
   SpeciesLookupDraft,
   SpeciesUpdateInput,
   ValidationHistoryEntry,
@@ -25,8 +26,8 @@ export interface ListParams {
   page_size?: number
 }
 
-export async function listSpecies(params: ListParams = {}): Promise<Page<Species>> {
-  const { data } = await api.get<Page<Species>>('/species', { params })
+export async function listSpecies(params: ListParams = {}): Promise<Page<SpeciesListItem>> {
+  const { data } = await api.get<Page<SpeciesListItem>>('/species', { params })
   return data
 }
 
@@ -69,12 +70,12 @@ export async function createSpecies(payload: SpeciesCreateInput): Promise<Specie
 }
 
 export async function associateSpeciesWithSite(siteId: number, speciesId: number, notes?: string) {
-  const { data } = await api.post(`/species/${siteId}/species`, { species_id: speciesId, notes })
+  const { data } = await api.post(`/sites/${siteId}/species`, { species_id: speciesId, notes })
   return data
 }
 
 export async function removeSpeciesFromSite(siteId: number, speciesId: number): Promise<void> {
-  await api.delete(`/species/${siteId}/species/${speciesId}`)
+  await api.delete(`/sites/${siteId}/species/${speciesId}`)
 }
 
 export async function startLookupSpeciesBatch(

@@ -1,6 +1,3 @@
-import type { ReactNode } from 'react'
-import { motion, type MotionValue } from 'framer-motion'
-
 /**
  * Shared image slot used across the landing page.
  *
@@ -19,7 +16,6 @@ interface EditorialImageProps {
   alt: string
   className?: string
   seed?: string
-  parallax?: boolean
 }
 
 export function EditorialImage({ src, alt, className = '', seed = 'default' }: EditorialImageProps) {
@@ -37,13 +33,5 @@ export function EditorialImage({ src, alt, className = '', seed = 'default' }: E
         background: `linear-gradient(160deg, hsl(${hue} 32% 20%) 0%, hsl(${(hue + 35) % 360} 28% 10%) 60%, hsl(${(hue + 10) % 360} 25% 6%) 100%)`,
       }}
     />
-  )
-}
-
-export function ParallaxLayer({ children, y }: { children: ReactNode; y: MotionValue<number> }) {
-  return (
-    <motion.div style={{ y }} className="absolute inset-0">
-      {children}
-    </motion.div>
   )
 }

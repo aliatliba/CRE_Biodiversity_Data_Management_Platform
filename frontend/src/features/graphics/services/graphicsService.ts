@@ -1,4 +1,5 @@
 import { api } from '@/services/api'
+import { downloadBlob } from '@/lib/download'
 import type { GraphicsFormat, GraphicsJob, GraphicType } from '../types'
 
 export type { GraphicsJob, GraphicType, GraphicsFormat }
@@ -55,12 +56,5 @@ export async function downloadGraphics(
     if (match?.[1]) filename = match[1].replace(/^["']|["']$/g, '')
   }
 
-  const url = window.URL.createObjectURL(blob)
-  const link = document.createElement('a')
-  link.href = url
-  link.download = filename
-  document.body.appendChild(link)
-  link.click()
-  link.remove()
-  window.URL.revokeObjectURL(url)
+  downloadBlob(blob, filename)
 }

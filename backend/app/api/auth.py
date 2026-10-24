@@ -1,9 +1,9 @@
-from fastapi import APIRouter, Depends, Request
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, Request
 
-from app.core.dependencies import DBSession,CurrentUser, get_current_user
+from app.core.dependencies import CurrentUser, DBSession
 from app.core.limiter import limiter
-from app.schemas.auth import LoginRequest, RefreshRequest, TokenResponse
+from app.models.user import User
+from app.schemas.auth import LoginRequest, RefreshRequest, TokenResponse, UserProfileResponse
 from app.schemas.user import CompleteProfileRequest, UpdateOwnProfileRequest, UserResponse
 from app.services import auth_service
 
@@ -27,34 +27,31 @@ def logout(refresh_data: RefreshRequest):
     return {"detail": "Logged out successfully"}
 
 
-@router.get("/me")
-def me(current_user = Depends(get_current_user)):
-    return {
-        "id": current_user.id,
-        "email": current_user.email,
-        "full_name": current_user.full_name,
-        "phone": current_user.phone,
-        "role": current_user.role.name,
-        "is_active": current_user.is_active,
-        "must_change_password": current_user.must_change_password,
-    }
-    
-@router.patch("/me")
+def _profile(user: User) -> UserProfileResponse:
+    return UserProfileResponse(
+        id=user.id,
+        email=user.email,
+        full_name=user.full_name,
+        phone=user.phone,
+        role=user.role.name,
+        is_active=user.is_active,
+        must_change_password=user.must_change_password,
+    )
+
+
+@router.get("/me", response_model=UserProfileResponse)
+def me(current_user: CurrentUser):
+    return _profile(current_user)
+
+
+@router.patch("/me", response_model=UserProfileResponse)
 def update_me(data: UpdateOwnProfileRequest, db: DBSession, current_user: CurrentUser):
     """Lets any signed-in user view-and-edit their own profile info
     (full name, phone) without needing admin rights or a password."""
     user = auth_service.update_own_profile(
         db, current_user, full_name=data.full_name, phone=data.phone
     )
-    return {
-        "id": user.id,
-        "email": user.email,
-        "full_name": user.full_name,
-        "phone": user.phone,
-        "role": user.role.name,
-        "is_active": user.is_active,
-        "must_change_password": user.must_change_password,
-    }
+    return _profile(user)
 
 
 @router.post("/complete-profile", response_model=UserResponse)

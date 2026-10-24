@@ -28,11 +28,17 @@ export interface Species {
   potential_threats: string | null
   reference: string | null
   status: string
-  created_by: number
+  created_by: number | null
   validated_by: number | null
   validated_at: string | null
   updated_at: string
 }
+
+/** Slim row returned by GET /species (the table view). */
+export type SpeciesListItem = Pick<
+  Species,
+  'id' | 'scientific_name' | 'common_name' | 'family' | 'kingdom' | 'iucn_status' | 'national_status'
+>
 
 export interface Page<T> {
   items: T[]
@@ -75,6 +81,8 @@ export interface SpeciesLookupDraft {
 
   field_sources: Record<string, string | FieldSource | null>
   national_status: string
+  /** provider name -> error message, for providers that could not be queried */
+  provider_errors?: Record<string, string>
 }
 
 export interface SpeciesCreateInput {
@@ -149,7 +157,7 @@ export interface ValidationHistoryEntry {
   species_id: number
   action: string
   changed_fields: Record<string, unknown>
-  validated_by: number
+  validated_by: number | null
   validated_at: string
 }
 

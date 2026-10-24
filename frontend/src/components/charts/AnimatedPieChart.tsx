@@ -3,16 +3,6 @@ import { motion } from 'framer-motion'
 const COLORS = 
   ['#117036', '#f59e0b',  '#6366f1','#ef4444','#40916c',  '#ec4899', '#14b8a6']
 
-  export const IUCN_COLORS: Record<string, string> = {
-  CR: '#dc2626',
-  EN: '#ea580c',
-  VU: '#f59e0b',
-  NT: '#eab308',
-  LC: '#16a34a',
-  DD: '#6b7280',
-  NE: '#9ca3af',
-}
-
 interface PieSlice {
   label: string
   value: number

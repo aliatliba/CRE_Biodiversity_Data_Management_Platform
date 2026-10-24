@@ -1,8 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
-import { ChevronDown, Filter, Search, X } from 'lucide-react'
+import { ChevronDown, Filter, X } from 'lucide-react'
 import type { Site } from '@/features/sites/types'
 import type { SpeciesFilters } from '../types'
 import { EMPTY_SPECIES_FILTERS } from '../types'
+import { IUCN_OPTIONS } from '@/lib/iucn'
+import { SearchInput } from '@/components/ui/SearchInput'
+import { Select } from '@/components/ui/Select'
 
 interface SpeciesSearchProps {
   filters: SpeciesFilters
@@ -17,16 +20,6 @@ const FILTER_FIELDS: { key: keyof SpeciesFilters; label: string; placeholder: st
   { key: 'order_name', label: 'Order', placeholder: 'e.g. Fagales' },
   { key: 'family', label: 'Family', placeholder: 'e.g. Fagaceae' },
   { key: 'genus', label: 'Genus', placeholder: 'e.g. Quercus' },
-]
-
-const IUCN_STATUS_OPTIONS: { value: string; label: string }[] = [
-  { value: 'CR', label: 'Critically Endangered (CR)' },
-  { value: 'EN', label: 'Endangered (EN)' },
-  { value: 'VU', label: 'Vulnerable (VU)' },
-  { value: 'NT', label: 'Near Threatened (NT)' },
-  { value: 'LC', label: 'Least Concern (LC)' },
-  { value: 'DD', label: 'Data Deficient (DD)' },
-  { value: 'NE', label: 'Not Evaluated (NE)' },
 ]
 
 /**
@@ -72,7 +65,7 @@ function IucnStatusMultiSelect({
     selected.length === 0
       ? 'All IUCN statuses'
       : selected.length === 1
-        ? (IUCN_STATUS_OPTIONS.find((o) => o.value === selected[0])?.label ?? selected[0])
+        ? (IUCN_OPTIONS.find((o) => o.value === selected[0])?.label ?? selected[0])
         : `${selected.length} IUCN statuses`
 
   return (
@@ -93,7 +86,7 @@ function IucnStatusMultiSelect({
           role="listbox"
           className="absolute left-0 z-10 mt-2 w-56 rounded-xl border border-mist-200 bg-paper-0 p-2 shadow-lg"
         >
-          {IUCN_STATUS_OPTIONS.map((option) => (
+          {IUCN_OPTIONS.map((option) => (
             <label
               key={option.value}
               className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-ink-950/80 transition-colors hover:bg-mist-100"
@@ -125,23 +118,17 @@ export function SpeciesSearch({ filters, onChange, sites }: SpeciesSearchProps) 
   return (
     <div className="flex w-full flex-col gap-3">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <div className="relative w-full max-w-sm">
-          <Search
-            size={16}
-            className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-950/35"
-          />
-          <input
-            value={filters.search}
-            onChange={(e) => setField('search', e.target.value)}
-            placeholder="Search by scientific or common name…"
-            className="h-11 w-full rounded-xl border border-mist-200 bg-paper-0 pl-10 pr-4 text-sm outline-none transition-colors focus:border-canopy-600"
-          />
-        </div>
+        <SearchInput
+          value={filters.search}
+          onChange={(e) => setField('search', e.target.value)}
+          placeholder="Search by scientific or common name…"
+          aria-label="Search species"
+        />
 
-        <select
+        <Select
+          aria-label="Site"
           value={filters.site_id}
           onChange={(e) => setField('site_id', e.target.value)}
-          className="h-11 rounded-xl border border-mist-200 bg-paper-0 px-3.5 text-sm text-ink-950/80 outline-none transition-colors focus:border-canopy-600"
         >
           <option value="">All sites</option>
           {sites.map((site) => (
@@ -149,17 +136,17 @@ export function SpeciesSearch({ filters, onChange, sites }: SpeciesSearchProps) 
               {site.name}
             </option>
           ))}
-        </select>
+        </Select>
 
-        <select
+        <Select
+          aria-label="National status"
           value={filters.national_status}
           onChange={(e) => setField('national_status', e.target.value)}
-          className="h-11 rounded-xl border border-mist-200 bg-paper-0 px-3.5 text-sm text-ink-950/80 outline-none transition-colors focus:border-canopy-600"
         >
           <option value="">All national statuses</option>
           <option value="Protected">Protected</option>
           <option value="Non Protected">Non Protected</option>
-        </select>
+        </Select>
 
         <IucnStatusMultiSelect
           value={filters.iucn_status}

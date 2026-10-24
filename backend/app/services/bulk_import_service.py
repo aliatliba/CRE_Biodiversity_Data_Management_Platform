@@ -25,9 +25,10 @@ import asyncio
 from dataclasses import dataclass, field
 from typing import Any, Awaitable, Callable
 
-from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
+from app.core.exceptions import AppException
+from app.core.utils import clean_and_dedupe_names
 from app.models.site_species import SiteSpecies
 from app.schemas.species import SpeciesCreate
 from app.services import site_service, species_service
@@ -86,20 +87,17 @@ def dedupe_names(names: list[str]) -> tuple[list[str], list[ImportItemResult]]:
 
     Returns (unique_names_in_order, results_for_skipped_or_invalid_entries).
     """
-    seen: set[str] = set()
-    unique: list[str] = []
+    unique = clean_and_dedupe_names(names)
     extras: list[ImportItemResult] = []
+    seen: set[str] = set()
     for raw in names:
         name = (raw or "").strip()
         if not name:
             extras.append(ImportItemResult(input_name=raw, status="invalid", error="Empty name"))
-            continue
-        key = name.lower()
-        if key in seen:
+        elif name.casefold() in seen:
             extras.append(ImportItemResult(input_name=name, status="skipped_duplicate_in_batch"))
-            continue
-        seen.add(key)
-        unique.append(name)
+        else:
+            seen.add(name.casefold())
     return unique, extras
 
 
@@ -190,14 +188,14 @@ async def run_bulk_import(
                     result.status = "created"
                     result.species_id = species.id
                     summary.created += 1
-        except HTTPException as exc:
+        except AppException as exc:
             db.rollback()
             if exc.status_code == 409:
                 result.status = "skipped_duplicate"
                 summary.skipped += 1
             else:
                 result.status = "failed"
-                result.error = str(exc.detail)
+                result.error = exc.message
                 summary.failed += 1
         except Exception as exc:  # keep the batch going on unexpected per-item errors
             db.rollback()

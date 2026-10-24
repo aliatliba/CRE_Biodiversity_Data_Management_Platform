@@ -1,4 +1,5 @@
 import { api } from '@/services/api'
+import { downloadBlob } from '@/lib/download'
 import type { ExportFilters, ExportJob, ExportOptions } from '../types'
 
 export async function createExport(
@@ -24,19 +25,9 @@ export async function getExport(exportId: number): Promise<ExportJob> {
 }
 
 export async function downloadExport(job: ExportJob): Promise<void> {
-  const response = await api.get(`/exports/${job.id}/download`, {
+  const response = await api.get<Blob>(`/exports/${job.id}/download`, {
     responseType: 'blob',
   })
 
-  const blob = new Blob([response.data])
-  const url = window.URL.createObjectURL(blob)
-  const link = document.createElement('a')
-
-  link.href = url
-  link.download = `export_${job.id}.${job.format}`
-  document.body.appendChild(link)
-  link.click()
-  link.remove()
-
-  window.URL.revokeObjectURL(url)
+  downloadBlob(response.data, `export_${job.id}.${job.format}`)
 }

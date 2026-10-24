@@ -1,5 +1,6 @@
 
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import {
   AlertCircle,
@@ -16,13 +17,16 @@ import {
   Trash2,
 } from 'lucide-react'
 
-import { AppLayout } from '@/components/layout/AppLayout'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 
 import * as speciesService from '../services/speciesService'
-import * as siteService from '@/features/sites/services/siteService'
+import { useSitesQuery } from '@/hooks/useSitesQuery'
+import { usePolling } from '@/hooks/usePolling'
+import { getErrorMessage } from '@/lib/errors'
+import { queryKeys } from '@/lib/queryKeys'
+import { ROUTES, speciesUrl } from '@/lib/constants'
 
 import type {
   IucnAssessment,
@@ -31,7 +35,6 @@ import type {
   SpeciesLookupDraft,
 } from '../types'
 
-import type { Site } from '@/features/sites/types'
 
 import {
   SpeciesReviewForm,
@@ -130,55 +133,12 @@ function getDefaultIucnAssessment(
   )
 }
 
-function getErrorMessage(error: unknown): string {
-  if (
-    error &&
-    typeof error === 'object' &&
-    'response' in error
-  ) {
-    const response = (
-      error as {
-        response?: {
-          data?: {
-            detail?: string | { message?: string }
-            message?: string
-          }
-        }
-      }
-    ).response
-
-    const detail = response?.data?.detail
-
-    if (typeof detail === 'string') {
-      return detail
-    }
-
-    if (
-      detail &&
-      typeof detail === 'object' &&
-      typeof detail.message === 'string'
-    ) {
-      return detail.message
-    }
-
-    if (
-      typeof response?.data?.message === 'string'
-    ) {
-      return response.data.message
-    }
-  }
-
-  if (error instanceof Error && error.message) {
-    return error.message
-  }
-
-  return 'An unexpected error occurred.'
-}
-
 export default function AddSpeciesPage() {
   const navigate = useNavigate()
 
-  const [sites, setSites] = useState<Site[]>([])
+  const sitesQuery = useSitesQuery()
+  const sites = sitesQuery.data ?? []
+  const queryClient = useQueryClient()
   const [siteId, setSiteId] = useState<number | ''>('')
 
   const [scientificNames, setScientificNames] =
@@ -190,6 +150,7 @@ export default function AddSpeciesPage() {
 
   const [isLookingUp, setIsLookingUp] =
     useState(false)
+  const [lookupJobId, setLookupJobId] = useState<string | null>(null)
 
   const [lookupProgress, setLookupProgress] =
   useState({
@@ -203,33 +164,10 @@ export default function AddSpeciesPage() {
   const [error, setError] =
     useState<string | null>(null)
 
-  useEffect(() => {
-    let mounted = true
-
-    async function loadSites() {
-      try {
-        const data = await siteService.listSites()
-
-        if (!mounted) return
-
-        setSites(data)
-      } catch (err) {
-        if (!mounted) return
-
-        setError(
-          `Unable to load sites: ${getErrorMessage(
-            err,
-          )}`,
-        )
-      }
-    }
-
-    loadSites()
-
-    return () => {
-      mounted = false
-    }
-  }, [])
+  const sitesError = sitesQuery.isError
+    ? `Unable to load sites: ${getErrorMessage(sitesQuery.error)}`
+    : null
+  const displayError = error ?? sitesError
 
   const parsedScientificNames = useMemo(
     () => parseScientificNames(scientificNames),
@@ -258,112 +196,83 @@ export default function AddSpeciesPage() {
     )
   }
 
- async function handleLookup() {
-  if (!siteId) {
-    setError('Select a site before looking up species.')
-    return
-  }
+  async function handleLookup() {
+    if (!siteId) {
+      setError('Select a site before looking up species.')
+      return
+    }
 
-  if (!speciesCount) {
-    setError(
-      'Enter at least one scientific name before looking up species.',
-    )
-    return
-  }
+    if (!speciesCount) {
+      setError('Enter at least one scientific name before looking up species.')
+      return
+    }
 
-  setError(null)
-  setItems([])
-  setIsLookingUp(true)
+    setError(null)
+    setItems([])
+    setIsLookingUp(true)
+    setLookupProgress({ processed: 0, total: speciesCount })
 
-  setLookupProgress({
-    processed: 0,
-    total: speciesCount,
-  })
-
-  try {
-    console.log(
-      'Starting batch lookup with:',
-      parsedScientificNames,
-    )
-
-    const job =
-      await speciesService.startLookupSpeciesBatch(
+    try {
+      const job = await speciesService.startLookupSpeciesBatch(
         parsedScientificNames,
         Number(siteId),
       )
 
-    console.log('LOOKUP JOB RESPONSE:', job)
+      setLookupProgress({ processed: job.processed, total: job.total })
+      setLookupJobId(job.job_id)
+    } catch (err) {
+      setError(`Batch lookup failed: ${getErrorMessage(err)}`)
+      setIsLookingUp(false)
+    }
+  }
 
-    setLookupProgress({
-      processed: job.processed,
-      total: job.total,
-    })
+  function finishLookup(message?: string) {
+    if (message) setError(`Batch lookup failed: ${message}`)
+    setLookupJobId(null)
+    setIsLookingUp(false)
+  }
 
-    const pollInterval = 500
-
-    while (true) {
-      const status =
-        await speciesService.getLookupSpeciesBatchStatus(
-          job.job_id,
-        )
-
-      setLookupProgress({
-        processed: status.processed,
-        total: status.total,
-      })
+  // Poll the lookup job until it completes or fails; stops on unmount.
+  usePolling({
+    enabled: lookupJobId !== null,
+    poll: () => speciesService.getLookupSpeciesBatchStatus(lookupJobId!),
+    intervalMs: 500,
+    onResult: (status) => {
+      setLookupProgress({ processed: status.processed, total: status.total })
 
       if (status.status === 'failed') {
-        throw new Error(
-          status.error ||
-            'The batch lookup failed.',
-        )
+        finishLookup(status.error || 'The batch lookup failed.')
+        return true
       }
 
       if (status.status === 'completed') {
-        const nextItems: BatchSpeciesItem[] =
-          status.items.map((result) => {
+        setItems(
+          status.items.map((result): BatchSpeciesItem => {
             const draft = result.draft
 
             return {
               id: createId(),
-              inputScientificName:
-                result.input_scientific_name,
+              inputScientificName: result.input_scientific_name,
               draft,
               duplicate: result.duplicate,
-              existingSpecies:
-                result.existing_species ?? null,
+              existingSpecies: result.existing_species ?? null,
               error: result.error ?? null,
-              selectedIucnAssessment:
-                getDefaultIucnAssessment(draft),
-              values: draft
-                ? getInitialValues(draft)
-                : { ...EMPTY_VALUES },
+              selectedIucnAssessment: getDefaultIucnAssessment(draft),
+              values: draft ? getInitialValues(draft) : { ...EMPTY_VALUES },
               expanded: false,
               saveStatus: 'idle',
               saveError: null,
             }
-          })
-
-        setItems(nextItems)
-        break
+          }),
+        )
+        finishLookup()
+        return true
       }
 
-      await new Promise((resolve) =>
-        setTimeout(resolve, pollInterval),
-      )
-    }
-  } catch (err) {
-    console.error('Batch lookup error:', err)
-
-    setError(
-      `Batch lookup failed: ${getErrorMessage(err)}`,
-    )
-  } finally {
-    setIsLookingUp(false)
-  }
-}
-
-
+      return false
+    },
+    onError: (err) => finishLookup(getErrorMessage(err)),
+  })
 
   function buildCreatePayload(
     item: BatchSpeciesItem,
@@ -530,6 +439,8 @@ export default function AddSpeciesPage() {
       await speciesService.createSpecies(
         payload,
       )
+      void queryClient.invalidateQueries({ queryKey: queryKeys.speciesAll })
+      void queryClient.invalidateQueries({ queryKey: ['dashboard'] })
 
       updateItem(itemId, {
         saveStatus: 'saved',
@@ -607,7 +518,7 @@ export default function AddSpeciesPage() {
     !isLookingUp
 
   return (
-    <AppLayout title="Log a species">
+    <>
       <div className="mx-auto w-full max-w-5xl">
         {/* =====================================================
             PAGE HEADER
@@ -615,7 +526,7 @@ export default function AddSpeciesPage() {
         <div className="mb-6">
           <button
             type="button"
-            onClick={() => navigate('/species')}
+            onClick={() => navigate(ROUTES.species)}
             className="mb-4 flex items-center gap-1.5 text-sm font-medium text-canopy-700 transition-colors hover:text-canopy-950"
           >
             <ArrowLeft className="h-4 w-4" />
@@ -659,7 +570,7 @@ export default function AddSpeciesPage() {
         {/* =====================================================
             GLOBAL ERROR
         ====================================================== */}
-        {error && (
+        {displayError && (
           <div
             role="alert"
             className="mb-5 flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 px-3.5 py-2.5 text-sm font-medium text-red-700"
@@ -667,7 +578,7 @@ export default function AddSpeciesPage() {
             <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
 
             <div className="flex-1">
-              {error}
+              {displayError}
             </div>
 
             <button
@@ -1082,9 +993,7 @@ Aquila chrysaetos`}
                                 type="button"
                                 variant="secondary"
                                 onClick={() =>
-                                  navigate(
-                                    `/species/${item.existingSpecies?.id}`,
-                                  )
+                                  navigate(speciesUrl(item.existingSpecies?.id ?? ''))
                                 }
                               >
                                 <Eye className="h-4 w-4" />
@@ -1219,6 +1128,40 @@ Aquila chrysaetos`}
                               or creating a duplicate
                               record.
                             </p>
+                          </div>
+                        )}
+
+                      {/* -----------------------------------------
+                          PROVIDER WARNINGS (e.g. IUCN unreachable)
+                      ------------------------------------------ */}
+                      {draft?.provider_errors &&
+                        Object.keys(draft.provider_errors).length > 0 && (
+                          <div
+                            role="status"
+                            className="mt-5 rounded-lg border border-amber-200 bg-amber-50 px-3.5 py-3 text-sm text-amber-900"
+                          >
+                            <div className="flex gap-2">
+                              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                              <div>
+                                <p className="font-semibold">
+                                  {draft.provider_errors.iucn
+                                    ? 'IUCN lookup failed — conservation status may be missing'
+                                    : 'Some data sources could not be reached'}
+                                </p>
+                                <ul className="mt-1 list-disc pl-4 text-xs leading-5">
+                                  {Object.entries(draft.provider_errors).map(
+                                    ([provider, message]) => (
+                                      <li key={provider}>
+                                        <span className="font-medium uppercase">
+                                          {provider}
+                                        </span>
+                                        : {message}
+                                      </li>
+                                    ),
+                                  )}
+                                </ul>
+                              </div>
+                            </div>
                           </div>
                         )}
 
@@ -1480,7 +1423,7 @@ Aquila chrysaetos`}
         ====================================================== */}
         {!isLookingUp &&
           items.length === 0 &&
-          !error && (
+          !displayError && (
             <div className="mt-8 text-center">
               <p className="font-display text-base font-semibold text-canopy-950">
                 Add several species at once
@@ -1494,7 +1437,7 @@ Aquila chrysaetos`}
             </div>
           )}
       </div>
-    </AppLayout>
+    </>
   )
 }
 

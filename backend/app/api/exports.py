@@ -1,8 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.responses import FileResponse
-from sqlalchemy.orm import Session
+import os
 
-from app.core.dependencies import DBSession, ActiveUser
+from fastapi import APIRouter, HTTPException
+from fastapi.responses import FileResponse
+
+from app.core.dependencies import ActiveUser, DBSession
 from app.schemas.export import ExportRequest, ExportResponse
 from app.services import export_service
 
@@ -11,7 +12,7 @@ router = APIRouter()
 
 @router.post("", response_model=ExportResponse, status_code=201)
 def create_export(data: ExportRequest, db: DBSession, user: ActiveUser):
-    filters = data.filters.model_dump() if data.filters else None
+    filters = data.filters.model_dump(mode="json", exclude_none=True) if data.filters else None
 
     return export_service.create_export(
         db,
@@ -35,7 +36,7 @@ def get_export(export_id: int, db: DBSession, user: ActiveUser):
 def download_export(export_id: int, db: DBSession, user: ActiveUser):
     export = export_service.get_export(db, export_id)
 
-    if export.status != "done" or not export.file_path:
+    if export.status != "done" or not export.file_path or not os.path.exists(export.file_path):
         raise HTTPException(
             status_code=404,
             detail="Export file not ready or not found",

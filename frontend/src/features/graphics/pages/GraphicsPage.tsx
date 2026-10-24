@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import {
   BarChart3,
   CheckCircle2,
@@ -11,52 +12,75 @@ import {
   XCircle,
 } from 'lucide-react'
 
-import { AppLayout } from '@/components/layout/AppLayout'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
+import { Select } from '@/components/ui/Select'
 import { LoadingSpinner } from '@/components/common/LoadingSpinner'
-import * as siteService from '@/features/sites/services/siteService'
-import type { Site } from '@/features/sites/types'
+import { useSitesQuery } from '@/hooks/useSitesQuery'
+import { usePolling } from '@/hooks/usePolling'
+import { getErrorMessage } from '@/lib/errors'
+import { queryKeys } from '@/lib/queryKeys'
 import * as graphicsService from '../services/graphicsService'
-import type { GraphicsFormat, GraphicsJob, GraphicType } from '../types'
+import type { GraphicsFormat, GraphicsJob } from '../types'
+
+const ACTIVE = new Set(['queued', 'running'])
 
 export function GraphicsPage() {
-  const [sites, setSites] = useState<Site[]>([])
-  const [graphicTypes, setGraphicTypes] = useState<GraphicType[]>([])
+  const sitesQuery = useSitesQuery()
+  const typesQuery = useQuery({
+    queryKey: queryKeys.graphicTypes,
+    queryFn: graphicsService.listGraphicTypes,
+    staleTime: 5 * 60_000,
+  })
+  const sites = sitesQuery.data ?? []
+  const graphicTypes = typesQuery.data ?? []
+  const loading = sitesQuery.isPending || typesQuery.isPending
+
   const [selectedSiteId, setSelectedSiteId] = useState('')
-  const [selectedType, setSelectedType] = useState('')
+  const [pickedType, setPickedType] = useState('')
   const [job, setJob] = useState<GraphicsJob | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [generating, setGenerating] = useState(false)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const [actionError, setActionError] = useState<string | null>(null)
+
+  // Default to the first graphic type once the list has loaded.
+  const selectedType = pickedType || graphicTypes[0]?.key || ''
+  const setSelectedType = setPickedType
+  const error =
+    actionError ??
+    (sitesQuery.isError || typesQuery.isError
+      ? getErrorMessage(
+          sitesQuery.error ?? typesQuery.error,
+          'Could not load research sites or graphic types.',
+        )
+      : null)
 
   const currentType = graphicTypes.find((t) => t.key === selectedType)
   const jobType = graphicTypes.find((t) => t.key === job?.graphic_type)
 
-  useEffect(() => {
-    async function load() {
-      try {
-        const [siteData, typeData] = await Promise.all([
-          siteService.listSites(),
-          graphicsService.listGraphicTypes(),
-        ])
-        setSites(siteData)
-        setGraphicTypes(typeData)
-        if (typeData.length > 0) setSelectedType(typeData[0].key)
-      } catch {
-        setError('Could not load research sites or graphic types.')
-      } finally {
-        setLoading(false)
-      }
-    }
-    load()
-    return () => stopPolling()
-  }, [])
+  const createMutation = useMutation({
+    mutationFn: () => graphicsService.generateGraphics(Number(selectedSiteId), selectedType),
+    onSuccess: setJob,
+    onError: (err) => setActionError(getErrorMessage(err, 'Could not start graphics generation.')),
+  })
+
+  const isRunning = job !== null && ACTIVE.has(job.status)
+  const generating = createMutation.isPending || isRunning
+
+  usePolling({
+    enabled: isRunning,
+    poll: () => graphicsService.getGraphicsJob(job!.job_id),
+    onResult: (updated) => {
+      setJob(updated)
+      return !ACTIVE.has(updated.status)
+    },
+    onError: (err) =>
+      setActionError(getErrorMessage(err, 'Could not check the graphics generation status.')),
+    intervalMs: 1500,
+  })
 
   useEffect(() => {
     let objectUrl: string | null = null
+    let cancelled = false
 
     async function loadPreview() {
       if (!job || job.status !== 'completed' || !job.available_formats.includes('png')) {
@@ -65,91 +89,45 @@ export function GraphicsPage() {
       }
       try {
         const blob = await graphicsService.getGraphicsPreviewBlob(job.job_id)
+        if (cancelled) return
         objectUrl = URL.createObjectURL(blob)
         setPreviewUrl(objectUrl)
       } catch (err) {
-        console.error('Could not load graphics preview:', err)
+        if (cancelled) return
         setPreviewUrl(null)
-        setError('Could not load the generated graphics preview.')
+        setActionError(getErrorMessage(err, 'Could not load the generated graphics preview.'))
       }
     }
-    loadPreview()
+    void loadPreview()
 
     return () => {
+      cancelled = true
       if (objectUrl) URL.revokeObjectURL(objectUrl)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [job?.job_id, job?.status])
 
-  function stopPolling() {
-    if (pollRef.current) {
-      clearInterval(pollRef.current)
-      pollRef.current = null
-    }
-  }
-
   function resetResult() {
-    stopPolling()
     setJob(null)
-    setError(null)
+    setActionError(null)
     setPreviewUrl(null)
-    setGenerating(false)
   }
 
-  async function fetchJob(jobId: string) {
-    const updated = await graphicsService.getGraphicsJob(jobId)
-    setJob(updated)
-    if (updated.status === 'completed' || updated.status === 'failed') {
-      stopPolling()
-      setGenerating(false)
-    }
-  }
-
-  async function startPolling(jobId: string) {
-    stopPolling()
-    try {
-      await fetchJob(jobId)
-    } catch {
-      setGenerating(false)
-      setError('Could not check the graphics generation status.')
-      return
-    }
-    pollRef.current = setInterval(async () => {
-      try {
-        await fetchJob(jobId)
-      } catch {
-        stopPolling()
-        setGenerating(false)
-        setError('Could not check the graphics generation status.')
-      }
-    }, 1500)
-  }
-
-  async function handleGenerate() {
+  function handleGenerate() {
     if (!selectedSiteId || !selectedType) {
-      setError('Please select a research site and a graphic type.')
+      setActionError('Please select a research site and a graphic type.')
       return
     }
     resetResult()
-    setGenerating(true)
-    try {
-      const created = await graphicsService.generateGraphics(
-        Number(selectedSiteId),
-        selectedType,
-      )
-      await startPolling(created.job_id)
-    } catch (err) {
-      console.error(err)
-      setGenerating(false)
-      setError('Could not start graphics generation.')
-    }
+    createMutation.mutate()
   }
 
   async function handleDownload(format: GraphicsFormat) {
     if (!job) return
     try {
       await graphicsService.downloadGraphics(job.job_id, format)
-    } catch {
-      setError(`Could not download the ${format.toUpperCase()} file.`)
+    } catch (err) {
+      setActionError(getErrorMessage(err, `Could not download the ${format.toUpperCase()} file.`))
     }
   }
 
@@ -160,10 +138,8 @@ export function GraphicsPage() {
         ? 100
         : 0
 
-  const isRunning = job?.status === 'queued' || job?.status === 'running'
-
   return (
-    <AppLayout title="Graphics">
+    <>
       <div className="mx-auto max-w-6xl">
         {/* HEADER */}
         <div className="mb-7">
@@ -244,13 +220,8 @@ export function GraphicsPage() {
 
                 {/* SITE */}
                 <div className="mt-5">
-                  <label
-                    htmlFor="graphics-site"
-                    className="mb-1.5 block text-xs font-semibold text-ink-950/70"
-                  >
-                    Site
-                  </label>
-                  <select
+                  <Select
+                    label="Site"
                     id="graphics-site"
                     value={selectedSiteId}
                     onChange={(event) => {
@@ -258,7 +229,7 @@ export function GraphicsPage() {
                       resetResult()
                     }}
                     disabled={generating}
-                    className="h-11 w-full rounded-xl border border-mist-200 bg-white px-3.5 text-sm text-ink-950 outline-none transition hover:border-mist-300 focus:border-canopy-600 focus:ring-4 focus:ring-canopy-600/10 dark:bg-paper-50 dark:[color-scheme:dark]"
+                    className="w-full"
                   >
                     <option value="">Select a research site</option>
                     {sites.map((site) => (
@@ -266,7 +237,7 @@ export function GraphicsPage() {
                         {site.name}
                       </option>
                     ))}
-                  </select>
+                  </Select>
                 </div>
               </>
             )}
@@ -358,12 +329,16 @@ export function GraphicsPage() {
                             ? 'Generation complete'
                             : 'Generating graphic…'}
                         </span>
-                        <span className="font-semibold text-canopy-700">{progress}%</span>
+                        {job.processed > 0 && (
+                          <span className="font-semibold text-canopy-700">{progress}%</span>
+                        )}
                       </div>
                       <div className="h-2 overflow-hidden rounded-full bg-mist-200 dark:bg-mist-100/20">
                         <div
-                          className="h-full rounded-full bg-canopy-700 transition-all duration-500"
-                          style={{ width: `${progress}%` }}
+                          className={`h-full rounded-full bg-canopy-700 transition-all duration-500 ${
+                            isRunning && job.processed === 0 ? 'animate-pulse' : ''
+                          }`}
+                          style={{ width: isRunning && job.processed === 0 ? '100%' : `${progress}%` }}
                         />
                       </div>
                     </div>
@@ -421,7 +396,7 @@ export function GraphicsPage() {
           </Card>
         </div>
       </div>
-    </AppLayout>
+    </>
   )
 }
 

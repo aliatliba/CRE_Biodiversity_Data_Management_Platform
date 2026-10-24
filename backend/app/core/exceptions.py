@@ -14,6 +14,31 @@ class AppException(Exception):
         super().__init__(self.message)
 
 
+class BadRequestError(AppException):
+    def __init__(self, message: str):
+        super().__init__(message, 400)
+
+
+class UnauthorizedError(AppException):
+    def __init__(self, message: str):
+        super().__init__(message, 401)
+
+
+class ForbiddenError(AppException):
+    def __init__(self, message: str):
+        super().__init__(message, 403)
+
+
+class NotFoundError(AppException):
+    def __init__(self, message: str):
+        super().__init__(message, 404)
+
+
+class ConflictError(AppException):
+    def __init__(self, message: str):
+        super().__init__(message, 409)
+
+
 async def app_exception_handler(request: Request, exc: AppException) -> JSONResponse:
     return JSONResponse(status_code=exc.status_code, content={"detail": exc.message})
 

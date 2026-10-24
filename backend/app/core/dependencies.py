@@ -7,7 +7,6 @@ from sqlalchemy.orm import Session
 from app.core.db import SessionLocal
 from app.core.security import decode_token
 from app.models.user import User
-from app.models.role import Role
 
 oauth2_scheme = HTTPBearer()
 

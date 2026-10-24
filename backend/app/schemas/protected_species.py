@@ -14,5 +14,5 @@ class ProtectedSpeciesResponse(BaseModel):
     id: int
     scientific_name: str
     source_reference: str | None
-    added_by: int
+    added_by: int | None
     created_at: datetime

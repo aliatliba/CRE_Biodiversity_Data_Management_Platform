@@ -11,29 +11,27 @@ from tempfile import TemporaryDirectory  # noqa: F401  (re-exported for the API)
 
 from sqlalchemy.orm import Session
 
-from app.core.graphics_job_store import GraphicsJob
+from app.core.config import get_settings
+from app.core.job_store import GraphicsJob
 from app.scripts.graphics_registry import GraphicSpec, get_spec  # noqa: F401
 
 logger = logging.getLogger(__name__)
 
 BASE_DIR = Path(__file__).resolve().parents[1]
-GRAPHICS_DIR = Path(os.environ.get("GRAPHICS_DIR", str(BASE_DIR / "graphics")))
+_settings = get_settings()
+GRAPHICS_DIR = Path(_settings.graphics_dir or str(BASE_DIR / "graphics"))
 # Persistent cache shared by all R scripts (e.g. PhyloPic silhouettes)
-GRAPHICS_CACHE_DIR = Path(
-    os.environ.get("GRAPHICS_CACHE_DIR", str(GRAPHICS_DIR / ".cache"))
-)
+GRAPHICS_CACHE_DIR = Path(_settings.graphics_cache_dir or str(GRAPHICS_DIR / ".cache"))
 
 # --- Memory protection (tune with Render environment variables) -------------
 # Default raster resolution handed to the R scripts (memory ~ DPI squared).
-GRAPHICS_DPI = os.environ.get("GRAPHICS_DPI", "200")
+GRAPHICS_DPI = _settings.graphics_dpi
 # The R process (and its children) is killed above this RSS, so the API
 # survives and the job fails with a readable error instead of Render
 # restarting the whole container. 0 disables the watchdog.
-MAX_R_RSS_MB = int(os.environ.get("GRAPHICS_MAX_RSS_MB", "350"))
+MAX_R_RSS_MB = _settings.graphics_max_rss_mb
 # Number of R processes allowed at the same time.
-_R_SLOT = threading.BoundedSemaphore(
-    max(1, int(os.environ.get("GRAPHICS_MAX_CONCURRENT", "1")))
-)
+_R_SLOT = threading.BoundedSemaphore(max(1, _settings.graphics_max_concurrent))
 
 try:
     _PAGE_MB = os.sysconf("SC_PAGE_SIZE") / (1024 * 1024)
@@ -61,9 +59,7 @@ def build_site_excel(
     output_path: Path,
 ) -> tuple[str, int]:
     """Export the site's species to the Excel layout the R script expects."""
-    # Imported lazily: keeps pandas out of the API's idle memory footprint
-    # when nothing else has loaded it yet.
-    import pandas as pd
+    from openpyxl import Workbook
 
     from app.models.site import Site
     from app.models.site_species import SiteSpecies
@@ -110,9 +106,14 @@ def build_site_excel(
             f"data this graphic needs ({details})."
         )
 
-    pd.DataFrame(records, columns=list(spec.columns)).to_excel(
-        output_path, index=False, sheet_name="Species"
-    )
+    headers = list(spec.columns)
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.title = "Species"
+    sheet.append(headers)
+    for record in records:
+        sheet.append([record.get(h) for h in headers])
+    workbook.save(output_path)
     return site.name, len(records)
 
 
@@ -230,12 +231,12 @@ def _run_r_script(
 
     output_lines: list[str] = []
     try:
-        print(f"[R:{spec.key}] started: {' '.join(command)}", flush=True)
+        logger.info("[R:%s] started: %s", spec.key, " ".join(command))
         assert proc.stdout is not None
         for line in proc.stdout:
             line = line.rstrip("\n")
             output_lines.append(line)
-            print(f"[R:{spec.key}] {line}", flush=True)
+            logger.info("[R:%s] %s", spec.key, line)
         returncode = proc.wait()
     finally:
         timer.cancel()
@@ -245,11 +246,14 @@ def _run_r_script(
 
     # Highest memory used so far by any R child process (Linux: KB).
     peak_children_mb = resource.getrusage(resource.RUSAGE_CHILDREN).ru_maxrss / 1024
-    print(
-        f"[R:{spec.key}] finished with code {returncode}; "
-        f"peak R memory this run ~{peak['mb']:.0f} MB "
-        f"(all R runs so far ~{peak_children_mb:.0f} MB, limit {MAX_R_RSS_MB} MB)",
-        flush=True,
+    logger.info(
+        "[R:%s] finished with code %s; peak R memory this run ~%.0f MB "
+        "(all R runs so far ~%.0f MB, limit %s MB)",
+        spec.key,
+        returncode,
+        peak["mb"],
+        peak_children_mb,
+        MAX_R_RSS_MB,
     )
 
     if timed_out.is_set():

@@ -7,13 +7,13 @@ import { EditorialImage } from './EditorialImage'
  * not a view into the registry. No status flags, site names, or record
  * metadata are shown here; that detail stays inside the platform.
  *
- *   Images are served from frontend/public/assests/landing.
+ *   Images are served from frontend/public/assets/landing.
  */
 const SPECIES = [
-  { id: 'quercus-afares', name: 'Quercus afares', common: 'Afares oak', src: '/assests/landing/quercus.jpeg' },
-  { id: 'gazella-cuvieri', name: 'Gazella cuvieri', common: "Cuvier's gazelle", src: '/assests/landing/Gazelle-cuvier-copie-600x600.jpg' },
-  { id: 'cedrus-atlantica', name: 'Cedrus atlantica', common: 'Atlas cedar', src: '/assests/landing/Cedrus-atlantica-Glauca-20050005-A-scaled.jpg' },
-  { id: 'testudo-graeca', name: 'Testudo graeca', common: 'Greek tortoise', src: '/assests/landing/tortue.webp' },
+  { id: 'quercus-afares', name: 'Quercus afares', common: 'Afares oak', src: '/assets/landing/quercus.jpeg' },
+  { id: 'gazella-cuvieri', name: 'Gazella cuvieri', common: "Cuvier's gazelle", src: '/assets/landing/Gazelle-cuvier-copie-600x600.jpg' },
+  { id: 'cedrus-atlantica', name: 'Cedrus atlantica', common: 'Atlas cedar', src: '/assets/landing/Cedrus-atlantica-Glauca-20050005-A-scaled.jpg' },
+  { id: 'testudo-graeca', name: 'Testudo graeca', common: 'Greek tortoise', src: '/assets/landing/tortue.webp' },
 ]
 
 export function ProtectedSpeciesShowcase() {

@@ -1,8 +1,11 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import { BrowserRouter } from 'react-router-dom'
-import App from './App.tsx'
+import { RouterProvider } from 'react-router-dom'
+import { QueryClientProvider } from '@tanstack/react-query'
+import { MotionConfig } from 'framer-motion'
 import { ThemeProvider } from './hooks/useTheme.tsx'
+import { queryClient } from './lib/queryClient'
+import { router } from './router'
 import './index.css'
 
 const initialSplash = document.getElementById('initial-splash')
@@ -19,10 +22,13 @@ if (initialSplash) {
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <ThemeProvider>
-      <BrowserRouter>
-        <App />
-      </BrowserRouter>
-    </ThemeProvider>
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider>
+        {/* Honour the OS "reduce motion" setting for every framer-motion animation. */}
+        <MotionConfig reducedMotion="user">
+          <RouterProvider router={router} />
+        </MotionConfig>
+      </ThemeProvider>
+    </QueryClientProvider>
   </StrictMode>,
 )

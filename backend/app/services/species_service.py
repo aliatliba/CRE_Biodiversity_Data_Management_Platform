@@ -2,29 +2,30 @@ import asyncio
 from datetime import datetime, timezone
 from typing import Any
 
-from app.models.user import User
+from sqlalchemy.orm import Session, load_only
+from starlette.concurrency import run_in_threadpool
 
-from fastapi import HTTPException, status
-from sqlalchemy.orm import Session
-from sqlalchemy import func
-
-from app.models.user import User
-from app.models.species import Species
-from app.models.site_species import SiteSpecies
-from app.models.validation_history import SpeciesValidationHistory
-from app.models.protected_species import ProtectedSpeciesList
-from app.schemas.species import (
-    SpeciesCreate,
-    SpeciesUpdate,
-    SiteSpeciesCreate,
-)
-from app.integrations.base import ProviderResult
-from app.integrations.wikidata_client import WikidataClient
+from app.core.config import get_settings
+from app.core.exceptions import BadRequestError, ConflictError, ForbiddenError, NotFoundError
+from app.core.ttl_cache import TTLCache
+from app.core.utils import clean_and_dedupe_names
+from app.integrations.base import ExternalProviderClient, ProviderResult, describe_error
 from app.integrations.gbif_client import GbifClient
-from app.integrations.iucn_client import IucnClient
-from app.integrations.powo_client import PowoClient
 from app.integrations.inaturalist_client import InaturalistClient
+from app.integrations.iucn_client import IucnClient
 from app.integrations.mapper import normalize_provider_result
+from app.integrations.powo_client import PowoClient
+from app.integrations.wikidata_client import WikidataClient
+from app.models.protected_species import ProtectedSpeciesList
+from app.models.site_species import SiteSpecies
+from app.models.species import Species, name_search_filter
+from app.models.validation_history import SpeciesValidationHistory
+from app.schemas.species import (
+    SiteSpeciesCreate,
+    SpeciesCreate,
+    SpeciesResponse,
+    SpeciesUpdate,
+)
 
 PERMITTED_EDIT_FIELDS = {
     # Taxonomy
@@ -48,14 +49,66 @@ PERMITTED_EDIT_FIELDS = {
 }
 
 
-async def lookup_species(db: Session, scientific_name: str) -> dict[str, Any]:
-    gbif_result = await GbifClient().search(scientific_name)
+class DbRunner:
+    """Run blocking SQLAlchemy work in the threadpool without blocking the event loop.
+
+    A Session is not safe for concurrent use, so calls through one runner are
+    serialised with a lock (the same session is shared by the concurrent workers of a
+    batch lookup).
+    """
+
+    def __init__(self, db: Session):
+        self.db = db
+        self._lock = asyncio.Lock()
+
+    async def __call__(self, fn, *args, **kwargs):
+        async with self._lock:
+            return await run_in_threadpool(fn, self.db, *args, **kwargs)
+
+
+def _as_runner(db: "Session | DbRunner") -> DbRunner:
+    return db if isinstance(db, DbRunner) else DbRunner(db)
+
+
+# Provider answers keyed by "<source>:<name>" (successful answers only, never errors),
+# so re-looking-up a species (batch retries, the review step, ...) does not hit the APIs again.
+_provider_cache: TTLCache[ProviderResult] = TTLCache(get_settings().provider_cache_ttl_seconds)
+
+
+async def _search_cached(client: ExternalProviderClient, scientific_name: str) -> ProviderResult:
+    key = f"{client.source}:{scientific_name.casefold()}"
+    cached = _provider_cache.get(key)
+    if cached is not None:
+        return cached
+    result = await client.search(scientific_name)
+    if result.error is None:
+        _provider_cache.set(key, result)
+    return result
+
+
+def _skips_powo(kingdom: str | None) -> bool:
+    """POWO (Kew) only covers plants: skip it when GBIF says the taxon is something else."""
+    return bool(kingdom) and kingdom.strip().casefold() != "plantae"
+
+
+async def fetch_provider_draft(scientific_name: str) -> dict[str, Any]:
+    """Query the external providers and merge their answers into a draft.
+
+    Pure network work: no database access (``national_status`` is added by the caller).
+    Provider failures are reported in ``provider_errors`` instead of looking like "no data".
+    """
+    gbif = GbifClient()
+    gbif_result = await _search_cached(gbif, scientific_name)
     resolved_name = gbif_result.data.get("canonicalName") or scientific_name
     is_synonym = "_resolved_from_synonym" in gbif_result.data
 
-    other_clients = [WikidataClient(), IucnClient(), PowoClient(), InaturalistClient()]
+    other_clients: list[ExternalProviderClient] = [WikidataClient(), IucnClient()]
+    if not _skips_powo(gbif_result.data.get("kingdom")):
+        other_clients.append(PowoClient())
+    other_clients.append(InaturalistClient())
+
     other_results = await asyncio.gather(
-        *[c.search(resolved_name) for c in other_clients],
+        *[_search_cached(c, resolved_name) for c in other_clients],
         return_exceptions=True,
     )
 
@@ -66,18 +119,72 @@ async def lookup_species(db: Session, scientific_name: str) -> dict[str, Any]:
         "conservation": {},
         "traits": {},
         "field_sources": {},
-        # Surface protection status immediately in lookup results, so a
-        # researcher sees it before saving the record, not after.
-        "national_status": compute_national_status(db, resolved_name),
+        "provider_errors": {},
     }
 
     _merge_into_draft(merged, normalize_provider_result(gbif_result, "GbifClient"))
+    if gbif_result.error:
+        merged["provider_errors"][gbif.source] = gbif_result.error
+
     for client, result in zip(other_clients, other_results):
-        if isinstance(result, Exception):
+        if isinstance(result, BaseException):
+            merged["provider_errors"][client.source] = describe_error(result)
             continue
+        if result.error:
+            merged["provider_errors"][client.source] = result.error
         _merge_into_draft(merged, normalize_provider_result(result, client.__class__.__name__))
 
     return merged
+
+
+async def lookup_species(db: "Session | DbRunner", scientific_name: str) -> dict[str, Any]:
+    run_db = _as_runner(db)
+    draft = await fetch_provider_draft(scientific_name)
+    # Surface protection status immediately in lookup results, so a
+    # researcher sees it before saving the record, not after.
+    draft["national_status"] = await run_db(compute_national_status, draft["scientific_name"])
+    return draft
+
+
+def _precheck_existing(db: Session, scientific_name: str, site_id: int) -> dict[str, Any] | None:
+    """Existing species (as a plain dict) plus whether it is already linked to the site."""
+    existing = check_duplicate(db, scientific_name)
+    if existing is None:
+        return None
+    return {
+        "existing_species": SpeciesResponse.model_validate(existing).model_dump(),
+        "duplicate": is_species_associated_with_site(db, site_id, existing.id),
+    }
+
+
+async def _lookup_batch_item(
+    run_db: DbRunner, scientific_name: str, site_id: int
+) -> dict[str, Any]:
+    item: dict[str, Any] = {
+        "input_scientific_name": scientific_name,
+        "draft": None,
+        "duplicate": False,
+        "existing_species": None,
+        "error": None,
+    }
+    try:
+        # First check the exact name already in the database.
+        found = await run_db(_precheck_existing, scientific_name, site_id)
+        if found:
+            item.update(found)
+            return item
+
+        draft = await lookup_species(run_db, scientific_name)
+        item["draft"] = draft
+
+        # GBIF may resolve a synonym to another canonical name; check that too.
+        found = await run_db(_precheck_existing, draft["scientific_name"], site_id)
+        if found:
+            item.update(found)
+    except Exception as exc:
+        item["error"] = str(exc)
+    return item
+
 
 async def lookup_species_batch(
     db: Session,
@@ -85,107 +192,47 @@ async def lookup_species_batch(
     site_id: int,
     delay_seconds: float = 1.0,
     on_progress=None,
+    concurrency: int | None = None,
 ) -> list[dict[str, Any]]:
-    """
-    Review-only batch lookup.
+    """Review-only batch lookup.
 
     Looks up multiple scientific names without creating any Species records.
     Each item can independently be reviewed and saved later by the frontend.
 
-    `on_progress`, when provided, is called after each species has finished
-    processing. It receives the current number of processed species and the
-    result item.
-    """
+    Up to ``concurrency`` species are processed at the same time (default
+    ``LOOKUP_BATCH_CONCURRENCY``). Each worker waits ``delay_seconds`` after a species
+    before taking the next one, which keeps the request rate towards the providers
+    bounded. Results are returned in input order.
 
-    if not scientific_names:
+    ``on_progress(processed=, total=, item=, index=)`` is awaited after each species
+    finishes (in completion order); ``index`` is the species' position in the input.
+    """
+    unique_names = clean_and_dedupe_names(scientific_names)
+    if not unique_names:
         return []
 
-    # Clean and deduplicate while preserving order.
-    unique_names: list[str] = []
-    seen: set[str] = set()
-
-    for raw_name in scientific_names:
-        name = (raw_name or "").strip()
-
-        if not name:
-            continue
-
-        key = name.casefold()
-
-        if key in seen:
-            continue
-
-        seen.add(key)
-        unique_names.append(name)
-
-    results: list[dict[str, Any]] = []
-
     total = len(unique_names)
+    limit = max(1, concurrency or get_settings().lookup_batch_concurrency)
+    semaphore = asyncio.Semaphore(limit)
+    run_db = DbRunner(db)
+    results: list[dict[str, Any] | None] = [None] * total
+    processed = 0
 
-    for index, scientific_name in enumerate(unique_names):
-        item: dict[str, Any] = {
-            "input_scientific_name": scientific_name,
-            "draft": None,
-            "duplicate": False,
-            "existing_species": None,
-            "error": None,
-        }
+    async def worker(index: int, name: str) -> None:
+        nonlocal processed
+        async with semaphore:
+            item = await _lookup_batch_item(run_db, name, site_id)
+            results[index] = item
+            processed += 1
+            if on_progress is not None:
+                await on_progress(processed=processed, total=total, item=item, index=index)
+            # Throttle: hold the slot for a moment before starting the next species.
+            if delay_seconds > 0:
+                await asyncio.sleep(delay_seconds)
 
-        try:
-            # First check the exact name already in the database.
-            existing = check_duplicate(db, scientific_name)
+    await asyncio.gather(*[worker(i, n) for i, n in enumerate(unique_names)])
+    return [r for r in results if r is not None]
 
-            if existing:
-                item["existing_species"] = existing
-                item["duplicate"] = is_species_associated_with_site(
-                    db,
-                    site_id,
-                    existing.id,
-                )
-            else:
-                # Perform the normal external-provider lookup.
-                draft = await lookup_species(
-                    db,
-                    scientific_name,
-                )
-                item["draft"] = draft
-
-                # GBIF may resolve a synonym to another canonical name.
-                # Check that resolved name as well.
-                resolved_name = draft.get("scientific_name")
-
-                resolved_existing = check_duplicate(
-                    db,
-                    resolved_name,
-                )
-
-                if resolved_existing:
-                    item["existing_species"] = resolved_existing
-                    item["duplicate"] = is_species_associated_with_site(
-                        db,
-                        site_id,
-                        resolved_existing.id,
-                    )
-
-        except Exception as exc:
-            item["error"] = str(exc)
-
-        results.append(item)
-
-        # This is the important part:
-        # report progress AFTER this species has actually finished.
-        if on_progress is not None:
-            await on_progress(
-                processed=index + 1,
-                total=total,
-                item=item,
-            )
-
-        # Rate-limit between species, not between providers.
-        if index < total - 1 and delay_seconds > 0:
-            await asyncio.sleep(delay_seconds)
-
-    return results
 
 def _merge_into_draft(merged: dict[str, Any], normalized: dict[str, Any]) -> None:
     for section in ("taxonomy", "conservation", "traits"):
@@ -198,7 +245,7 @@ def _merge_into_draft(merged: dict[str, Any], normalized: dict[str, Any]) -> Non
 def check_duplicate(db: Session, scientific_name: str) -> Species | None:
     return (
         db.query(Species)
-        .filter(func.lower(Species.scientific_name) == func.lower(scientific_name))
+        .filter(Species.scientific_name == scientific_name)
         .first()
     )
 
@@ -242,9 +289,7 @@ def ensure_site_association(
 def compute_national_status(db: Session, scientific_name: str) -> str:
     protected = (
         db.query(ProtectedSpeciesList)
-        .filter(
-            func.lower(ProtectedSpeciesList.scientific_name) == func.lower(scientific_name)
-        )
+        .filter(ProtectedSpeciesList.scientific_name == scientific_name)
         .first()
     )
     return "Protected" if protected else "Non Protected"
@@ -253,10 +298,7 @@ def compute_national_status(db: Session, scientific_name: str) -> str:
 def create_species(db: Session, data: SpeciesCreate, user_id: int) -> Species:
     existing = check_duplicate(db, data.scientific_name)
     if existing:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Species already exists",
-        )
+        raise ConflictError("Species already exists")
 
     national_status = compute_national_status(db, data.scientific_name)
 
@@ -309,20 +351,23 @@ def create_species(db: Session, data: SpeciesCreate, user_id: int) -> Species:
     return species
 
 
+def _as_utc(value: datetime) -> datetime:
+    """Compare timestamps as instants. Naive values are assumed to be UTC; aware
+    values keep their offset (a DB session in a non-UTC time zone returns +01:00,
+    which must not be relabelled as UTC)."""
+    if value.tzinfo is None:
+        return value.replace(tzinfo=timezone.utc)
+    return value.astimezone(timezone.utc)
+
+
 def update_species(db: Session, species_id: int, data: SpeciesUpdate, user_id: int) -> Species:
     species = db.query(Species).filter(Species.id == species_id).first()
     if not species:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Species not found",
-        )
+        raise NotFoundError("Species not found")
 
-    incoming_updated_at = datetime.fromisoformat(data.updated_at.replace("Z", "+00:00"))
-    if species.updated_at.replace(tzinfo=timezone.utc) != incoming_updated_at:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Species was modified by another user. Please refresh and try again.",
-        )
+    incoming_updated_at = _as_utc(datetime.fromisoformat(data.updated_at.replace("Z", "+00:00")))
+    if _as_utc(species.updated_at) != incoming_updated_at:
+        raise ConflictError("Species was modified by another user. Please refresh and try again.")
 
     changes: dict[str, Any] = {}
     update_data = data.model_dump(exclude_unset=True)
@@ -330,20 +375,14 @@ def update_species(db: Session, species_id: int, data: SpeciesUpdate, user_id: i
 
     for field, new_value in update_data.items():
         if field not in PERMITTED_EDIT_FIELDS:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Field '{field}' is not permitted to be edited on an existing species.",
-            )
+            raise ForbiddenError(f"Field '{field}' is not permitted to be edited on an existing species.")
         old_value = getattr(species, field)
         if old_value != new_value:
             changes[field] = {"old": old_value, "new": new_value}
             setattr(species, field, new_value)
 
     if not changes:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="No changes detected",
-        )
+        raise BadRequestError("No changes detected")
 
     species.validated_by = user_id
     species.validated_at = datetime.now(timezone.utc)
@@ -364,10 +403,7 @@ def update_species(db: Session, species_id: int, data: SpeciesUpdate, user_id: i
 def get_species(db: Session, species_id: int) -> Species:
     species = db.query(Species).filter(Species.id == species_id).first()
     if not species:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Species not found",
-        )
+        raise NotFoundError("Species not found")
     return species
 
 
@@ -395,11 +431,7 @@ def _apply_species_filters(
     if status:
         query = query.filter(Species.status == status)
     if search:
-        pattern = f"%{search}%"
-        query = query.filter(
-            (Species.scientific_name.ilike(pattern))
-            | (Species.common_name.ilike(pattern))
-        )
+        query = query.filter(name_search_filter(search))
     if kingdom:
         query = query.filter(Species.kingdom.ilike(f"%{kingdom}%"))
     if class_name:
@@ -435,7 +467,18 @@ def list_species(
     page_size: int = 20,
 
 ) -> tuple[list[Species], int]:
-    query = db.query(Species)
+    # Only the columns of SpeciesListItem: skips the JSONB / long-text columns.
+    query = db.query(Species).options(
+        load_only(
+            Species.id,
+            Species.scientific_name,
+            Species.common_name,
+            Species.family,
+            Species.kingdom,
+            Species.iucn_status,
+            Species.national_status,
+        )
+    )
     query = _apply_species_filters(
         query,
         status=status,
@@ -462,10 +505,7 @@ def list_species(
 def delete_species(db: Session, species_id: int) -> None:
     species = db.query(Species).filter(Species.id == species_id).first()
     if not species:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Species not found",
-        )
+        raise NotFoundError("Species not found")
     db.query(SiteSpecies).filter(SiteSpecies.species_id == species_id).delete(
         synchronize_session=False
     )
@@ -494,10 +534,7 @@ def associate_species_with_site(
         .first()
     )
     if existing:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Species is already associated with this site",
-        )
+        raise ConflictError("Species is already associated with this site")
     association = SiteSpecies(
         site_id=site_id,
         species_id=data.species_id,
@@ -521,25 +558,6 @@ def remove_site_species(db: Session, site_id: int, species_id: int) -> None:
         .first()
     )
     if not association:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Association not found",
-        )
+        raise NotFoundError("Association not found")
     db.delete(association)
     db.commit()
-
-
-def is_species_associated_with_site(
-    db: Session,
-    site_id: int,
-    species_id: int,
-) -> bool:
-    return (
-        db.query(SiteSpecies)
-        .filter(
-            SiteSpecies.site_id == site_id,
-            SiteSpecies.species_id == species_id,
-        )
-        .first()
-        is not None
-    )

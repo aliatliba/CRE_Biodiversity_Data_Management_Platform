@@ -1,10 +1,11 @@
-from fastapi import APIRouter, Depends, Query
-from sqlalchemy.orm import Session
 from typing import List
 
-from app.core.dependencies import DBSession, ActiveUser, AdminUser
-from app.schemas.site import SiteCreate, SiteUpdate, SiteResponse
-from app.services import site_service
+from fastapi import APIRouter, Query
+
+from app.core.dependencies import ActiveUser, AdminUser, DBSession
+from app.schemas.site import SiteCreate, SiteResponse, SiteUpdate
+from app.schemas.species import SiteSpeciesCreate, SiteSpeciesResponse
+from app.services import site_service, species_service
 
 router = APIRouter()
 
@@ -44,3 +45,24 @@ def delete_site(
 ):
     site_service.delete_site(db, site_id, force)
     return {"detail": "Site deleted"}
+
+
+@router.post("/{site_id}/species", response_model=SiteSpeciesResponse, status_code=201)
+def associate_species(
+    site_id: int,
+    data: SiteSpeciesCreate,
+    db: DBSession,
+    user: ActiveUser,
+):
+    return species_service.associate_species_with_site(db, site_id, data, user.id)
+
+
+@router.get("/{site_id}/species", response_model=List[SiteSpeciesResponse])
+def list_site_species(site_id: int, db: DBSession, user: ActiveUser):
+    return species_service.list_species_for_site(db, site_id)
+
+
+@router.delete("/{site_id}/species/{species_id}")
+def remove_site_species(site_id: int, species_id: int, db: DBSession, user: ActiveUser):
+    species_service.remove_site_species(db, site_id, species_id)
+    return {"detail": "Species removed from site"}

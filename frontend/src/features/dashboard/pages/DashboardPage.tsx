@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
@@ -6,86 +6,38 @@ import {
   MapPin,
   ShieldCheck,
 } from 'lucide-react'
-import axios from 'axios'
 import { useAuth } from '@/hooks/useAuth'
-import { AppLayout } from '@/components/layout/AppLayout'
 import { Card } from '@/components/ui/Card'
 import { LoadingSpinner } from '@/components/common/LoadingSpinner'
 import { ErrorState } from '@/components/common/ErrorState'
 import { AnimatedBarChart } from '@/components/charts/AnimatedBarChart'
-import { AnimatedPieChart, IUCN_COLORS } from '@/components/charts/AnimatedPieChart'
+import { AnimatedPieChart } from '@/components/charts/AnimatedPieChart'
+import { ChartCard } from '@/components/charts/ChartCard'
+import { toChartData } from '@/lib/chartData'
+import { getErrorMessage } from '@/lib/errors'
+import { IUCN_COLORS, THREATENED_STATUSES_PARAM } from '@/lib/iucn'
+import { queryKeys } from '@/lib/queryKeys'
+import { ROUTES, siteUrl, speciesListUrl } from '@/lib/constants'
 import * as dashboardService from '../services/dashboardService'
-import type { DashboardStats } from '../types'
 import { StatCard } from '../components/StatCard'
+
+const COMPOSITION_LABELS = ['Fauna', 'Flora', 'Micro-organisms', 'Fungi']
 
 export function DashboardPage() {
   const { user } = useAuth()
 
-  const [stats, setStats] = useState<DashboardStats | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const query = useQuery({
+    queryKey: queryKeys.dashboard(),
+    queryFn: () => dashboardService.getStats(),
+  })
+  const stats = query.data
 
-  async function load() {
-    setIsLoading(true)
-    setError(null)
-
-    try {
-      const data = await dashboardService.getStats()
-      setStats(data)
-    } catch (err) {
-      setError(
-        axios.isAxiosError(err)
-          ? (err.response?.data?.detail ??
-              'Could not load dashboard stats.')
-          : 'Could not load dashboard stats.'
-      )
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    load()
-  }, [])
-
-  const biodiversityCompositionData = stats
-    ? [
-        {
-          label: 'Fauna',
-          value: stats.biodiversity_composition['Fauna'] ?? 0,
-        },
-        {
-          label: 'Flora',
-          value: stats.biodiversity_composition['Flora'] ?? 0,
-        },
-        {
-          label: 'Micro-organisms',
-          value:
-            stats.biodiversity_composition['Micro-organisms'] ?? 0,
-        },
-        {
-          label: 'Fungi',
-          value: stats.biodiversity_composition['Fungi'] ?? 0,
-        },
-      ]
-    : []
-
-  const iucnData = stats
-    ? Object.entries(stats.iucn_breakdown).map(([label, value]) => ({
-        label: label.toLowerCase() === 'unknown' ? 'NE' : label,
-        value,
-      }))
-    : []
-
-  const statusData = stats
-    ? Object.entries(stats.status_breakdown).map(
-        ([label, value]) => ({
-          label,
-          value,
-        })
-      )
-    : []
-
+  const compositionData = COMPOSITION_LABELS.map((label) => ({
+    label,
+    value: stats?.biodiversity_composition[label] ?? 0,
+  }))
+  const iucnData = toChartData(stats?.iucn_breakdown)
+  const statusData = toChartData(stats?.status_breakdown)
   const siteRichnessData =
     stats?.species_richness_by_site.map((site) => ({
       label: site.site_name,
@@ -93,7 +45,7 @@ export function DashboardPage() {
     })) ?? []
 
   return (
-    <AppLayout title="Dashboard">
+    <>
       <p className="mb-6 text-sm text-ink-950/55">
         Welcome back,{' '}
         <span className="font-medium text-ink-950">
@@ -102,17 +54,20 @@ export function DashboardPage() {
         . Here's what's in the registry right now.
       </p>
 
-      {isLoading && (
+      {query.isPending && (
         <div className="flex justify-center py-20">
           <LoadingSpinner className="h-7 w-7" />
         </div>
       )}
 
-      {!isLoading && error && (
-        <ErrorState message={error} onRetry={load} />
+      {query.isError && (
+        <ErrorState
+          message={getErrorMessage(query.error, 'Could not load dashboard stats.')}
+          onRetry={() => query.refetch()}
+        />
       )}
 
-      {!isLoading && !error && stats && (
+      {stats && (
         <div className="flex flex-col gap-6">
 
           {/* -------------------------------------------------------- */}
@@ -135,7 +90,7 @@ export function DashboardPage() {
             />
 
             <Link
-              to="/species/threatened"
+              to={speciesListUrl({ iucn_status: THREATENED_STATUSES_PARAM })}
               className="block rounded-2xl transition-transform duration-200 hover:-translate-y-0.5"
             >
               <StatCard
@@ -153,115 +108,25 @@ export function DashboardPage() {
 
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
 
-            {/* Biodiversity composition */}
+            <ChartCard title="Biodiversity composition" delay={0.1}>
+              <AnimatedPieChart data={compositionData} delay={0.15} showValues />
+            </ChartCard>
 
-            <motion.div
-              className="h-full"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{
-                duration: 0.5,
-                delay: 0.1,
-              }}
-            >
-              <Card className="h-full min-w-0 overflow-hidden">
-                <h2 className="font-display text-sm font-bold text-canopy-950">
-                  Biodiversity composition
-                </h2>
+            <ChartCard title="IUCN status breakdown" delay={0.15}>
+              <AnimatedPieChart data={iucnData} delay={0.2} showValues colorMap={IUCN_COLORS} />
+            </ChartCard>
 
-                <div className="mt-5 min-w-0 overflow-hidden">
-                  <AnimatedPieChart
-                    data={biodiversityCompositionData}
-                    delay={0.15}
-                    showValues
-                  />
-                </div>
-              </Card>
-            </motion.div>
+            <ChartCard title="National status breakdown" delay={0.2}>
+              <AnimatedPieChart data={statusData} delay={0.25} showValues />
+            </ChartCard>
 
-            {/* IUCN status */}
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{
-                duration: 0.5,
-                delay: 0.15,
-              }}
-            >
-              <Card className="min-w-0 overflow-hidden">
-                <h2 className="font-display text-sm font-bold text-canopy-950">
-                  IUCN status breakdown
-                </h2>
-
-                <div className="mt-5 min-w-0 overflow-hidden">
-                  <AnimatedPieChart
-                    data={iucnData}
-                    delay={0.2}
-                    showValues
-                    colorMap={IUCN_COLORS}
-                  />
-                </div>
-              </Card>
-            </motion.div>
-
-            {/* National status */}
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{
-                duration: 0.5,
-                delay: 0.2,
-                
-              }}
-            >
-              <Card className="min-w-0 overflow-hidden">
-                <h2 className="font-display text-sm font-bold text-canopy-950">
-                  National status breakdown
-                </h2>
-
-                <div className="mt-5 min-w-0 overflow-hidden">
-                  <AnimatedPieChart
-                    data={statusData}
-                    delay={0.25}
-                    showValues
-                  />
-                </div>
-              </Card>
-            </motion.div>
-
-            {/* Species richness by site */}
-
-            <motion.div
-              className="h-full"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{
-                duration: 0.5,
-                delay: 0.25,
-                
-              }}
-            >
-              <Card className="h-full min-w-0 overflow-hidden">
-                <h2 className="font-display text-sm font-bold text-canopy-950">
-                  Species richness by site
-                </h2>
-
-                <div className="mt-5 min-w-0 overflow-hidden">
-                  <AnimatedBarChart
-                    data={siteRichnessData}
-                    colors={[
-                      '#49AA7F',
-                      '#80C6A2',
-                      '#95D5B3'
-                    ]}
-                    delay={0.3}
-                    
-                  />
-                </div>
-              </Card>
-            </motion.div>
+            <ChartCard title="Species richness by site" delay={0.25}>
+              <AnimatedBarChart
+                data={siteRichnessData}
+                colors={['#49AA7F', '#80C6A2', '#95D5B3']}
+                delay={0.3}
+              />
+            </ChartCard>
           </div>
 
           {/* -------------------------------------------------------- */}
@@ -321,7 +186,7 @@ export function DashboardPage() {
                         >
                           <td className="px-4 py-3">
                             <Link
-                              to={`/sites/${site.site_id}`}
+                              to={siteUrl(site.site_id)}
                               className="font-medium text-canopy-900 hover:underline"
                             >
                               {site.site_name}
@@ -362,7 +227,7 @@ export function DashboardPage() {
             </h2>
 
             <Link
-              to="/species/new"
+              to={ROUTES.addSpecies}
               className="flex items-center gap-3 rounded-xl border border-canopy-900/10 px-3.5 py-3 text-sm font-medium text-ink-950/75 transition-colors hover:border-canopy-700/30 hover:bg-mist-100"
             >
               <Leaf
@@ -373,7 +238,7 @@ export function DashboardPage() {
             </Link>
 
             <Link
-              to="/protected-species"
+              to={ROUTES.protectedSpecies}
               className="flex items-center gap-3 rounded-xl border border-canopy-900/10 px-3.5 py-3 text-sm font-medium text-ink-950/75 transition-colors hover:border-canopy-700/30 hover:bg-mist-100"
             >
               <ShieldCheck
@@ -384,7 +249,7 @@ export function DashboardPage() {
             </Link>
 
             <Link
-              to="/sites"
+              to={ROUTES.sites}
               className="flex items-center gap-3 rounded-xl border border-canopy-900/10 px-3.5 py-3 text-sm font-medium text-ink-950/75 transition-colors hover:border-canopy-700/30 hover:bg-mist-100"
             >
               <MapPin
@@ -396,7 +261,7 @@ export function DashboardPage() {
           </Card>
         </div>
       )}
-    </AppLayout>
+    </>
   )
 }
 

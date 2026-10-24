@@ -1,4 +1,3 @@
-from datetime import datetime, timezone
 
 
 def test_create_and_update_species(client, admin_headers, db_session):

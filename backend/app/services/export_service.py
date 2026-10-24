@@ -4,25 +4,42 @@ import os
 from datetime import datetime, timezone
 from typing import Any
 
-from fastapi import HTTPException, status
-from sqlalchemy.orm import Session
-from sqlalchemy import func, or_
+import openpyxl
+from sqlalchemy import func
+from sqlalchemy.orm import Session, selectinload
 
+from app.core.config import get_settings
+from app.core.exceptions import BadRequestError, NotFoundError
+from app.core.utils import purge_old_entries
 from app.models.export import Export
-from app.models.species import Species
-from app.models.site_species import SiteSpecies
 from app.models.site import Site
+from app.models.site_species import SiteSpecies
+from app.models.species import Species, name_search_filter
+
+EXPORTS_DIR = get_settings().exports_dir
 
 
-EXPORTS_DIR = os.environ.get("EXPORTS_DIR", "./exports")
+def _parse_dt(value: Any) -> datetime | None:
+    """Filters are stored as JSON, so datetimes come back as ISO strings."""
+    if value is None or value == "":
+        return None
+    if isinstance(value, datetime):
+        return value
+    parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed
 
 
 def _ensure_exports_dir() -> None:
     os.makedirs(EXPORTS_DIR, exist_ok=True)
+    purge_old_entries(EXPORTS_DIR, get_settings().exports_retention_hours)
 
 
 def _build_export_query(db: Session, filters: dict[str, Any] | None):
     filters = filters or {}
+    date_from = _parse_dt(filters.get("date_from"))
+    date_to = _parse_dt(filters.get("date_to"))
 
     site_ids = filters.get("site_ids")
 
@@ -36,6 +53,7 @@ def _build_export_query(db: Session, filters: dict[str, Any] | None):
                 ", "
             ).label("site_names"),
         )
+        .options(selectinload(Species.validator))
         .join(SiteSpecies, SiteSpecies.species_id == Species.id)
         .join(Site, Site.id == SiteSpecies.site_id)
         .filter(Species.status == "validated")
@@ -73,13 +91,7 @@ def _build_export_query(db: Session, filters: dict[str, Any] | None):
 
     # Search
     if filters.get("search"):
-        pattern = f"%{filters['search']}%"
-        query = query.filter(
-            or_(
-                Species.scientific_name.ilike(pattern),
-                Species.common_name.ilike(pattern),
-            )
-        )
+        query = query.filter(name_search_filter(filters["search"]))
 
     # Conservation filters
     if filters.get("iucn_status"):
@@ -98,15 +110,11 @@ def _build_export_query(db: Session, filters: dict[str, Any] | None):
         )
 
     # Validation date filters
-    if filters.get("date_from"):
-        query = query.filter(
-            Species.validated_at >= filters["date_from"]
-        )
+    if date_from:
+        query = query.filter(Species.validated_at >= date_from)
 
-    if filters.get("date_to"):
-        query = query.filter(
-            Species.validated_at <= filters["date_to"]
-        )
+    if date_to:
+        query = query.filter(Species.validated_at <= date_to)
 
     # Critical part:
     # group everything by species so each species appears exactly once.
@@ -159,105 +167,54 @@ def get_export_options(db: Session) -> dict[str, list]:
     }
 
 
+EXPORT_COLUMNS = [
+    "id", "scientific_name", "kingdom", "class_name", "order_name", "family",
+    "genus", "species_epithet", "common_name", "iucn_status", "iucn_trend",
+    "national_status", "guild", "ecosystem_service", "habitat", "typology",
+    "endemism", "potential_threats", "reference", "site_name",
+    "validated_by", "validated_at",
+]  # fmt: skip
+
+# Plain species attributes exported as-is, in column order.
+_SPECIES_ATTRS = EXPORT_COLUMNS[:19]
+
+
+def _row(species: Species, site_names: str | None) -> list[Any]:
+    """One export row (shared by CSV and XLSX); order follows EXPORT_COLUMNS."""
+    return [
+        *(getattr(species, attr) for attr in _SPECIES_ATTRS),
+        site_names or "",
+        species.validator.full_name if species.validator else "",
+        species.validated_at.isoformat() if species.validated_at else "",
+    ]
+
+
 def generate_csv(db: Session, filters: dict[str, Any] | None) -> str:
     _ensure_exports_dir()
-    query = _build_export_query(db, filters)
-    rows = query.all()
+    rows = _build_export_query(db, filters).all()
 
     output = io.StringIO()
     writer = csv.writer(output)
-    writer.writerow([
-        "id", "scientific_name", "kingdom", "class_name", "order_name", "family",
-        "genus", "species_epithet", "common_name", "iucn_status", "iucn_trend",
-        "national_status", "guild", "ecosystem_service", "habitat", "typology",
-        "endemism", "potential_threats", "reference", "site_name",
-        "validated_by", "validated_at",
-    ])
+    writer.writerow(EXPORT_COLUMNS)
     for species, site_names in rows:
-        writer.writerow([
-            species.id,
-            species.scientific_name,
-            species.kingdom,
-            species.class_name,
-            species.order_name,
-            species.family,
-            species.genus,
-            species.species_epithet,
-            species.common_name,
-            species.iucn_status,
-            species.iucn_trend,
-            species.national_status,
-            species.guild,
-            species.ecosystem_service,
-            species.habitat,
-            species.typology,
-            species.endemism,
-            species.potential_threats,
-            species.reference,
-            site_names or "",
-            species.validator.full_name if species.validator else "",
-            species.validated_at.isoformat()
-            if species.validated_at
-            else "",
-        ])
-    
-    return output.getvalue()
+        writer.writerow(_row(species, site_names))
+
+    # BOM so Excel opens the UTF-8 file with French accents intact.
+    return "\ufeff" + output.getvalue()
 
 
 def generate_xlsx(db: Session, filters: dict[str, Any] | None) -> bytes:
     _ensure_exports_dir()
-    try:
-        import openpyxl
-    except ImportError:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="XLSX generation requires openpyxl",
-        )
-
-    query = _build_export_query(db, filters)
-    rows = query.all()
+    rows = _build_export_query(db, filters).all()
 
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = "Species"
-    headers = [
-        "id", "scientific_name", "kingdom", "class_name", "order_name", "family",
-        "genus", "species_epithet", "common_name", "iucn_status", "iucn_trend",
-        "national_status", "guild", "ecosystem_service", "habitat", "typology",
-        "endemism", "potential_threats", "reference", "site_name",
-        "validated_by", "validated_at",
-    ]
-    ws.append(headers)
+    ws.append(EXPORT_COLUMNS)
     for species, site_names in rows:
-        ws.append([
-        species.id,
-        species.scientific_name,
-        species.kingdom,
-        species.class_name,
-        species.order_name,
-        species.family,
-        species.genus,
-        species.species_epithet,
-        species.common_name,
-        species.iucn_status,
-        species.iucn_trend,
-        species.national_status,
-        species.guild,
-        species.ecosystem_service,
-        species.habitat,
-        species.typology,
-        species.endemism,
-        species.potential_threats,
-        species.reference,
-        site_names or "",
-        species.validator.full_name if species.validator else "",
-        species.validated_at.isoformat()
-        if species.validated_at
-        else "",
-        ])
+        ws.append(_row(species, site_names))
     buffer = io.BytesIO()
     wb.save(buffer)
-    buffer.seek(0)
     return buffer.getvalue()
 
 
@@ -286,10 +243,7 @@ def create_export(db: Session, format: str, filters: dict[str, Any] | None, user
     else:
         export.status = "failed"
         db.commit()
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Unsupported export format",
-        )
+        raise BadRequestError("Unsupported export format")
 
     export.status = "done"
     export.file_path = filepath
@@ -302,10 +256,7 @@ def create_export(db: Session, format: str, filters: dict[str, Any] | None, user
 def get_export(db: Session, export_id: int) -> Export:
     export = db.query(Export).filter(Export.id == export_id).first()
     if not export:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Export not found",
-        )
+        raise NotFoundError("Export not found")
     return export
 
 

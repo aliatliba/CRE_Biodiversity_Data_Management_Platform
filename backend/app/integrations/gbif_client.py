@@ -1,7 +1,18 @@
-from app.integrations.base import ExternalProviderClient, HttpClientMixin, ProviderResult
+import logging
+
+from app.integrations.base import (
+    ExternalProviderClient,
+    HttpClientMixin,
+    ProviderResult,
+    describe_error,
+)
+
+logger = logging.getLogger(__name__)
 
 
 class GbifClient(ExternalProviderClient, HttpClientMixin):
+    source = "gbif"
+
     def __init__(self):
         HttpClientMixin.__init__(self, "https://api.gbif.org/v1")
 
@@ -23,10 +34,9 @@ class GbifClient(ExternalProviderClient, HttpClientMixin):
                 accepted_resp.raise_for_status()
                 accepted = accepted_resp.json()
                 accepted["_resolved_from_synonym"] = match.get("canonicalName") or scientific_name
-                return ProviderResult(source="gbif", data=accepted)
+                return ProviderResult(source=self.source, data=accepted)
 
-            return ProviderResult(source="gbif", data=match)
-        except Exception:
-            return ProviderResult(source="gbif", data={})
-        finally:
-            await self.close()
+            return ProviderResult(source=self.source, data=match)
+        except Exception as exc:
+            logger.warning("GBIF lookup failed for %s: %s", scientific_name, describe_error(exc))
+            return ProviderResult(source=self.source, data={}, error=describe_error(exc))

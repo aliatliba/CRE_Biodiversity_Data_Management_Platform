@@ -1,12 +1,11 @@
 import { useState, type FormEvent } from 'react'
-import axios from 'axios'
 import { UserRound, KeyRound, Palette } from 'lucide-react'
-import { AppLayout } from '@/components/layout/AppLayout'
 import { Card } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { useAuth } from '@/hooks/useAuth'
+import { getErrorMessage } from '@/lib/errors'
 import { useTheme } from '@/hooks/useTheme'
 import * as authService from '@/features/auth/services/authService'
 
@@ -29,13 +28,6 @@ export function ProfilePage() {
   const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null)
   const [isSavingPassword, setIsSavingPassword] = useState(false)
 
-  function extractError(err: unknown, fallback: string): string {
-    if (axios.isAxiosError(err) && err.response?.data?.detail) {
-      return String(err.response.data.detail)
-    }
-    return fallback
-  }
-
   async function handleSaveInfo(event: FormEvent) {
     event.preventDefault()
     setInfoError(null)
@@ -50,7 +42,7 @@ export function ProfilePage() {
       setInfoSuccess('Profile updated.')
       setIsEditingInfo(false)
     } catch (err) {
-      setInfoError(extractError(err, 'Could not update your profile.'))
+      setInfoError(getErrorMessage(err, 'Could not update your profile.'))
     } finally {
       setIsSavingInfo(false)
     }
@@ -70,14 +62,14 @@ export function ProfilePage() {
       setCurrentPassword('')
       setNewPassword('')
     } catch (err) {
-      setPasswordError(extractError(err, 'Could not change your password.'))
+      setPasswordError(getErrorMessage(err, 'Could not change your password.'))
     } finally {
       setIsSavingPassword(false)
     }
   }
 
   return (
-    <AppLayout title="Profile">
+    <>
       <div className="mx-auto flex max-w-2xl flex-col gap-6">
         <Card>
           <div className="flex items-start justify-between gap-4">
@@ -229,7 +221,7 @@ export function ProfilePage() {
           </div>
         </Card>
       </div>
-    </AppLayout>
+    </>
   )
 }
 

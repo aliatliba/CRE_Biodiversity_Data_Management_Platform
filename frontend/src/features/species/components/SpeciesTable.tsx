@@ -1,8 +1,9 @@
 import { Link } from 'react-router-dom'
-import { Badge, getIucnTone } from '@/components/ui/Badge'
-import type { Species } from '../types'
+import { Badge } from '@/components/ui/Badge'
+import { getIucnTone } from '@/lib/iucn'
+import type { SpeciesListItem } from '../types'
 
-export function SpeciesTable({ species }: { species: Species[] }) {
+export function SpeciesTable({ species }: { species: SpeciesListItem[] }) {
   return (
     <div className="overflow-hidden rounded-2xl border border-canopy-900/10 bg-paper-0">
       <div className="overflow-x-auto">

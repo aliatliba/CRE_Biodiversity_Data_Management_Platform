@@ -1,6 +1,6 @@
 from fastapi import APIRouter
-from app.api import auth, users, sites, species, exports, dashboard, protected_species
-from app.api import graphics
+
+from app.api import auth, dashboard, exports, graphics, protected_species, sites, species, users
 
 router = APIRouter(prefix="/api/v1")
 

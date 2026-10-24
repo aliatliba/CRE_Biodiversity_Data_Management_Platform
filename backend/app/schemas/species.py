@@ -1,5 +1,6 @@
-from typing import Any
 from datetime import datetime
+from typing import Any
+
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -46,11 +47,14 @@ class SpeciesLookupRequest(BaseModel):
 
 class SpeciesDraft(BaseModel):
     scientific_name: str
+    input_scientific_name: str | None = None
     taxonomy: Taxonomy
     conservation: ConservationStatus
     traits: EcologicalTraits
     field_sources: dict[str, Any]
     national_status: str = "Non Protected"
+    # provider name -> error message, for providers that could not be queried
+    provider_errors: dict[str, str] = Field(default_factory=dict)
 
 
 class BatchSpeciesLookupRequest(BaseModel):
@@ -135,10 +139,23 @@ class SpeciesResponse(BaseModel):
     potential_threats: str | None
     reference: str | None
     status: str
-    created_by: int
+    created_by: int | None
     validated_by: int | None
     validated_at: datetime | None
     updated_at: datetime
+
+class SpeciesListItem(BaseModel):
+    """Slim row for GET /species (table view); detail endpoints return SpeciesResponse."""
+
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    scientific_name: str
+    common_name: str | None
+    family: str | None
+    kingdom: str | None
+    iucn_status: str | None
+    national_status: str
+
 
 class BatchSpeciesLookupItem(BaseModel):
     input_scientific_name: str
@@ -168,7 +185,7 @@ class ValidationHistoryResponse(BaseModel):
     species_id: int
     action: str
     changed_fields: dict[str, Any]
-    validated_by: int
+    validated_by: int | None
     validated_at: datetime
 
 
@@ -183,9 +200,9 @@ class SiteSpeciesResponse(BaseModel):
     id: int
     site_id: int
     species_id: int
-    recorded_by: int
+    recorded_by: int | None
     notes: str | None
-    
+
 class BulkImportRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     scientific_names: list[str] = Field(..., min_length=1, max_length=300)
