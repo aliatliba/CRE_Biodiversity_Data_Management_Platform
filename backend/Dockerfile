@@ -7,6 +7,8 @@ WORKDIR /app
 # ---------------------------------------------------------
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
+    curl \
+    ca-certificates \
     libpq-dev \
     r-base \
     r-base-dev \
@@ -36,13 +38,27 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # ---------------------------------------------------------
-# R packages from CRAN / GitHub
+# R packages from CRAN
 # ---------------------------------------------------------
-RUN Rscript -e 'install.packages(c("janitor", "remotes"), repos="https://cloud.r-project.org")' && \
-    Rscript -e 'remotes::install_github("hrbrmstr/ggchicklet")'
+RUN Rscript -e 'options(timeout=600); install.packages("janitor", repos="https://cloud.r-project.org")'
+
+# ---------------------------------------------------------
+# ggchicklet (GitHub only, not on CRAN)
+#
+# The previous remotes::install_github() call hit the GitHub API
+# and timed out after 10s on the build server. Instead we download
+# the source tarball with curl (retries + generous timeouts) and
+# install it from a local file, so no API call is needed.
+# ---------------------------------------------------------
+RUN curl -fsSL --retry 5 --retry-delay 10 --retry-all-errors \
+      --connect-timeout 30 --max-time 300 \
+      https://github.com/hrbrmstr/ggchicklet/archive/refs/heads/master.tar.gz \
+      -o /tmp/ggchicklet.tar.gz && \
+    R CMD INSTALL /tmp/ggchicklet.tar.gz && \
+    rm -f /tmp/ggchicklet.tar.gz
 
 # ggimage (family richness chart: PhyloPic silhouettes)
-RUN Rscript -e 'install.packages("ggimage", repos="https://cloud.r-project.org", Ncpus=2)'
+RUN Rscript -e 'options(timeout=600); install.packages("ggimage", repos="https://cloud.r-project.org", Ncpus=2)'
 
 # ---------------------------------------------------------
 # Fail the build if any package needed by the R scripts is missing
