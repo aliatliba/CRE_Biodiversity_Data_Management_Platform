@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import {
   CalendarDays,
   Check,
@@ -12,72 +13,83 @@ import {
   X,
   XCircle,
 } from 'lucide-react'
-import { AppLayout } from '@/components/layout/AppLayout'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
+import { Alert } from '@/components/ui/Alert'
 import { Badge } from '@/components/ui/Badge'
+import { Combobox } from '@/components/ui/Combobox'
+import { SearchInput } from '@/components/ui/SearchInput'
+import { usePolling } from '@/hooks/usePolling'
+import { getErrorMessage } from '@/lib/errors'
+import { queryKeys } from '@/lib/queryKeys'
 import * as exportService from '../services/exportService'
 import type { ExportFilters, ExportJob, ExportOptions } from '../types'
+
+const ACTIVE_STATUSES = new Set(['pending', 'processing'])
+
+function isActiveFilter(value: unknown): boolean {
+  return Array.isArray(value) ? value.length > 0 : value !== undefined && value !== ''
+}
 
 export function ExportsPage() {
   const [format, setFormat] = useState<'csv' | 'xlsx'>('csv')
   const [job, setJob] = useState<ExportJob | null>(null)
-  const [isCreating, setIsCreating] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const [filters, setFilters] = useState<ExportFilters>({})
-  const [options, setOptions] = useState<ExportOptions | null>(null)
 
   const [siteSearch, setSiteSearch] = useState('')
   const [sitesOpen, setSitesOpen] = useState(false)
 
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const sitesRef = useRef<HTMLDivElement | null>(null)
 
-  useEffect(() => {
-    async function loadOptions() {
-      try {
-        const data = await exportService.getExportOptions()
-        setOptions(data)
-      } catch (err) {
-        console.error('Failed to load export options:', err)
-      }
-    }
+  const optionsQuery = useQuery({
+    queryKey: queryKeys.exportOptions,
+    queryFn: exportService.getExportOptions,
+    staleTime: 5 * 60_000,
+  })
+  const options: ExportOptions | undefined = optionsQuery.data
 
-    loadOptions()
+  const createMutation = useMutation({
+    mutationFn: () => exportService.createExport(format, filters),
+    onMutate: () => {
+      setError(null)
+      setJob(null)
+    },
+    onSuccess: setJob,
+    onError: (err) => setError(getErrorMessage(err, 'Could not start the export.')),
+  })
 
-    return () => {
-      if (pollRef.current) {
-        clearInterval(pollRef.current)
-      }
-    }
-  }, [])
+  // Poll until the job is finished; stops on unmount or a terminal status.
+  usePolling({
+    enabled: job !== null && ACTIVE_STATUSES.has(job.status),
+    poll: () => exportService.getExport(job!.id),
+    onResult: (updated) => {
+      setJob(updated)
+      return !ACTIVE_STATUSES.has(updated.status)
+    },
+    onError: (err) => setError(getErrorMessage(err, 'Could not check the export status.')),
+    intervalMs: 1500,
+  })
+
+  const downloadMutation = useMutation({
+    mutationFn: (target: ExportJob) => exportService.downloadExport(target),
+    onError: (err) => setError(getErrorMessage(err, 'Could not download the file.')),
+  })
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (
-        sitesRef.current &&
-        !sitesRef.current.contains(event.target as Node)
-      ) {
+      if (sitesRef.current && !sitesRef.current.contains(event.target as Node)) {
         setSitesOpen(false)
       }
     }
 
     document.addEventListener('mousedown', handleClickOutside)
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside)
-    }
+    return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  function updateFilter<K extends keyof ExportFilters>(
-    key: K,
-    value: ExportFilters[K],
-  ) {
-    setFilters((previous) => ({
-      ...previous,
-      [key]: value,
-    }))
+  function updateFilter<K extends keyof ExportFilters>(key: K, value: ExportFilters[K]) {
+    setFilters((previous) => ({ ...previous, [key]: value }))
   }
 
   function clearFilters() {
@@ -87,7 +99,6 @@ export function ExportsPage() {
 
   function toggleSite(siteId: number) {
     const current = filters.site_ids ?? []
-
     const next = current.includes(siteId)
       ? current.filter((id) => id !== siteId)
       : [...current, siteId]
@@ -96,96 +107,22 @@ export function ExportsPage() {
   }
 
   function removeSite(siteId: number) {
-    const current = filters.site_ids ?? []
-    const next = current.filter((id) => id !== siteId)
-
+    const next = (filters.site_ids ?? []).filter((id) => id !== siteId)
     updateFilter('site_ids', next.length > 0 ? next : undefined)
   }
 
   function selectAllSites() {
     if (!options?.sites.length) return
-
-    updateFilter(
-      'site_ids',
-      options.sites.map((site) => site.id),
-    )
+    updateFilter('site_ids', options.sites.map((site) => site.id))
   }
 
   function clearSites() {
     updateFilter('site_ids', undefined)
   }
 
-  async function handleCreate() {
-    setError(null)
-    setIsCreating(true)
-    setJob(null)
-
-    if (pollRef.current) {
-      clearInterval(pollRef.current)
-      pollRef.current = null
-    }
-
-    try {
-      const created = await exportService.createExport(format, filters)
-      setJob(created)
-
-      if (created.status !== 'done') {
-        pollRef.current = setInterval(async () => {
-          try {
-            const updated = await exportService.getExport(created.id)
-            setJob(updated)
-
-            if (
-              updated.status === 'done' ||
-              updated.status === 'failed'
-            ) {
-              if (pollRef.current) {
-                clearInterval(pollRef.current)
-                pollRef.current = null
-              }
-            }
-          } catch {
-            if (pollRef.current) {
-              clearInterval(pollRef.current)
-              pollRef.current = null
-            }
-
-            setError('Could not check the export status.')
-          }
-        }, 1500)
-      }
-    } catch {
-      setError('Could not start the export.')
-    } finally {
-      setIsCreating(false)
-    }
-  }
-
-  async function handleDownload() {
-    if (!job) return
-
-    try {
-      await exportService.downloadExport(job)
-    } catch {
-      setError('Could not download the file.')
-    }
-  }
-
-  const hasFilters = Object.values(filters).some((value) => {
-    if (Array.isArray(value)) {
-      return value.length > 0
-    }
-
-    return value !== undefined && value !== ''
-  })
-
-  const activeFilterCount = Object.values(filters).filter((value) => {
-    if (Array.isArray(value)) {
-      return value.length > 0
-    }
-
-    return value !== undefined && value !== ''
-  }).length
+  const activeFilterCount = Object.values(filters).filter(isActiveFilter).length
+  const hasFilters = activeFilterCount > 0
+  const isCreating = createMutation.isPending
 
   const selectedSites =
     options?.sites.filter((site) =>
@@ -198,7 +135,7 @@ export function ExportsPage() {
     ) ?? []
 
   return (
-    <AppLayout title="Exports">
+    <>
       {/* PAGE HEADER */}
       <div className="mb-7 flex flex-col gap-2">
         <div className="flex items-center gap-2">
@@ -217,6 +154,13 @@ export function ExportsPage() {
           </div>
         </div>
       </div>
+
+      {optionsQuery.isError && (
+        <Alert tone="warning" className="mb-6">
+          Could not load the filter options ({getErrorMessage(optionsQuery.error, 'unknown error')}).
+          You can still export without filters.
+        </Alert>
+      )}
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
         {/* ============================================================
@@ -264,37 +208,13 @@ export function ExportsPage() {
                   Species search
                 </FieldLabel>
 
-                <div className="relative">
-                  <Search
-                    size={17}
-                    className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-950/35"
-                  />
-
-                  <input
-                    id="export-search"
-                    type="text"
-                    value={filters.search ?? ''}
-                    onChange={(event) =>
-                      updateFilter(
-                        'search',
-                        event.target.value || undefined,
-                      )
-                    }
-                    placeholder="Search scientific or common name..."
-                    className="h-11 w-full rounded-xl border border-mist-200 bg-white pl-10 pr-10 text-sm text-ink-950 outline-none transition placeholder:text-ink-950/35 hover:border-mist-300 focus:border-canopy-600 focus:ring-4 focus:ring-canopy-600/10 dark:bg-paper-50 dark:hover:border-canopy-400/40"
-                  />
-
-                  {filters.search && (
-                    <button
-                      type="button"
-                      onClick={() => updateFilter('search', undefined)}
-                      aria-label="Clear species search"
-                      className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-1 text-ink-950/35 transition hover:bg-mist-100 hover:text-ink-950"
-                    >
-                      <X size={15} />
-                    </button>
-                  )}
-                </div>
+                <SearchInput
+                  id="export-search"
+                  value={filters.search ?? ''}
+                  onChange={(event) => updateFilter('search', event.target.value || undefined)}
+                  placeholder="Search scientific or common name..."
+                  wrapperClassName="max-w-none"
+                />
               </div>
             </FilterSection>
 
@@ -510,24 +430,20 @@ export function ExportsPage() {
                   }
                 />
 
-                <FilterSelect
+                <Combobox
                   label="Family"
                   value={filters.family ?? ''}
                   options={options?.families ?? []}
                   placeholder="All families"
-                  onChange={(value) =>
-                    updateFilter('family', value || undefined)
-                  }
+                  onChange={(value) => updateFilter('family', value || undefined)}
                 />
 
-                <FilterSelect
+                <Combobox
                   label="Genus"
                   value={filters.genus ?? ''}
                   options={options?.genera ?? []}
                   placeholder="All genera"
-                  onChange={(value) =>
-                    updateFilter('genus', value || undefined)
-                  }
+                  onChange={(value) => updateFilter('genus', value || undefined)}
                 />
               </div>
             </FilterSection>
@@ -665,21 +581,14 @@ export function ExportsPage() {
             )}
 
             <Button
-              onClick={handleCreate}
+              onClick={() => createMutation.mutate()}
               isLoading={isCreating}
               className="mt-5 w-full dark:!bg-canopy-700 dark:!text-white dark:hover:!bg-canopy-600"
             >
               Generate export
             </Button>
 
-            {error && (
-              <div
-                role="alert"
-                className="mt-4 rounded-xl border border-red-200 bg-red-50 px-3.5 py-3 text-sm font-medium text-red-700 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-300"
-              >
-                {error}
-              </div>
-            )}
+            {error && <Alert className="mt-4">{error}</Alert>}
 
             {job && (
               <div className="mt-5 rounded-xl border border-canopy-900/10 bg-mist-100/50 p-4 dark:border-canopy-400/15">
@@ -727,7 +636,7 @@ export function ExportsPage() {
                     <Button
                       size="md"
                       variant="secondary"
-                      onClick={handleDownload}
+                      onClick={() => job && downloadMutation.mutate(job)}
                       className="shrink-0 gap-2"
                     >
                       <Download size={15} />
@@ -774,7 +683,7 @@ export function ExportsPage() {
           </Card>
         </div>
       </div>
-    </AppLayout>
+    </>
   )
 }
 
