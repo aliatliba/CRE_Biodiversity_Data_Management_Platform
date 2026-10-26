@@ -32,8 +32,10 @@ engine = create_engine(TEST_DATABASE_URL)
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
-@pytest.fixture(scope="session", autouse=True)
+@pytest.fixture(scope="session")
 def setup_test_db():
+    """Fresh schema for the whole run. Requested by db_session (and autoused by
+    tests/integration), so unit tests run without a database."""
     with engine.begin() as conn:
         conn.execute(text("CREATE EXTENSION IF NOT EXISTS pg_trgm"))
         conn.execute(text("CREATE EXTENSION IF NOT EXISTS citext"))
@@ -113,7 +115,7 @@ def fake_providers(monkeypatch):
 
 
 @pytest.fixture
-def db_session():
+def db_session(setup_test_db):
     """Session bound to an outer transaction that is always rolled back.
 
     ``join_transaction_mode="create_savepoint"`` makes the app's own

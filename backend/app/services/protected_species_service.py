@@ -2,15 +2,42 @@ from sqlalchemy.orm import Session
 
 from app.core.exceptions import ConflictError, NotFoundError
 from app.models.protected_species import ProtectedSpeciesList
-from app.models.species import Species
+from app.models.species import Species, escape_like
 from app.schemas.protected_species import ProtectedSpeciesCreate
 
 
-def list_protected_species(db: Session, search: str | None = None) -> list[ProtectedSpeciesList]:
-    query = db.query(ProtectedSpeciesList)
+def list_protected_species(
+    db: Session, search: str | None = None, page: int = 1, page_size: int = 25
+) -> tuple[list[dict], int]:
+    """One page of the protected list (alphabetical), each entry with the IUCN status
+    of the matching recorded species. Both names are CITEXT: matched case-insensitively,
+    and unique on both sides, so the join never duplicates an entry."""
+    query = db.query(ProtectedSpeciesList, Species.iucn_status).outerjoin(
+        Species, Species.scientific_name == ProtectedSpeciesList.scientific_name
+    )
     if search:
-        query = query.filter(ProtectedSpeciesList.scientific_name.ilike(f"%{search}%"))
-    return query.order_by(ProtectedSpeciesList.scientific_name).all()
+        query = query.filter(
+            ProtectedSpeciesList.scientific_name.ilike(f"%{escape_like(search)}%", escape="\\")
+        )
+    total = query.count()
+    rows = (
+        query.order_by(ProtectedSpeciesList.scientific_name)
+        .offset((page - 1) * page_size)
+        .limit(page_size)
+        .all()
+    )
+    items = [
+        {
+            "id": entry.id,
+            "scientific_name": entry.scientific_name,
+            "source_reference": entry.source_reference,
+            "added_by": entry.added_by,
+            "created_at": entry.created_at,
+            "iucn_status": iucn_status or None,
+        }
+        for entry, iucn_status in rows
+    ]
+    return items, total
 
 
 def sync_species_national_status(db: Session, scientific_name: str) -> int:

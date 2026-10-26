@@ -1,21 +1,26 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ShieldCheck, Plus, Trash2 } from 'lucide-react'
 import { Alert } from '@/components/ui/Alert'
+import { Badge } from '@/components/ui/Badge'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { SearchInput } from '@/components/ui/SearchInput'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
+import { Pagination } from '@/components/ui/Pagination'
 import { LoadingSpinner } from '@/components/common/LoadingSpinner'
 import { ErrorState } from '@/components/common/ErrorState'
 import { EmptyState } from '@/components/common/EmptyState'
 import { useAuth } from '@/hooks/useAuth'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import { getErrorMessage } from '@/lib/errors'
+import { getIucnTone } from '@/lib/iucn'
 import { queryKeys } from '@/lib/queryKeys'
 import * as protectedSpeciesService from '../services/protectedSpeciesService'
 import type { ProtectedSpeciesEntry } from '../types'
+
+const DEFAULT_PAGE_SIZE = 25
 
 export function ProtectedSpeciesPage() {
   const { user } = useAuth()
@@ -24,6 +29,11 @@ export function ProtectedSpeciesPage() {
 
   const [search, setSearch] = useState('')
   const debouncedSearch = useDebouncedValue(search.trim())
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
+
+  // A new search starts again from the first page.
+  useEffect(() => setPage(1), [debouncedSearch])
 
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [form, setForm] = useState({ scientific_name: '', source_reference: '' })
@@ -31,12 +41,19 @@ export function ProtectedSpeciesPage() {
   const [entryToRemove, setEntryToRemove] = useState<ProtectedSpeciesEntry | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
 
+  const listParams = { search: debouncedSearch || undefined, page, page_size: pageSize }
   const query = useQuery({
-    queryKey: queryKeys.protectedSpecies(debouncedSearch),
-    queryFn: () => protectedSpeciesService.listProtectedSpecies(debouncedSearch || undefined),
+    queryKey: queryKeys.protectedSpecies(listParams),
+    queryFn: () => protectedSpeciesService.listProtectedSpecies(listParams),
     placeholderData: keepPreviousData,
   })
-  const entries = query.data ?? []
+  const entries = query.data?.items ?? []
+
+  // Removing the last entry of the last page: step back to the new last page.
+  const lastPage = query.data?.pages || 1
+  useEffect(() => {
+    if (query.isSuccess && page > lastPage) setPage(lastPage)
+  }, [query.isSuccess, page, lastPage])
 
   function invalidate() {
     void queryClient.invalidateQueries({ queryKey: ['protected-species'] })
@@ -120,54 +137,73 @@ export function ProtectedSpeciesPage() {
       {query.isSuccess && entries.length === 0 && (
         <EmptyState
           icon={<ShieldCheck size={22} />}
-          title="Nothing on the protected list yet"
+          title={debouncedSearch ? 'No matching species' : 'Nothing on the protected list yet'}
           description={
-            isAdmin
-              ? 'Add a scientific name to have it flagged as Protected whenever it\'s logged.'
-              : 'Your administrator hasn\'t added any species to this list yet.'
+            debouncedSearch
+              ? 'Try a different search term.'
+              : isAdmin
+                ? 'Add a scientific name to have it flagged as Protected whenever it\'s logged.'
+                : 'Your administrator hasn\'t added any species to this list yet.'
           }
         />
       )}
 
       {query.isSuccess && entries.length > 0 && (
-        <div className="overflow-hidden rounded-2xl border border-canopy-900/10 bg-paper-0">
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-canopy-900/[0.08] bg-mist-100/50 text-xs font-semibold uppercase tracking-wide text-ink-950/50">
-                <th className="px-5 py-3">Scientific name</th>
-                <th className="hidden px-5 py-3 sm:table-cell">Source</th>
-                <th className="px-5 py-3">Added</th>
-                {isAdmin && <th className="px-5 py-3" />}
-              </tr>
-            </thead>
-            <tbody>
-              {entries.map((entry) => (
-                <tr key={entry.id} className="border-b border-canopy-900/[0.05] last:border-0">
-                  <td className="px-5 py-3.5 font-medium italic text-canopy-900">{entry.scientific_name}</td>
-                  <td className="hidden px-5 py-3.5 text-ink-950/60 sm:table-cell">
-                    {entry.source_reference || '—'}
-                  </td>
-                  <td className="px-5 py-3.5 text-ink-950/50">
-                    {new Date(entry.created_at).toLocaleDateString()}
-                  </td>
-                  {isAdmin && (
-                    <td className="px-5 py-3.5 text-right">
-                      <button
-                        onClick={() => {
-                          setActionError(null)
-                          setEntryToRemove(entry)
-                        }}
-                        aria-label={`Remove ${entry.scientific_name}`}
-                        className="rounded-full p-1.5 text-ink-950/30 transition-colors hover:bg-red-50 hover:text-red-600"
-                      >
-                        <Trash2 size={15} />
-                      </button>
-                    </td>
-                  )}
+        <div className={query.isPlaceholderData ? 'opacity-60 transition-opacity' : undefined}>
+          <div className="overflow-hidden rounded-2xl border border-canopy-900/10 bg-paper-0">
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="border-b border-canopy-900/[0.08] bg-mist-100/50 text-xs font-semibold uppercase tracking-wide text-ink-950/50">
+                  <th className="px-5 py-3">Scientific name</th>
+                  <th className="px-5 py-3">IUCN</th>
+                  <th className="px-5 py-3">Added</th>
+                  {isAdmin && <th className="px-5 py-3" />}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {entries.map((entry) => (
+                  <tr key={entry.id} className="border-b border-canopy-900/[0.05] last:border-0">
+                    <td className="px-5 py-3.5 font-medium italic text-canopy-900">{entry.scientific_name}</td>
+                    <td className="px-5 py-3.5">
+                      {entry.iucn_status && (
+                        <Badge tone={getIucnTone(entry.iucn_status)}>{entry.iucn_status}</Badge>
+                      )}
+                    </td>
+                    <td className="px-5 py-3.5 text-ink-950/50">
+                      {new Date(entry.created_at).toLocaleDateString()}
+                    </td>
+                    {isAdmin && (
+                      <td className="px-5 py-3.5 text-right">
+                        <button
+                          onClick={() => {
+                            setActionError(null)
+                            setEntryToRemove(entry)
+                          }}
+                          aria-label={`Remove ${entry.scientific_name}`}
+                          className="rounded-full p-1.5 text-ink-950/30 transition-colors hover:bg-red-50 hover:text-red-600"
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      </td>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <Pagination
+            className="mt-5"
+            page={page}
+            pages={lastPage}
+            total={query.data.total}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={(size) => {
+              setPageSize(size)
+              setPage(1)
+            }}
+          />
         </div>
       )}
 

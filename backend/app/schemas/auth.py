@@ -1,10 +1,12 @@
 from pydantic import BaseModel, ConfigDict
 
+from app.schemas.common import PasswordInput, Text
+
 
 class LoginRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    email: str
-    password: str
+    email: Text(254, min_length=1)
+    password: PasswordInput
 
 
 class TokenResponse(BaseModel):
@@ -16,7 +18,7 @@ class TokenResponse(BaseModel):
 
 class RefreshRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    refresh_token: str
+    refresh_token: Text(4096, min_length=1)
 
 
 class UserProfileResponse(BaseModel):

@@ -19,9 +19,9 @@ import { IUCN_COLORS, THREATENED_STATUSES_PARAM } from '@/lib/iucn'
 import { queryKeys } from '@/lib/queryKeys'
 import { ROUTES, siteUrl, speciesListUrl } from '@/lib/constants'
 import * as dashboardService from '../services/dashboardService'
-import { StatCard } from '../components/StatCard'
+import { StatCard } from '@/components/common/StatCard'
 
-const COMPOSITION_LABELS = ['Fauna', 'Flora', 'Micro-organisms', 'Fungi']
+const COMPOSITION_LABELS = ['Fauna', 'Flora', 'Micro-organisms', 'Fungi', 'Unclassified']
 
 export function DashboardPage() {
   const { user } = useAuth()
@@ -38,6 +38,16 @@ export function DashboardPage() {
   }))
   const iucnData = toChartData(stats?.iucn_breakdown)
   const statusData = toChartData(stats?.status_breakdown)
+  // Richest sites first (the API already orders them; kept explicit for the table).
+  const siteRecords = (stats?.site_stats ?? []).reduce((sum, s) => sum + s.species_count, 0)
+  const siteStats = [...(stats?.site_stats ?? [])]
+    .map((site) => ({
+      ...site,
+      // Older APIs did not send species_share: derive it from the counts.
+      species_share:
+        site.species_share ?? (siteRecords > 0 ? (site.species_count / siteRecords) * 100 : 0),
+    }))
+    .sort((a, b) => b.species_count - a.species_count || a.site_name.localeCompare(b.site_name))
   const siteRichnessData =
     stats?.species_richness_by_site.map((site) => ({
       label: site.site_name,
@@ -148,7 +158,7 @@ export function DashboardPage() {
                       </th>
 
                       <th className="px-4 py-3">
-                        Species
+                        Share of species
                       </th>
 
                       <th className="px-4 py-3">
@@ -166,7 +176,7 @@ export function DashboardPage() {
                   </thead>
 
                   <tbody>
-                    {stats.site_stats.map(
+                    {siteStats.map(
                       (site, index) => (
                         <motion.tr
                           key={site.site_id}
@@ -193,8 +203,24 @@ export function DashboardPage() {
                             </Link>
                           </td>
 
-                          <td className="px-4 py-3 tabular-nums">
-                            {site.species_count}
+                          <td
+                            className="px-4 py-3"
+                            title={`${site.species_count} species`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <span className="w-12 shrink-0 font-semibold tabular-nums text-canopy-950">
+                                {site.species_share.toFixed(1)}%
+                              </span>
+                              <div
+                                className="h-1.5 w-24 overflow-hidden rounded-full bg-canopy-900/[0.08]"
+                                aria-hidden
+                              >
+                                <div
+                                  className="h-full rounded-full bg-canopy-600"
+                                  style={{ width: `${site.species_share}%` }}
+                                />
+                              </div>
+                            </div>
                           </td>
 
                           <td className="px-4 py-3 tabular-nums">

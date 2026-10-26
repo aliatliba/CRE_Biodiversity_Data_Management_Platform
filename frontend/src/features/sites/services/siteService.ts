@@ -1,8 +1,8 @@
 import { api } from '@/services/api'
-import type { Site, SiteCreateInput, SiteUpdateInput } from '../types'
+import type { Site, SiteCreateInput, SiteListItem, SiteUpdateInput } from '../types'
 
-export async function listSites(search?: string): Promise<Site[]> {
-  const { data } = await api.get<Site[]>('/sites', { params: search ? { search } : undefined })
+export async function listSites(search?: string): Promise<SiteListItem[]> {
+  const { data } = await api.get<SiteListItem[]>('/sites', { params: search ? { search } : undefined })
   return data
 }
 

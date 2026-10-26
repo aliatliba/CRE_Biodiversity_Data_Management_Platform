@@ -3,18 +3,18 @@ from typing import List
 from fastapi import APIRouter, Query
 
 from app.core.dependencies import ActiveUser, AdminUser, DBSession
-from app.schemas.site import SiteCreate, SiteResponse, SiteUpdate
+from app.schemas.site import SiteCreate, SiteListItem, SiteResponse, SiteUpdate
 from app.schemas.species import SiteSpeciesCreate, SiteSpeciesResponse
 from app.services import site_service, species_service
 
 router = APIRouter()
 
 
-@router.get("", response_model=List[SiteResponse])
+@router.get("", response_model=List[SiteListItem])
 def list_sites(
     db: DBSession,
     user: ActiveUser,
-    search: str | None = Query(None),
+    search: str | None = Query(None, max_length=255),
 ):
     return site_service.list_sites(db, search)
 
@@ -64,5 +64,5 @@ def list_site_species(site_id: int, db: DBSession, user: ActiveUser):
 
 @router.delete("/{site_id}/species/{species_id}")
 def remove_site_species(site_id: int, species_id: int, db: DBSession, user: ActiveUser):
-    species_service.remove_site_species(db, site_id, species_id)
+    species_service.remove_site_species(db, site_id, species_id, user)
     return {"detail": "Species removed from site"}

@@ -1,9 +1,12 @@
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.core.exceptions import ConflictError, NotFoundError
 from app.models.site import Site
 from app.models.site_species import SiteSpecies
+from app.models.species import Species, escape_like
 from app.schemas.site import SiteCreate, SiteUpdate
+from app.services.dashboard_service import THREATENED_STATUSES, _taxonomy_complete_filter
 
 
 def create_site(db: Session, data: SiteCreate, user_id: int) -> Site:
@@ -26,11 +29,45 @@ def get_site(db: Session, site_id: int) -> Site:
     return site
 
 
-def list_sites(db: Session, search: str | None = None) -> list[Site]:
-    query = db.query(Site)
+def list_sites(db: Session, search: str | None = None) -> list[dict]:
+    """Sites (alphabetical) with their species counters, in one grouped query.
+
+    ``species_share`` is the site's percentage of all site-species records, across
+    every site (not only those matching ``search``), so it reads the same either way.
+    """
+    has_iucn = Species.iucn_status.isnot(None) & (Species.iucn_status != "")
+    query = (
+        db.query(
+            Site,
+            func.count(Species.id),
+            func.count(Species.id).filter(Species.national_status == "Protected"),
+            func.count(Species.id).filter(Species.iucn_status.in_(THREATENED_STATUSES)),
+            func.count(Species.id).filter(_taxonomy_complete_filter() & has_iucn),
+        )
+        .outerjoin(SiteSpecies, SiteSpecies.site_id == Site.id)
+        .outerjoin(Species, Species.id == SiteSpecies.species_id)
+        .group_by(Site.id)
+    )
     if search:
-        query = query.filter(Site.name.ilike(f"%{search}%"))
-    return query.order_by(Site.name).all()
+        query = query.filter(Site.name.ilike(f"%{escape_like(search)}%", escape="\\"))
+    rows = query.order_by(Site.name).all()
+
+    total_records = db.query(func.count(SiteSpecies.id)).scalar() or 0
+    return [
+        {
+            "id": site.id,
+            "name": site.name,
+            "code": site.code,
+            "description": site.description,
+            "created_by": site.created_by,
+            "species_count": count,
+            "species_share": round(count / total_records * 100, 1) if total_records else 0.0,
+            "protected_count": protected,
+            "threatened_count": threatened,
+            "complete_count": complete,
+        }
+        for site, count, protected, threatened, complete in rows
+    ]
 
 
 def update_site(db: Session, site_id: int, data: SiteUpdate) -> Site:

@@ -34,11 +34,15 @@ def get_current_user(
     payload = decode_token(credentials.credentials)
     if payload is None or payload.get("type") != "access":
         raise credentials_exception
-    user_id: str | None = payload.get("sub")
-    if user_id is None:
-        raise credentials_exception
-    user = db.query(User).filter(User.id == int(user_id)).first()
+    try:
+        user_id = int(payload["sub"])
+    except (KeyError, TypeError, ValueError):
+        raise credentials_exception from None
+    user = db.query(User).filter(User.id == user_id).first()
     if user is None or not user.is_active:
+        raise credentials_exception
+    # Tokens issued before a password change / sign-out-everywhere are dead.
+    if payload.get("ver") != user.token_version:
         raise credentials_exception
     return user
 
@@ -63,7 +67,7 @@ def require_password_already_set(current_user: CurrentUser) -> User:
 ActiveUser = Annotated[User, Depends(require_password_already_set)]
 
 
-def require_admin(current_user: CurrentUser) -> User:
+def require_admin(current_user: ActiveUser) -> User:
     if current_user.role.name != "admin":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,

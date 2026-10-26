@@ -19,18 +19,20 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from typing import Any, Generic, TypeVar
 
-import structlog
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.core.db import SessionLocal
+from app.core.exceptions import TooManyRequestsError, public_error_message
 
-logger = structlog.get_logger()
+ACTIVE_STATUSES = ("queued", "running")
 
 
 @dataclass
 class BaseJob:
     id: str
+    owner_id: int | None = None
+    kind: str = ""  # e.g. "bulk_import", "lookup_batch", "graphics"
     status: str = "queued"  # queued | running | completed | failed
     started_at: datetime | None = None
     finished_at: datetime | None = None
@@ -86,8 +88,38 @@ class JobStore(Generic[J]):
         self._jobs[job.id] = job
         return job
 
+    def active_jobs(self, kind: str | None = None, owner_id: int | None = None) -> list[J]:
+        return [
+            job
+            for job in self._jobs.values()
+            if job.status in ACTIVE_STATUSES
+            and (kind is None or job.kind == kind)
+            and (owner_id is None or job.owner_id == owner_id)
+        ]
+
+    def create_for_user(self, owner_id: int, kind: str, **fields: Any) -> J:
+        """Create a job unless ``owner_id`` already has MAX_ACTIVE_JOBS_PER_USER queued
+        or running jobs of this ``kind`` (each one holds memory, provider quota and a
+        worker slot, so one user must not be able to queue hundreds)."""
+        limit = get_settings().max_active_jobs_per_user
+        if len(self.active_jobs(kind=kind, owner_id=owner_id)) >= limit:
+            raise TooManyRequestsError(
+                "You already have a job of this type running. Wait for it to finish."
+            )
+        return self.create(owner_id=owner_id, kind=kind, **fields)
+
     def get(self, job_id: str) -> J | None:
         return self._jobs.get(job_id)
+
+    def get_for_user(self, job_id: str, user: Any) -> J | None:
+        """The job, if ``user`` started it or is an admin; otherwise None (reported as
+        not found, so job ids cannot be probed)."""
+        job = self.get(job_id)
+        if job is None:
+            return None
+        if job.owner_id != user.id and user.role.name != "admin":
+            return None
+        return job
 
 
 job_store: JobStore[Job] = JobStore(Job)
@@ -98,8 +130,9 @@ async def run_job(job: BaseJob, work: Callable[[Session], Awaitable[None]]) -> N
     """Run ``work(db)`` for ``job``: status transitions, own DB session, error capture.
 
     The session is opened here and always closed, ``finished_at`` is always set, and an
-    exception marks the job ``failed`` (with the message) instead of vanishing inside
-    the background task.
+    exception marks the job ``failed`` instead of vanishing inside the background task.
+    ``work`` should end its transactions promptly (see species_service.DbRunner), since
+    an open transaction keeps a pooled connection checked out.
     """
     db = SessionLocal()
     try:
@@ -107,9 +140,10 @@ async def run_job(job: BaseJob, work: Callable[[Session], Awaitable[None]]) -> N
         await work(db)
         job.status = "completed"
     except Exception as exc:
-        logger.error("job_failed", job_id=job.id, exc_info=exc)
         job.status = "failed"
-        job.error = str(exc)
+        # Only messages written for users reach the client; anything else is logged
+        # with a reference and replaced by a generic text.
+        job.error = public_error_message(exc, "job_failed")
     finally:
         job.finished_at = datetime.now(timezone.utc)
         db.close()
