@@ -3,6 +3,8 @@ import sys
 
 import structlog
 
+from app.core.config import get_settings
+
 
 def configure_logging() -> None:
     structlog.configure(
@@ -22,4 +24,8 @@ def configure_logging() -> None:
         wrapper_class=structlog.stdlib.BoundLogger,
         cache_logger_on_first_use=True,
     )
-    logging.basicConfig(format="%(message)s", stream=sys.stdout, level=logging.INFO)
+    logging.basicConfig(
+        format="%(message)s",
+        stream=sys.stdout,
+        level=getattr(logging, get_settings().log_level.upper(), logging.INFO),
+    )

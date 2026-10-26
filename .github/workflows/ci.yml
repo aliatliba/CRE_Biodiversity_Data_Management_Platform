@@ -38,6 +38,13 @@ jobs:
             backend/requirements-dev.txt
       - run: pip install -r requirements.txt -r requirements-dev.txt
       - run: ruff check .
+      - name: Known vulnerabilities in Python dependencies
+        run: pip-audit -r requirements.txt
+      - name: start.sh is a valid container entrypoint
+        # Docker runs CMD ["./start.sh"] via exec: the file must begin with "#!".
+        run: |
+          test "$(head -c 2 start.sh)" = '#!' || { echo "start.sh must start with a shebang"; exit 1; }
+          sh -n start.sh
       - run: pytest -q
       - name: Migrations apply to a fresh database and match the models
         env:
@@ -61,6 +68,8 @@ jobs:
           cache: npm
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci
+      - name: Known vulnerabilities in npm dependencies
+        run: npm audit --omit=dev --audit-level=high
       - run: npx tsc -b
       - run: npm run lint
       - run: npm test

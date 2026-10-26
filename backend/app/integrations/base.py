@@ -3,10 +3,15 @@ from typing import Any
 
 import httpx
 
-DEFAULT_HEADERS = {
-    "User-Agent": "BiodiversityPlatform/1.0 (contact: a.tliba2004@gmail.com)",
-    "Accept": "application/json",
-}
+from app.core.config import get_settings
+
+
+def _default_headers() -> dict[str, str]:
+    # GBIF and Wikidata ask clients to identify themselves with a contact address.
+    contact = get_settings().provider_contact
+    user_agent = "BiodiversityPlatform/1.0" + (f" (contact: {contact})" if contact else "")
+    return {"User-Agent": user_agent, "Accept": "application/json"}
+
 
 # One shared AsyncClient (connection pooling / keep-alive) for every provider call.
 # ``lifespan`` creates it at startup and closes it on shutdown; it is also created
@@ -19,7 +24,7 @@ def init_http_client() -> httpx.AsyncClient:
     if _http_client is None or _http_client.is_closed:
         _http_client = httpx.AsyncClient(
             follow_redirects=True,
-            headers=DEFAULT_HEADERS,
+            headers=_default_headers(),
             timeout=5.0,
         )
     return _http_client

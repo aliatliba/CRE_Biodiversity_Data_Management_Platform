@@ -1,4 +1,5 @@
 import os
+from typing import List
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse
@@ -22,6 +23,12 @@ def create_export(data: ExportRequest, db: DBSession, user: ActiveUser):
     )
 
 
+@router.get("", response_model=List[ExportResponse])
+def list_my_exports(db: DBSession, user: ActiveUser):
+    """The signed-in user's own exports, newest first."""
+    return export_service.list_exports(db, user.id)
+
+
 @router.get("/options")
 def get_export_options(db: DBSession, user: ActiveUser):
     return export_service.get_export_options(db)
@@ -29,12 +36,12 @@ def get_export_options(db: DBSession, user: ActiveUser):
 
 @router.get("/{export_id}", response_model=ExportResponse)
 def get_export(export_id: int, db: DBSession, user: ActiveUser):
-    return export_service.get_export(db, export_id)
+    return export_service.get_export_for_user(db, export_id, user)
 
 
 @router.get("/{export_id}/download")
 def download_export(export_id: int, db: DBSession, user: ActiveUser):
-    export = export_service.get_export(db, export_id)
+    export = export_service.get_export_for_user(db, export_id, user)
 
     if export.status != "done" or not export.file_path or not os.path.exists(export.file_path):
         raise HTTPException(

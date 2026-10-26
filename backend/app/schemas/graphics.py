@@ -2,12 +2,15 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
+
+from app.schemas.common import Text
 
 
 class GraphicsGenerateRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     site_id: int
-    graphic_type: str = "dendrogram"
+    graphic_type: Text(50) = "dendrogram"
 
 
 class GraphicTypeResponse(BaseModel):

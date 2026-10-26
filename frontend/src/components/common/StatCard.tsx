@@ -6,10 +6,12 @@ interface StatCardProps {
   label: string
   value: string | number
   icon: LucideIcon
+  /** Extra context under the label, e.g. the name behind a number. */
+  hint?: string
   delay?: number
 }
 
-export function StatCard({ label, value, icon: Icon, delay = 0 }: StatCardProps) {
+export function StatCard({ label, value, icon: Icon, hint, delay = 0 }: StatCardProps) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }}
@@ -20,9 +22,10 @@ export function StatCard({ label, value, icon: Icon, delay = 0 }: StatCardProps)
         <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-canopy-700/10 text-canopy-700">
           <Icon size={20} />
         </div>
-        <div>
+        <div className="min-w-0">
           <p className="font-display text-2xl font-bold tabular-nums text-canopy-950">{value}</p>
           <p className="text-xs font-medium text-ink-950/50">{label}</p>
+          {hint && <p className="mt-0.5 truncate text-xs text-ink-950/40" title={hint}>{hint}</p>}
         </div>
       </Card>
     </motion.div>

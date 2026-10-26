@@ -1,24 +1,26 @@
 import json
+import secrets
 from contextlib import asynccontextmanager
 from pathlib import Path
 
 import structlog
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware  # add this import
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from sqlalchemy import text
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import DataError, IntegrityError
 
 from app.api import router as api_router
 from app.core.config import get_settings
-from app.core.db import SessionLocal, engine, init_extensions
+from app.core.db import SessionLocal, assert_schema_is_current, engine, init_extensions
 from app.core.exceptions import (
     AppException,
     app_exception_handler,
+    data_error_handler,
     generic_exception_handler,
     integrity_error_handler,
+    rate_limit_handler,
 )
 from app.core.limiter import limiter
 from app.core.logging import configure_logging
@@ -41,6 +43,7 @@ async def lifespan(app: FastAPI):
     configure_logging()
     settings = get_settings()
     if settings.environment != "test":
+        assert_schema_is_current()
         init_extensions()
         seed_database()
     init_http_client()
@@ -50,14 +53,18 @@ async def lifespan(app: FastAPI):
         await close_http_client()
 
 
+settings = get_settings()
+
 app = FastAPI(
     title="Biodiversity Data Entry Platform",
     version="1.0.0",
     lifespan=lifespan,
-    debug=True
+    debug=settings.debug,
+    docs_url="/docs" if settings.docs_enabled else None,
+    redoc_url="/redoc" if settings.docs_enabled else None,
+    openapi_url="/openapi.json" if settings.docs_enabled else None,
 )
 
-settings = get_settings()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins_list,
@@ -68,8 +75,9 @@ app.add_middleware(
 
 # Register exception handlers
 app.add_exception_handler(AppException, app_exception_handler)
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_exception_handler(RateLimitExceeded, rate_limit_handler)
 app.add_exception_handler(IntegrityError, integrity_error_handler)
+app.add_exception_handler(DataError, data_error_handler)
 app.add_exception_handler(Exception, generic_exception_handler)
 
 app.state.limiter = limiter
@@ -99,22 +107,44 @@ def seed_database() -> None:
             db.commit()
             db.refresh(admin_role)
 
-        admin_user = db.query(User).filter(User.email == "admin@biodiversity.local").first()
-        if not admin_user:
-            admin_user = User(
-                email="admin@biodiversity.local",
-                hashed_password=get_password_hash("admin123"),
-                full_name="Default Admin",
-                role_id=admin_role.id,
-                must_change_password=False,
-            )
-            db.add(admin_user)
-            db.commit()
-            db.refresh(admin_user)
+        admin_user = seed_admin(db, admin_role)
 
         seed_protected_species(db, admin_user)
     finally:
         db.close()
+
+
+def seed_admin(db, admin_role: Role) -> User:
+    """Create the first admin from INITIAL_ADMIN_EMAIL / INITIAL_ADMIN_PASSWORD.
+
+    Without a configured password a random one is generated and logged once. The
+    account always has to set its own password on first sign-in.
+    """
+    settings = get_settings()
+    admin_user = db.query(User).filter(User.email == settings.initial_admin_email).first()
+    if admin_user:
+        return admin_user
+
+    password = settings.initial_admin_password
+    if not password:
+        password = secrets.token_urlsafe(12)
+        logger.warning(
+            "initial_admin_created",
+            email=settings.initial_admin_email,
+            temporary_password=password,
+            note="Shown only once. Sign in and set a new password.",
+        )
+    admin_user = User(
+        email=settings.initial_admin_email,
+        hashed_password=get_password_hash(password),
+        full_name="Default Admin",
+        role_id=admin_role.id,
+        must_change_password=True,
+    )
+    db.add(admin_user)
+    db.commit()
+    db.refresh(admin_user)
+    return admin_user
 
 
 def seed_protected_species(db, admin_user: User) -> None:

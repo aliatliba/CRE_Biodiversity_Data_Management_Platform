@@ -3,6 +3,11 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.schemas.common import ScientificName, Text
+
+Rank = Text(100)
+LongText = Text(10_000)
+
 
 class Taxonomy(BaseModel):
     kingdom: str | None = None
@@ -42,7 +47,7 @@ class EcologicalTraits(BaseModel):
 
 class SpeciesLookupRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    scientific_name: str
+    scientific_name: ScientificName
 
 
 class SpeciesDraft(BaseModel):
@@ -60,7 +65,7 @@ class SpeciesDraft(BaseModel):
 class BatchSpeciesLookupRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    scientific_names: list[str] = Field(
+    scientific_names: list[Text(255)] = Field(
         ...,
         min_length=1,
         max_length=50,
@@ -70,49 +75,52 @@ class BatchSpeciesLookupRequest(BaseModel):
 
 class SpeciesCreate(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    scientific_name: str
-    kingdom: str | None = None
-    class_name: str | None = None
-    order_name: str | None = None
-    family: str | None = None
-    genus: str | None = None
-    species_epithet: str | None = None
-    common_name: str | None = None
+    scientific_name: ScientificName
+    kingdom: Rank | None = None
+    class_name: Rank | None = None
+    order_name: Rank | None = None
+    family: Rank | None = None
+    genus: Rank | None = None
+    species_epithet: Rank | None = None
+    common_name: Text(255) | None = None
     raw_taxonomy_extra: dict[str, Any] | None = None
     field_sources: dict[str, Any] | None = None
-    iucn_status: str | None = None
-    iucn_trend: str | None = None
-    guild: str | None = None
-    ecosystem_service: str | None = None
-    habitat: str | None = None
-    typology: str | None = None
-    endemism: str | None = None
-    potential_threats: str | None = None
-    reference: str | None = None
+    iucn_status: Text(50) | None = None
+    iucn_trend: Text(50) | None = None
+    guild: Text(255) | None = None
+    ecosystem_service: LongText | None = None
+    habitat: LongText | None = None
+    typology: Text(255) | None = None
+    endemism: Text(255) | None = None
+    potential_threats: LongText | None = None
+    reference: LongText | None = None
     site_id: int
+    # Name the user typed when GBIF resolved it to another accepted name (the draft's
+    # input_scientific_name). Not stored; only used for the protected-list check.
+    input_scientific_name: ScientificName | None = None
 
 
 class SpeciesUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid")
     # Taxonomy
-    kingdom: str | None = None
-    class_name: str | None = None
-    order_name: str | None = None
-    family: str | None = None
-    genus: str | None = None
-    species_epithet: str | None = None
-    common_name: str | None = None
+    kingdom: Rank | None = None
+    class_name: Rank | None = None
+    order_name: Rank | None = None
+    family: Rank | None = None
+    genus: Rank | None = None
+    species_epithet: Rank | None = None
+    common_name: Text(255) | None = None
     # Conservation & ecological traits
-    guild: str | None = None
-    ecosystem_service: str | None = None
-    habitat: str | None = None
-    typology: str | None = None
-    endemism: str | None = None
-    potential_threats: str | None = None
-    reference: str | None = None
-    iucn_status: str | None = None
-    iucn_trend: str | None = None
-    updated_at: str  # optimistic concurrency token
+    guild: Text(255) | None = None
+    ecosystem_service: LongText | None = None
+    habitat: LongText | None = None
+    typology: Text(255) | None = None
+    endemism: Text(255) | None = None
+    potential_threats: LongText | None = None
+    reference: LongText | None = None
+    iucn_status: Text(50) | None = None
+    iucn_trend: Text(50) | None = None
+    updated_at: datetime  # optimistic concurrency token
 
 
 class SpeciesResponse(BaseModel):
@@ -192,7 +200,7 @@ class ValidationHistoryResponse(BaseModel):
 class SiteSpeciesCreate(BaseModel):
     model_config = ConfigDict(extra="forbid")
     species_id: int
-    notes: str | None = None
+    notes: LongText | None = None
 
 
 class SiteSpeciesResponse(BaseModel):
@@ -205,7 +213,7 @@ class SiteSpeciesResponse(BaseModel):
 
 class BulkImportRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    scientific_names: list[str] = Field(..., min_length=1, max_length=300)
+    scientific_names: list[Text(255)] = Field(..., min_length=1, max_length=300)
     site_id: int
     delay_seconds: float = Field(
         1.5, ge=0.2, le=10, description="Seconds to wait between species lookups."
