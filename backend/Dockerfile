@@ -44,11 +44,8 @@ RUN Rscript -e 'options(timeout=600); install.packages("janitor", repos="https:/
 
 # ---------------------------------------------------------
 # ggchicklet (GitHub only, not on CRAN)
-#
-# The previous remotes::install_github() call hit the GitHub API
-# and timed out after 10s on the build server. Instead we download
-# the source tarball with curl (retries + generous timeouts) and
-# install it from a local file, so no API call is needed.
+# Downloaded with curl (retries + generous timeouts) instead of
+# remotes::install_github(), which timed out on the GitHub API.
 # ---------------------------------------------------------
 RUN curl -fsSL --retry 5 --retry-delay 10 --retry-all-errors \
       --connect-timeout 30 --max-time 300 \
@@ -62,8 +59,6 @@ RUN Rscript -e 'options(timeout=600); install.packages("ggimage", repos="https:/
 
 # ---------------------------------------------------------
 # Fail the build if any package needed by the R scripts is missing
-# (install.packages only warns, so without this the error
-#  would only appear later, when a graphic is generated)
 # ---------------------------------------------------------
 RUN Rscript -e 'needed <- c("readxl","dplyr","stringr","janitor","ggplot2","ggraph","igraph","scales","writexl","ggchicklet","jsonlite","httr2","magick","ggimage"); missing <- setdiff(needed, rownames(installed.packages())); if (length(missing) > 0) stop("Missing R packages: ", paste(missing, collapse=", ")); cat("All R packages OK\n")'
 
@@ -79,7 +74,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # ---------------------------------------------------------
 COPY . .
 
-RUN chmod +x start.sh
+# Strip Windows CRLF line endings (fixes "exec format error") and make executable
+RUN sed -i 's/\r$//' start.sh && chmod +x start.sh
 
 # ---------------------------------------------------------
 # Application user
@@ -91,4 +87,5 @@ USER appuser
 
 EXPOSE 8000
 
-CMD ["./start.sh"]
+# Run through sh so it works even if the exec bit or line endings are off
+CMD ["sh", "./start.sh"]
