@@ -55,4 +55,4 @@ def test_protected_species_with_null_adder(client, admin_headers, db_session):
 
     r = client.get("/api/v1/protected-species", headers=admin_headers)
     assert r.status_code == 200
-    assert r.json()[0]["added_by"] is None
+    assert r.json()["items"][0]["added_by"] is None

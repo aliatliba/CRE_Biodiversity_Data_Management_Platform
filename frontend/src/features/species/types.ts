@@ -40,13 +40,7 @@ export type SpeciesListItem = Pick<
   'id' | 'scientific_name' | 'common_name' | 'family' | 'kingdom' | 'iucn_status' | 'national_status'
 >
 
-export interface Page<T> {
-  items: T[]
-  total: number
-  page: number
-  page_size: number
-  pages: number
-}
+export type { Page } from '@/types/common'
 
 export interface SpeciesLookupDraft {
   scientific_name: string
@@ -87,6 +81,8 @@ export interface SpeciesLookupDraft {
 
 export interface SpeciesCreateInput {
   scientific_name: string
+  /** Name the user typed when GBIF resolved a synonym (used for the protected-list check). */
+  input_scientific_name?: string | null
   site_id: number
   kingdom?: string | null
   class_name?: string | null

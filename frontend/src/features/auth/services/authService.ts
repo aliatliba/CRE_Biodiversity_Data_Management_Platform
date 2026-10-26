@@ -27,11 +27,14 @@ export async function updateOwnProfile(payload: UpdateOwnProfileRequest): Promis
 export async function changePassword(payload: ChangePasswordRequest): Promise<void> {
   // The complete-profile endpoint doubles as a general password-change
   // endpoint once must_change_password is already false.
-  await api.post('/auth/complete-profile', payload)
+  await completeProfile(payload)
 }
 
 export async function completeProfile(payload: CompleteProfileRequest): Promise<void> {
-  await api.post('/auth/complete-profile', payload)
+  // Changing the password signs out every session, this one included; the
+  // response carries the replacement tokens for this tab.
+  const { data } = await api.post<TokenResponse>('/auth/complete-profile', payload)
+  setTokens(data.access_token, data.refresh_token)
 }
 
 export async function logout(): Promise<void> {

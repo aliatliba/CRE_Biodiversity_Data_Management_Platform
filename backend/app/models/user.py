@@ -1,10 +1,24 @@
 from datetime import datetime, timezone
 
-from sqlalchemy import BigInteger, Boolean, Column, DateTime, ForeignKey, SmallInteger, String
+from sqlalchemy import (
+    BigInteger,
+    Boolean,
+    Column,
+    DateTime,
+    ForeignKey,
+    Integer,
+    SmallInteger,
+    String,
+    text,
+)
 from sqlalchemy.dialects.postgresql import CITEXT
 from sqlalchemy.orm import relationship
 
 from app.core.db import Base
+
+
+def _utcnow() -> datetime:
+    return datetime.now(timezone.utc)
 
 
 class User(Base):
@@ -18,11 +32,11 @@ class User(Base):
     role_id = Column(SmallInteger, ForeignKey("roles.id"), nullable=False, index=True)
     is_active = Column(Boolean, nullable=False, default=True)
     must_change_password = Column(Boolean, nullable=False, default=True)
-    created_at = Column(
-        DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc)
-    )
-    updated_at = Column(
-        DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc)
-    )
+    # Embedded in access tokens as "ver"; incrementing it invalidates them all.
+    token_version = Column(Integer, nullable=False, default=0, server_default=text("0"))
+    failed_login_attempts = Column(Integer, nullable=False, default=0, server_default=text("0"))
+    locked_until = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=_utcnow)
+    updated_at = Column(DateTime(timezone=True), nullable=False, default=_utcnow, onupdate=_utcnow)
 
     role = relationship("Role", back_populates="users")

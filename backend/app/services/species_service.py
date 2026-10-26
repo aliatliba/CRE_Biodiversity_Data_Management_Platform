@@ -6,7 +6,13 @@ from sqlalchemy.orm import Session, load_only
 from starlette.concurrency import run_in_threadpool
 
 from app.core.config import get_settings
-from app.core.exceptions import BadRequestError, ConflictError, ForbiddenError, NotFoundError
+from app.core.exceptions import (
+    BadRequestError,
+    ConflictError,
+    ForbiddenError,
+    NotFoundError,
+    public_error_message,
+)
 from app.core.ttl_cache import TTLCache
 from app.core.utils import clean_and_dedupe_names
 from app.integrations.base import ExternalProviderClient, ProviderResult, describe_error
@@ -17,8 +23,9 @@ from app.integrations.mapper import normalize_provider_result
 from app.integrations.powo_client import PowoClient
 from app.integrations.wikidata_client import WikidataClient
 from app.models.protected_species import ProtectedSpeciesList
+from app.models.site import Site
 from app.models.site_species import SiteSpecies
-from app.models.species import Species, name_search_filter
+from app.models.species import Species, escape_like, name_search_filter
 from app.models.validation_history import SpeciesValidationHistory
 from app.schemas.species import (
     SiteSpeciesCreate,
@@ -55,15 +62,28 @@ class DbRunner:
     A Session is not safe for concurrent use, so calls through one runner are
     serialised with a lock (the same session is shared by the concurrent workers of a
     batch lookup).
+
+    Each call is its own short transaction (committed on success, rolled back on
+    error). That hands the pooled connection back between calls, instead of holding
+    it through the provider requests and throttling sleeps of a long batch.
     """
 
     def __init__(self, db: Session):
         self.db = db
         self._lock = asyncio.Lock()
 
+    def _run(self, fn, args, kwargs):
+        try:
+            result = fn(self.db, *args, **kwargs)
+            self.db.commit()
+            return result
+        except Exception:
+            self.db.rollback()
+            raise
+
     async def __call__(self, fn, *args, **kwargs):
         async with self._lock:
-            return await run_in_threadpool(fn, self.db, *args, **kwargs)
+            return await run_in_threadpool(self._run, fn, args, kwargs)
 
 
 def _as_runner(db: "Session | DbRunner") -> DbRunner:
@@ -142,7 +162,10 @@ async def lookup_species(db: "Session | DbRunner", scientific_name: str) -> dict
     draft = await fetch_provider_draft(scientific_name)
     # Surface protection status immediately in lookup results, so a
     # researcher sees it before saving the record, not after.
-    draft["national_status"] = await run_db(compute_national_status, draft["scientific_name"])
+    # The decree may list the name the user typed (a synonym), not GBIF's accepted one.
+    draft["national_status"] = await run_db(
+        compute_national_status, draft["scientific_name"], draft.get("input_scientific_name")
+    )
     return draft
 
 
@@ -182,7 +205,7 @@ async def _lookup_batch_item(
         if found:
             item.update(found)
     except Exception as exc:
-        item["error"] = str(exc)
+        item["error"] = public_error_message(exc, "lookup_batch_item_failed")
     return item
 
 
@@ -286,10 +309,13 @@ def ensure_site_association(
     return True
 
 
-def compute_national_status(db: Session, scientific_name: str) -> str:
+def compute_national_status(db: Session, scientific_name: str, *other_names: str | None) -> str:
+    """"Protected" if ``scientific_name`` or any of ``other_names`` (e.g. the synonym
+    the user typed) is on the protected list. Names are CITEXT: case-insensitive."""
+    names = [n for n in (scientific_name, *other_names) if n]
     protected = (
-        db.query(ProtectedSpeciesList)
-        .filter(ProtectedSpeciesList.scientific_name == scientific_name)
+        db.query(ProtectedSpeciesList.id)
+        .filter(ProtectedSpeciesList.scientific_name.in_(names))
         .first()
     )
     return "Protected" if protected else "Non Protected"
@@ -299,8 +325,11 @@ def create_species(db: Session, data: SpeciesCreate, user_id: int) -> Species:
     existing = check_duplicate(db, data.scientific_name)
     if existing:
         raise ConflictError("Species already exists")
+    _require_site(db, data.site_id)
 
-    national_status = compute_national_status(db, data.scientific_name)
+    national_status = compute_national_status(
+        db, data.scientific_name, data.input_scientific_name
+    )
 
     species = Species(
         scientific_name=data.scientific_name,
@@ -365,7 +394,7 @@ def update_species(db: Session, species_id: int, data: SpeciesUpdate, user_id: i
     if not species:
         raise NotFoundError("Species not found")
 
-    incoming_updated_at = _as_utc(datetime.fromisoformat(data.updated_at.replace("Z", "+00:00")))
+    incoming_updated_at = _as_utc(data.updated_at)
     if _as_utc(species.updated_at) != incoming_updated_at:
         raise ConflictError("Species was modified by another user. Please refresh and try again.")
 
@@ -433,15 +462,15 @@ def _apply_species_filters(
     if search:
         query = query.filter(name_search_filter(search))
     if kingdom:
-        query = query.filter(Species.kingdom.ilike(f"%{kingdom}%"))
+        query = query.filter(Species.kingdom.ilike(f"%{escape_like(kingdom)}%", escape="\\"))
     if class_name:
-        query = query.filter(Species.class_name.ilike(f"%{class_name}%"))
+        query = query.filter(Species.class_name.ilike(f"%{escape_like(class_name)}%", escape="\\"))
     if order_name:
-        query = query.filter(Species.order_name.ilike(f"%{order_name}%"))
+        query = query.filter(Species.order_name.ilike(f"%{escape_like(order_name)}%", escape="\\"))
     if family:
-        query = query.filter(Species.family.ilike(f"%{family}%"))
+        query = query.filter(Species.family.ilike(f"%{escape_like(family)}%", escape="\\"))
     if genus:
-        query = query.filter(Species.genus.ilike(f"%{genus}%"))
+        query = query.filter(Species.genus.ilike(f"%{escape_like(genus)}%", escape="\\"))
     if national_status:
         query = query.filter(Species.national_status == national_status)
     if iucn_status:
@@ -525,9 +554,18 @@ def get_species_history(db: Session, species_id: int) -> list[SpeciesValidationH
     )
 
 
+def _require_site(db: Session, site_id: int) -> Site:
+    site = db.query(Site).filter(Site.id == site_id).first()
+    if site is None:
+        raise NotFoundError("Site not found")
+    return site
+
+
 def associate_species_with_site(
     db: Session, site_id: int, data: SiteSpeciesCreate, user_id: int
 ) -> SiteSpecies:
+    _require_site(db, site_id)
+    get_species(db, data.species_id)
     existing = (
         db.query(SiteSpecies)
         .filter(SiteSpecies.site_id == site_id, SiteSpecies.species_id == data.species_id)
@@ -548,10 +586,17 @@ def associate_species_with_site(
 
 
 def list_species_for_site(db: Session, site_id: int) -> list[SiteSpecies]:
-    return db.query(SiteSpecies).filter(SiteSpecies.site_id == site_id).all()
+    _require_site(db, site_id)
+    return (
+        db.query(SiteSpecies)
+        .filter(SiteSpecies.site_id == site_id)
+        .order_by(SiteSpecies.id)
+        .all()
+    )
 
 
-def remove_site_species(db: Session, site_id: int, species_id: int) -> None:
+def remove_site_species(db: Session, site_id: int, species_id: int, user) -> None:
+    """Unlink a species from a site: admins, or the researcher who recorded the link."""
     association = (
         db.query(SiteSpecies)
         .filter(SiteSpecies.site_id == site_id, SiteSpecies.species_id == species_id)
@@ -559,5 +604,7 @@ def remove_site_species(db: Session, site_id: int, species_id: int) -> None:
     )
     if not association:
         raise NotFoundError("Association not found")
+    if user.role.name != "admin" and association.recorded_by != user.id:
+        raise ForbiddenError("Only an admin or the person who recorded it can remove this species")
     db.delete(association)
     db.commit()

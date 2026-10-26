@@ -23,8 +23,7 @@
 #
 # EXPORT :
 #
-# - PNG 300 DPI
-# - TIFF 300 DPI
+# - PNG / TIFF à GRAPHICS_DPI (300 par défaut)
 # - PDF vectoriel
 #
 # IMPORTANT :
@@ -107,6 +106,11 @@ if (length(args) < 2) {
 excel_path <- args[1]
 
 out_dir <- args[2]
+
+# Résolution des exports raster (la mémoire croît avec le carré du DPI).
+# Le serveur la fixe via GRAPHICS_DPI ; 300 en lancement manuel.
+GRAPHICS_DPI <- suppressWarnings(as.numeric(Sys.getenv("GRAPHICS_DPI", "300")))
+if (is.na(GRAPHICS_DPI) || GRAPHICS_DPI < 72) GRAPHICS_DPI <- 300
 
 
 # ============================================================
@@ -1050,6 +1054,11 @@ p_taxo <- ggraph(layout_taxo) +
 
   ggraph::geom_edge_diagonal(
 
+    # Points par courbe (100 par défaut). C'est le poste mémoire principal :
+    # 30 suffit visuellement et divise presque par deux le pic mémoire sur les
+    # sites riches (800 espèces : 431 -> 312 Mo ; 2000 espèces : 703 -> 369 Mo).
+    n = 30,
+
     colour = "grey35",
 
     linewidth = 0.32,
@@ -1305,11 +1314,7 @@ base_name <-
 #
 # Nouveau :
 # 16 x 13 pouces
-# 300 DPI
-# = 4800 x 3900 pixels
-# = 18.72 millions de pixels
-#
-# Soit environ 5.2 fois moins de pixels.
+# GRAPHICS_DPI (300 -> 4800 x 3900 pixels ; 200 -> 3200 x 2600)
 # ============================================================
 
 png_file <- file.path(
@@ -1330,7 +1335,7 @@ ggplot2::ggsave(
 
   units = "in",
 
-  dpi = 300,
+  dpi = GRAPHICS_DPI,
 
   bg = "white",
 
@@ -1345,8 +1350,7 @@ gc()
 # ============================================================
 # 29. EXPORT TIFF
 #
-# Même résolution mémoire raisonnable :
-# 300 DPI
+# Même résolution : GRAPHICS_DPI
 # ============================================================
 
 tiff_file <- file.path(
@@ -1367,7 +1371,7 @@ ggplot2::ggsave(
 
   units = "in",
 
-  dpi = 300,
+  dpi = GRAPHICS_DPI,
 
   compression = "lzw",
 

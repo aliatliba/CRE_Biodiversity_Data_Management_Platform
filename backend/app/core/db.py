@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import declarative_base, sessionmaker
 from sqlalchemy.pool import NullPool
@@ -26,3 +28,27 @@ def init_extensions() -> None:
     with engine.begin() as conn:
         conn.execute(text("CREATE EXTENSION IF NOT EXISTS pg_trgm"))
         conn.execute(text("CREATE EXTENSION IF NOT EXISTS citext"))
+
+
+BACKEND_DIR = Path(__file__).resolve().parents[2]
+
+
+def assert_schema_is_current() -> None:
+    """Fail fast, with the fix in the message, when the database has not been
+    migrated to the revision this code expects (otherwise the first query dies on a
+    missing column)."""
+    from alembic.config import Config
+    from alembic.runtime.migration import MigrationContext
+    from alembic.script import ScriptDirectory
+
+    config = Config(str(BACKEND_DIR / "alembic.ini"))
+    config.set_main_option("script_location", str(BACKEND_DIR / "alembic"))
+    expected = set(ScriptDirectory.from_config(config).get_heads())
+    with engine.connect() as conn:
+        current = set(MigrationContext.configure(conn).get_current_heads())
+    if current != expected:
+        raise RuntimeError(
+            f"Database schema is at revision {', '.join(sorted(current)) or 'none'} but this "
+            f"code expects {', '.join(sorted(expected))}. Run `alembic upgrade head` "
+            "from the backend/ directory, then start the API again."
+        )

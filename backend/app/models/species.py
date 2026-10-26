@@ -55,7 +55,10 @@ class Species(Base):
         DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc)
     )
     updated_at = Column(
-        DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc)
+        DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
     )
 
     creator = relationship("User", foreign_keys=[created_by])
@@ -84,10 +87,16 @@ class Species(Base):
     )
 
 
+def escape_like(term: str) -> str:
+    """Make ``%``, ``_`` and ``\\`` in user input match literally in (I)LIKE patterns
+    (use with ``escape="\\"``)."""
+    return term.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+
+
 def name_search_filter(term: str):
     """Case-insensitive substring match on scientific or common name (uses the trigram indexes)."""
-    pattern = f"%{term}%"
+    pattern = f"%{escape_like(term)}%"
     return or_(
-        cast(Species.scientific_name, Text).ilike(pattern),
-        Species.common_name.ilike(pattern),
+        cast(Species.scientific_name, Text).ilike(pattern, escape="\\"),
+        Species.common_name.ilike(pattern, escape="\\"),
     )

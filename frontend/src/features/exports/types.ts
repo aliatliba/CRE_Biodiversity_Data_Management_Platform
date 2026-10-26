@@ -40,7 +40,6 @@ export interface ExportJob {
   format: string
   filters: ExportFilters | null
   status: 'pending' | 'processing' | 'done' | 'failed' | string
-  file_path: string | null
   created_at: string
   completed_at: string | null
 }

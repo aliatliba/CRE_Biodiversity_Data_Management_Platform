@@ -18,7 +18,6 @@ import { Button } from '@/components/ui/Button'
 import { Alert } from '@/components/ui/Alert'
 import { Badge } from '@/components/ui/Badge'
 import { Combobox } from '@/components/ui/Combobox'
-import { SearchInput } from '@/components/ui/SearchInput'
 import { usePolling } from '@/hooks/usePolling'
 import { getErrorMessage } from '@/lib/errors'
 import { queryKeys } from '@/lib/queryKeys'
@@ -196,28 +195,6 @@ export function ExportsPage() {
           </div>
 
           <div className="space-y-7 pt-6">
-            {/* ========================================================
-                SPECIES
-            ======================================================== */}
-            <FilterSection
-              title="Species"
-              description="Search by scientific or common name."
-            >
-              <div>
-                <FieldLabel htmlFor="export-search">
-                  Species search
-                </FieldLabel>
-
-                <SearchInput
-                  id="export-search"
-                  value={filters.search ?? ''}
-                  onChange={(event) => updateFilter('search', event.target.value || undefined)}
-                  placeholder="Search scientific or common name..."
-                  wrapperClassName="max-w-none"
-                />
-              </div>
-            </FilterSection>
-
             {/* ========================================================
                 LOCATION
             ======================================================== */}

@@ -69,3 +69,29 @@ def test_seed_inserts_only_missing_names(db_session):
 
     assert db_session.query(ProtectedSpeciesList).count() == len(names)
     db_session.query(Species).count()  # session still healthy
+
+
+def test_protected_list_shows_iucn_status_and_paginates(client, admin_headers):
+    site = client.post(
+        "/api/v1/sites", json={"name": "Iucn Site", "code": "IU"}, headers=admin_headers
+    ).json()
+    for name in ("Genus alpha", "Genus beta", "Genus gamma"):
+        client.post("/api/v1/protected-species", json={"scientific_name": name}, headers=admin_headers)
+    client.post(
+        "/api/v1/species",
+        json={"scientific_name": "genus BETA", "iucn_status": "EN", "site_id": site["id"]},
+        headers=admin_headers,
+    )
+
+    page1 = client.get(
+        "/api/v1/protected-species?search=Genus&page=1&page_size=2", headers=admin_headers
+    ).json()
+    assert page1["total"] == 3 and page1["pages"] == 2
+    assert [e["scientific_name"] for e in page1["items"]] == ["Genus alpha", "Genus beta"]
+    assert [e["iucn_status"] for e in page1["items"]] == [None, "EN"]  # matched case-insensitively
+
+    page2 = client.get(
+        "/api/v1/protected-species?search=Genus&page=2&page_size=2", headers=admin_headers
+    ).json()
+    assert [e["scientific_name"] for e in page2["items"]] == ["Genus gamma"]
+

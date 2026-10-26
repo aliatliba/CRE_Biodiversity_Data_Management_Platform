@@ -45,6 +45,8 @@ export interface SiteStatSummary {
   site_id: number
   site_name: string
   species_count: number
+  /** % of all site-species records held by this site (rows sum to 100). */
+  species_share: number
   protected_count: number
   complete_count: number
   incomplete_count: number

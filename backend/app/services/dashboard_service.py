@@ -50,15 +50,23 @@ def _species_query_for_scope(db: Session, site_id: int | None):
     return query
 
 
-def _biodiversity_composition(species_query):
-    """
-    Derive biodiversity composition from taxonomy.
+# GBIF kingdom -> dashboard group. Chromista also holds large algae, but its members
+# are overwhelmingly microscopic, so it is counted with the micro-organisms.
+KINGDOM_GROUPS = {
+    "animalia": "Fauna",
+    "plantae": "Flora",
+    "fungi": "Fungi",
+    "bacteria": "Micro-organisms",
+    "archaea": "Micro-organisms",
+    "protozoa": "Micro-organisms",
+    "chromista": "Micro-organisms",
+    "viruses": "Micro-organisms",
+}
 
-    Animalia -> Fauna
-    Plantae -> Flora
-    Bacteria -> Micro-organisms
-    Fungi -> Fungi
-    """
+
+def _biodiversity_composition(species_query):
+    """Species per group (see KINGDOM_GROUPS). Unknown or missing kingdoms go to
+    "Unclassified", so the groups always add up to the species total."""
 
     kingdom_counts = (
         species_query
@@ -75,22 +83,12 @@ def _biodiversity_composition(species_query):
         "Flora": 0,
         "Micro-organisms": 0,
         "Fungi": 0,
+        "Unclassified": 0,
     }
 
     for kingdom, count in kingdom_counts:
-        normalized = (kingdom or "").strip().lower()
-
-        if normalized == "animalia":
-            composition["Fauna"] += count
-
-        elif normalized == "plantae":
-            composition["Flora"] += count
-
-        elif normalized == "bacteria":
-            composition["Micro-organisms"] += count
-
-        elif normalized == "fungi":
-            composition["Fungi"] += count
+        group = KINGDOM_GROUPS.get((kingdom or "").strip().lower(), "Unclassified")
+        composition[group] += count
 
     return composition
 
@@ -146,7 +144,8 @@ def _site_stats(db: Session) -> list[dict]:
         .outerjoin(SiteSpecies, SiteSpecies.site_id == Site.id)
         .outerjoin(Species, Species.id == SiteSpecies.species_id)
         .group_by(Site.id, Site.name)
-        .order_by(Site.name.asc())
+        # Richest sites first (the per-site table and the richness chart both use this).
+        .order_by(func.count(Species.id).desc(), Site.name.asc())
         .all()
     )
     return [
@@ -215,6 +214,10 @@ def get_dashboard_stats(
 
     # Richness share is relative to the total of species-site associations.
     total_site_species = sum(row["species_count"] for row in site_stats)
+    for row in site_stats:
+        row["species_share"] = (
+            round(row["species_count"] / total_site_species * 100, 1) if total_site_species else 0.0
+        )
     species_richness_by_site = [
         {
             "site_name": row["site_name"],
