@@ -1,12 +1,13 @@
 from dataclasses import asdict
 from typing import List
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Request
 from sqlalchemy.orm import Session
 
 from app.core.background import spawn
 from app.core.dependencies import ActiveUser, AdminUser, DBSession
 from app.core.job_store import Job, job_store, run_job
+from app.core.limiter import limiter
 from app.core.pagination import Page, PaginationParams, paginate
 from app.core.utils import clean_and_dedupe_names
 from app.schemas.species import (
@@ -31,15 +32,21 @@ router = APIRouter()
 
 
 @router.get("/check")
-def check_species(scientific_name: str, db: DBSession):
+def check_species(
+    db: DBSession, user: ActiveUser, scientific_name: str = Query(..., max_length=255)
+):
     existing = species_service.check_duplicate(db, scientific_name)
     if existing:
-        return {"exists": True, "species": existing}
+        return {"exists": True, "species": SpeciesResponse.model_validate(existing)}
     return {"exists": False}
 
 
 @router.post("/lookup", response_model=SpeciesDraft)
-async def lookup_species(data: SpeciesLookupRequest, db: DBSession):
+@limiter.limit("60/minute")
+async def lookup_species(
+    request: Request, data: SpeciesLookupRequest, db: DBSession, user: ActiveUser
+):
+    # Each lookup fans out to five external APIs (and spends the IUCN token's quota).
     return await species_service.lookup_species(db, data.scientific_name)
 
 
@@ -112,8 +119,7 @@ async def lookup_species_batch(
 
     site_service.get_site(db, data.site_id)
 
-    job = job_store.create()
-    job.total = len(names)
+    job = job_store.create_for_user(user.id, "lookup_batch", total=len(names))
 
     spawn(_execute_lookup_batch(job, names, data.site_id))
 
@@ -128,9 +134,9 @@ def get_lookup_batch_status(
     job_id: str,
     user: ActiveUser,
 ):
-    job = job_store.get(job_id)
+    job = job_store.get_for_user(job_id, user)
 
-    if job is None:
+    if job is None or job.kind != "lookup_batch":
         raise HTTPException(
             status_code=404,
             detail="Lookup job not found",
@@ -194,8 +200,7 @@ async def bulk_import_species(
     # fails immediately with a 404 instead of after the job has started.
     site_service.get_site(db, data.site_id)
 
-    job = job_store.create()
-    job.total = len(data.scientific_names)
+    job = job_store.create_for_user(user.id, "bulk_import", total=len(data.scientific_names))
 
     spawn(_execute_bulk_import(job, data, user.id))
 
@@ -204,8 +209,8 @@ async def bulk_import_species(
 
 @router.get("/bulk-import/{job_id}", response_model=BulkImportJobResponse)
 def get_bulk_import_status(job_id: str, user: AdminUser):
-    job = job_store.get(job_id)
-    if job is None:
+    job = job_store.get_for_user(job_id, user)
+    if job is None or job.kind != "bulk_import":
         raise HTTPException(status_code=404, detail="Import job not found")
     return _job_to_response(job)
 
@@ -215,13 +220,13 @@ def list_species(
     db: DBSession,
     user: ActiveUser,
     status: str | None = Query(None),
-    search: str | None = Query(None),
-    kingdom: str | None = Query(None),
-    class_name: str | None = Query(None),
-    order_name: str | None = Query(None),
-    family: str | None = Query(None),
-    genus: str | None = Query(None),
-    national_status: str | None = Query(None),
+    search: str | None = Query(None, max_length=255),
+    kingdom: str | None = Query(None, max_length=100),
+    class_name: str | None = Query(None, max_length=100),
+    order_name: str | None = Query(None, max_length=100),
+    family: str | None = Query(None, max_length=100),
+    genus: str | None = Query(None, max_length=100),
+    national_status: str | None = Query(None, max_length=50),
     site_id: int | None = Query(None),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),

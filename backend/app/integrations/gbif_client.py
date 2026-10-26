@@ -9,6 +9,11 @@ from app.integrations.base import (
 
 logger = logging.getLogger(__name__)
 
+# GBIF falls back to these when it cannot match the name at species level: HIGHERRANK
+# returns the genus (or family...) record, so a typo like "Quercus xyzabc" would come
+# back as "Quercus" and be saved as if it were a species.
+NO_SPECIES_MATCH = {"NONE", "HIGHERRANK"}
+
 
 class GbifClient(ExternalProviderClient, HttpClientMixin):
     source = "gbif"
@@ -21,6 +26,9 @@ class GbifClient(ExternalProviderClient, HttpClientMixin):
             resp = await self.get("/species/match", params={"name": scientific_name})
             resp.raise_for_status()
             match = resp.json()
+
+            if match.get("matchType") in NO_SPECIES_MATCH:
+                return ProviderResult(source=self.source, data={})
 
             # A match can resolve to a SYNONYM usage. In that case the match
             # response's genus/species/canonicalName fields still describe

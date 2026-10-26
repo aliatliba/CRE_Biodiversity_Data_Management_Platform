@@ -11,6 +11,13 @@ logger = logging.getLogger(__name__)
 
 
 class InaturalistClient(ExternalProviderClient, HttpClientMixin):
+    """Common (vernacular) name from iNaturalist.
+
+    ``/taxa`` results carry no kingdom/class/family fields (only ancestor ids), and the
+    first hit for "Panthera leo" is the genus Panthera, so only an exact,
+    species-level name match is used, and only for its common name.
+    """
+
     source = "inaturalist"
 
     def __init__(self):
@@ -18,19 +25,31 @@ class InaturalistClient(ExternalProviderClient, HttpClientMixin):
 
     async def search(self, scientific_name: str) -> ProviderResult:
         try:
-            resp = await self.get("/taxa", params={"q": scientific_name})
+            resp = await self.get(
+                "/taxa",
+                params={
+                    "q": scientific_name,
+                    "rank": "species,subspecies,variety",
+                    "per_page": 10,
+                },
+            )
             resp.raise_for_status()
-            data = resp.json()
-            results = data.get("results", [])
-            if not results:
+            wanted = scientific_name.strip().casefold()
+            taxon = next(
+                (
+                    t
+                    for t in resp.json().get("results", [])
+                    if (t.get("name") or "").casefold() == wanted
+                ),
+                None,
+            )
+            if taxon is None:
                 return ProviderResult(source=self.source, data={})
-            taxon = results[0]
             return ProviderResult(
                 source=self.source,
                 data={
-                    "kingdom": taxon.get("kingdom_name"),
-                    "class": taxon.get("class_name"),
-                    "family": taxon.get("family_name"),
+                    "common_name": taxon.get("preferred_common_name"),
+                    "taxon_id": taxon.get("id"),
                 },
             )
         except Exception as exc:

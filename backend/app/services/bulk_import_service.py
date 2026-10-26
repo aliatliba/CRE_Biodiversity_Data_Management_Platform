@@ -27,7 +27,7 @@ from typing import Any, Awaitable, Callable
 
 from sqlalchemy.orm import Session
 
-from app.core.exceptions import AppException
+from app.core.exceptions import AppException, public_error_message
 from app.core.utils import clean_and_dedupe_names
 from app.models.site_species import SiteSpecies
 from app.schemas.species import SpeciesCreate
@@ -62,11 +62,45 @@ class ImportSummary:
     items: list[ImportItemResult] = field(default_factory=list)
 
 
+# Which IUCN assessment becomes the species' status when nobody picks one by hand
+# (the review screen lets the user choose; a bulk import cannot).
+IUCN_SCOPE_PREFERENCE = ("Global", "Mediterranean", "Europe")
+
+
+def _pick_iucn_assessment(assessments: list[dict[str, Any]]) -> dict[str, Any] | None:
+    by_scope = {a.get("scope"): a for a in assessments if a.get("category")}
+    return next((by_scope[s] for s in IUCN_SCOPE_PREFERENCE if s in by_scope), None)
+
+
+def _has_species_match(draft: dict[str, Any]) -> bool:
+    """GBIF found the name at species level (genus/family-only matches are dropped)."""
+    taxonomy = draft.get("taxonomy", {})
+    return bool(taxonomy.get("genus") or taxonomy.get("family") or taxonomy.get("kingdom"))
+
+
 def _draft_to_species_create(draft: dict[str, Any], site_id: int) -> SpeciesCreate:
     taxonomy = draft.get("taxonomy", {})
     conservation = draft.get("conservation", {})
+    field_sources = dict(draft.get("field_sources") or {})
+
+    assessment = _pick_iucn_assessment(conservation.get("iucn_assessments") or [])
+    if assessment is not None:
+        # Same provenance record the review screen stores for a chosen assessment.
+        iucn_source = {
+            "source": "iucn",
+            "reference": f"assessment:{assessment.get('assessment_id')}",
+            "assessment_id": assessment.get("assessment_id"),
+            "scope": assessment.get("scope"),
+            "scope_code": assessment.get("scope_code"),
+            "year": assessment.get("year"),
+            "retrieved_at": None,
+        }
+        field_sources["iucn_status"] = iucn_source
+        field_sources["iucn_trend"] = iucn_source
+
     return SpeciesCreate(
         scientific_name=draft["scientific_name"],
+        input_scientific_name=draft.get("input_scientific_name"),
         kingdom=taxonomy.get("kingdom"),
         class_name=taxonomy.get("class_name"),
         order_name=taxonomy.get("order_name"),
@@ -75,9 +109,9 @@ def _draft_to_species_create(draft: dict[str, Any], site_id: int) -> SpeciesCrea
         species_epithet=taxonomy.get("species_epithet"),
         common_name=taxonomy.get("common_name"),
         raw_taxonomy_extra=taxonomy.get("raw_extra"),
-        field_sources=draft.get("field_sources"),
-        iucn_status=conservation.get("iucn_status"),
-        iucn_trend=conservation.get("iucn_trend"),
+        field_sources=field_sources,
+        iucn_status=(assessment or {}).get("category") or conservation.get("iucn_status"),
+        iucn_trend=(assessment or {}).get("population_trend") or conservation.get("iucn_trend"),
         site_id=site_id,
     )
 
@@ -101,20 +135,25 @@ def dedupe_names(names: list[str]) -> tuple[list[str], list[ImportItemResult]]:
     return unique, extras
 
 
-def _handle_existing(
+def _link_if_existing(
     db: Session,
-    species,
+    scientific_name: str,
     site_id: int,
     user_id: int,
     dry_run: bool,
     result: ImportItemResult,
     summary: ImportSummary,
-) -> None:
-    """Species already exists globally: link it to `site_id` if it isn't yet.
+) -> bool:
+    """If ``scientific_name`` already exists globally, link it to ``site_id`` (unless
+    it already is) and return True; return False when it is a new species.
 
     A species is a global record; "already in the DB" only means "already
     at *this* site" when a site_species row exists for (site_id, species.id).
     """
+    species = species_service.check_duplicate(db, scientific_name)
+    if species is None:
+        return False
+
     result.species_id = species.id
     result.resolved_name = species.scientific_name
 
@@ -133,6 +172,11 @@ def _handle_existing(
         species_service.ensure_site_association(db, site_id, species.id, user_id)
         result.status = "linked_existing"
         summary.linked += 1
+    return True
+
+
+def _create_species(db: Session, data: SpeciesCreate, user_id: int) -> int:
+    return species_service.create_species(db, data, user_id).id
 
 
 async def run_bulk_import(
@@ -150,12 +194,17 @@ async def run_bulk_import(
     input name or the name GBIF resolves it to) is never re-created: if it
     isn't yet associated with `site_id` it is linked to it
     (status "linked_existing"); if it already is, it's skipped.
+
+    Database work goes through a DbRunner: it runs off the event loop and in short
+    transactions, so the import does not hold a pooled connection for its whole run.
     """
     if len(names) > MAX_BATCH_SIZE:
         raise ValueError(f"Cannot import more than {MAX_BATCH_SIZE} species in one batch.")
 
+    run_db = species_service.DbRunner(db)
+
     # Fail fast rather than fail 150 species in.
-    site_service.get_site(db, site_id)
+    await run_db(site_service.get_site, site_id)
 
     unique_names, extras = dedupe_names(names)
     summary = ImportSummary(total=len(names))
@@ -166,30 +215,41 @@ async def run_bulk_import(
     for idx, name in enumerate(unique_names):
         result = ImportItemResult(input_name=name)
         try:
-            existing = species_service.check_duplicate(db, name)
-            if existing:
-                _handle_existing(db, existing, site_id, user_id, dry_run, result, summary)
-            else:
-                draft = await species_service.lookup_species(db, name)
+            linked = await run_db(
+                _link_if_existing, name, site_id, user_id, dry_run, result, summary
+            )
+            if not linked:
+                draft = await species_service.lookup_species(run_db, name)
                 result.resolved_name = draft.get("scientific_name")
 
+                if "gbif" in draft.get("provider_errors", {}):
+                    result.status = "failed"
+                    result.error = "GBIF could not be reached; retry this species later."
+                    summary.failed += 1
+                elif not _has_species_match(draft):
+                    result.status = "invalid"
+                    result.error = "No species-level match found; check the spelling."
+                    summary.invalid += 1
                 # The name GBIF resolves a synonym to may already exist
                 # even though the raw input name didn't.
-                resolved_existing = species_service.check_duplicate(db, result.resolved_name)
-                if resolved_existing:
-                    _handle_existing(
-                        db, resolved_existing, site_id, user_id, dry_run, result, summary
-                    )
+                elif await run_db(
+                    _link_if_existing,
+                    result.resolved_name,
+                    site_id,
+                    user_id,
+                    dry_run,
+                    result,
+                    summary,
+                ):
+                    pass
                 elif dry_run:
                     result.status = "looked_up"
                 else:
                     create_data = _draft_to_species_create(draft, site_id)
-                    species = species_service.create_species(db, create_data, user_id)
+                    result.species_id = await run_db(_create_species, create_data, user_id)
                     result.status = "created"
-                    result.species_id = species.id
                     summary.created += 1
         except AppException as exc:
-            db.rollback()
             if exc.status_code == 409:
                 result.status = "skipped_duplicate"
                 summary.skipped += 1
@@ -198,9 +258,8 @@ async def run_bulk_import(
                 result.error = exc.message
                 summary.failed += 1
         except Exception as exc:  # keep the batch going on unexpected per-item errors
-            db.rollback()
             result.status = "failed"
-            result.error = str(exc)
+            result.error = public_error_message(exc, "bulk_import_item_failed")
             summary.failed += 1
 
         summary.items.append(result)

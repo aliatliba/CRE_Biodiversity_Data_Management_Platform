@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
 import resource
@@ -7,13 +8,13 @@ import signal
 import subprocess
 import threading
 from pathlib import Path
-from tempfile import TemporaryDirectory  # noqa: F401  (re-exported for the API)
 
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
+from app.core.exceptions import UserFacingError
 from app.core.job_store import GraphicsJob
-from app.scripts.graphics_registry import GraphicSpec, get_spec  # noqa: F401
+from app.scripts.graphics_registry import GraphicSpec
 
 logger = logging.getLogger(__name__)
 
@@ -30,8 +31,9 @@ GRAPHICS_DPI = _settings.graphics_dpi
 # survives and the job fails with a readable error instead of Render
 # restarting the whole container. 0 disables the watchdog.
 MAX_R_RSS_MB = _settings.graphics_max_rss_mb
-# Number of R processes allowed at the same time.
-_R_SLOT = threading.BoundedSemaphore(max(1, _settings.graphics_max_concurrent))
+# Number of R processes allowed at the same time. An asyncio semaphore: jobs waiting
+# for their turn do not occupy a worker thread (asyncio.to_thread's pool is small).
+_R_SLOT = asyncio.Semaphore(max(1, _settings.graphics_max_concurrent))
 
 try:
     _PAGE_MB = os.sysconf("SC_PAGE_SIZE") / (1024 * 1024)
@@ -67,7 +69,7 @@ def build_site_excel(
 
     site = db.query(Site).filter(Site.id == site_id).first()
     if site is None:
-        raise ValueError("Research site not found.")
+        raise UserFacingError("Research site not found.")
 
     query = (
         db.query(Species)
@@ -82,7 +84,7 @@ def build_site_excel(
     unknown = [a for a in spec.required_attrs if not hasattr(Species, a)]
     unknown += [a for a in spec.columns.values() if not hasattr(Species, a)]
     if unknown:
-        raise ValueError(
+        raise RuntimeError(
             "Registry error: the Species model has no attribute(s): "
             + ", ".join(sorted(set(unknown)))
         )
@@ -101,7 +103,7 @@ def build_site_excel(
 
     if rows and not records:
         details = ", ".join(f"{a} empty for {n}/{len(rows)}" for a, n in missing.items())
-        raise ValueError(
+        raise UserFacingError(
             f"{len(rows)} validated species found, but none has all the "
             f"data this graphic needs ({details})."
         )
@@ -160,18 +162,18 @@ def _kill_tree(proc: subprocess.Popen) -> None:
             pass
 
 
-def run_r_script(
+async def run_r_script(
     spec: GraphicSpec,
     input_excel: Path,
     output_dir: Path,
 ) -> dict[str, Path]:
     """Run the spec's R script and return {format: file_path}.
 
-    Only one R process runs at a time (GRAPHICS_MAX_CONCURRENT): two
+    Only GRAPHICS_MAX_CONCURRENT R processes (default 1) run at a time: two
     concurrent renders would double the peak memory.
     """
-    with _R_SLOT:
-        return _run_r_script(spec, input_excel, output_dir)
+    async with _R_SLOT:
+        return await asyncio.to_thread(_run_r_script, spec, input_excel, output_dir)
 
 
 def _run_r_script(
@@ -204,6 +206,12 @@ def _run_r_script(
             **os.environ,
             "GRAPHICS_CACHE_DIR": str(GRAPHICS_CACHE_DIR),
             "GRAPHICS_DPI": GRAPHICS_DPI,
+            # Lower peak memory for a little CPU: R collects garbage before growing
+            # its heap, and glibc keeps fewer malloc arenas and returns freed memory
+            # sooner (measured: about -15 MB on a 2000-species dendrogram).
+            "R_GC_MEM_GROW": "0",
+            "MALLOC_ARENA_MAX": "2",
+            "MALLOC_TRIM_THRESHOLD_": "131072",
         },
     )
 
@@ -257,29 +265,29 @@ def _run_r_script(
     )
 
     if timed_out.is_set():
-        raise RuntimeError(
+        raise UserFacingError(
             f"The graphic took longer than {spec.timeout} seconds and was stopped."
         )
 
     if rss_exceeded.is_set():
-        raise RuntimeError(
+        raise UserFacingError(
             f"The graphic needed more than {MAX_R_RSS_MB} MB of memory and was "
             "stopped to keep the server running. Try again later, or ask an "
             "administrator to lower GRAPHICS_DPI or upgrade the server."
         )
 
     if returncode in (-9, 137):
-        raise RuntimeError(
+        raise UserFacingError(
             "The R process was killed by the system, most likely because the "
             "server ran out of memory. Try again, or use a larger instance / "
             "a lower GRAPHICS_DPI."
         )
 
     if returncode != 0:
+        # The full R output is already in the server log (streamed above); the tail
+        # goes into the exception for the log only, never to the client.
         tail = "\n".join(output_lines[-60:]).strip()
-        raise RuntimeError(
-            "R script failed:\n" + tail if tail else "R graphic generation failed."
-        )
+        raise RuntimeError(f"R script {spec.key} exited with code {returncode}:\n{tail}")
 
     files = {fmt: output_dir / f"{spec.output_basename}.{fmt}" for fmt in spec.formats}
     missing = [str(p) for p in files.values() if not p.exists()]

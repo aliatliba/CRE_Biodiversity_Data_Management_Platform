@@ -301,6 +301,7 @@ export default function AddSpeciesPage() {
 
     return {
       scientific_name: draft.scientific_name,
+      input_scientific_name: draft.input_scientific_name,
       site_id: Number(siteId),
 
       kingdom: draft.taxonomy.kingdom,

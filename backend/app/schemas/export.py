@@ -1,33 +1,48 @@
+import re
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+from app.schemas.common import Text
+
+_DATE_ONLY = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
+FilterText = Text(255)
 
 
 class ExportFilters(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     # Site filters
-    site_ids: list[int] | None = None
+    site_ids: list[int] | None = Field(None, max_length=500)
 
     # Taxonomy filters
-    kingdom: str | None = None
-    class_name: str | None = None
-    order_name: str | None = None
-    family: str | None = None
-    genus: str | None = None
+    kingdom: FilterText | None = None
+    class_name: FilterText | None = None
+    order_name: FilterText | None = None
+    family: FilterText | None = None
+    genus: FilterText | None = None
 
     # Search
-    search: str | None = None
+    search: FilterText | None = None
 
     # Conservation filters
-    iucn_status: str | None = None
-    iucn_trend: str | None = None
-    national_status: str | None = None
+    iucn_status: FilterText | None = None
+    iucn_trend: FilterText | None = None
+    national_status: FilterText | None = None
 
-    # Validation date filters
+    # Validation date filters. A bare date (what <input type="date"> sends) covers
+    # the whole day: date_from starts at 00:00, date_to ends at 23:59:59.999999 UTC.
     date_from: datetime | None = None
     date_to: datetime | None = None
+
+    @field_validator("date_to", mode="before")
+    @classmethod
+    def _date_to_includes_whole_day(cls, value):
+        if isinstance(value, str) and _DATE_ONLY.match(value):
+            return f"{value}T23:59:59.999999+00:00"
+        return value
 
 
 class ExportRequest(BaseModel):
@@ -44,6 +59,5 @@ class ExportResponse(BaseModel):
     format: str
     filters: ExportFilters | None
     status: str
-    file_path: str | None
     created_at: datetime
     completed_at: datetime | None

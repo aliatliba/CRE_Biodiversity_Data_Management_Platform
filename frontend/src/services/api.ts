@@ -82,12 +82,23 @@ api.interceptors.response.use(
     isRefreshing = true
     try {
       const { data } = await api.post('/auth/refresh', { refresh_token: refreshToken })
-      setTokens(data.access_token, data.refresh_token ?? refreshToken)
+      // The backend rotates the refresh token on every refresh.
+      setTokens(data.access_token, data.refresh_token)
       flushQueue(data.access_token)
       originalRequest.headers = originalRequest.headers ?? {}
       originalRequest.headers.Authorization = `Bearer ${data.access_token}`
       return api(originalRequest)
     } catch (refreshError) {
+      // Refresh tokens are single-use. If another tab rotated this one meanwhile,
+      // its new tokens are already in localStorage: use them instead of signing out.
+      const rotatedElsewhere = getRefreshToken()
+      if (rotatedElsewhere && rotatedElsewhere !== refreshToken) {
+        const token = getAccessToken()
+        flushQueue(token)
+        originalRequest.headers = originalRequest.headers ?? {}
+        originalRequest.headers.Authorization = `Bearer ${token}`
+        return api(originalRequest)
+      }
       clearTokens()
       flushQueue(null)
       notifySessionExpired()

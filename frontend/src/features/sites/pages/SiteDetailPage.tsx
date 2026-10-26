@@ -23,7 +23,7 @@ import { IUCN_COLORS, THREATENED_STATUSES_PARAM } from '@/lib/iucn'
 import { queryKeys } from '@/lib/queryKeys'
 
 import * as dashboardService from '@/features/dashboard/services/dashboardService'
-import { StatCard } from '@/features/dashboard/components/StatCard'
+import { StatCard } from '@/components/common/StatCard'
 
 import * as siteService from '../services/siteService'
 import { DeleteSiteDialogs } from '../components/DeleteSiteDialogs'
@@ -32,7 +32,7 @@ import * as speciesService from '@/features/species/services/speciesService'
 import { SpeciesTable } from '@/features/species/components/SpeciesTable'
 
 const PAGE_SIZE = 15
-const COMPOSITION_LABELS = ['Fauna', 'Flora', 'Micro-organisms', 'Fungi']
+const COMPOSITION_LABELS = ['Fauna', 'Flora', 'Micro-organisms', 'Fungi', 'Unclassified']
 
 export function SiteDetailPage() {
   const { id } = useParams<{ id: string }>()

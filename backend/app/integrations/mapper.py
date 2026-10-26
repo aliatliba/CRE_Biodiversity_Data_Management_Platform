@@ -55,8 +55,12 @@ def normalize_provider_result(result: ProviderResult, provider_name: str) -> dic
         _set("taxonomy", "species_epithet", data.get("speciesEpithet"))
 
     elif "inaturalist" in source_key:
-        _set("taxonomy", "kingdom", data.get("kingdom"))
-        _set("taxonomy", "class_name", data.get("class"))
-        _set("taxonomy", "family", data.get("family"))
+        taxon_id = data.get("taxon_id")
+        _set(
+            "taxonomy",
+            "common_name",
+            data.get("common_name"),
+            reference=f"https://www.inaturalist.org/taxa/{taxon_id}" if taxon_id else None,
+        )
 
     return mapped

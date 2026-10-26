@@ -30,7 +30,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Refresh */
+        /**
+         * Refresh
+         * @description Rotates the refresh token: the one sent is revoked, a new pair is returned.
+         */
         post: operations["refresh_api_v1_auth_refresh_post"];
         delete?: never;
         options?: never;
@@ -49,6 +52,26 @@ export interface paths {
         put?: never;
         /** Logout */
         post: operations["logout_api_v1_auth_logout_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/logout-all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Logout All
+         * @description Signs the user out on every device (all access and refresh tokens).
+         */
+        post: operations["logout_all_api_v1_auth_logout_all_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -93,6 +116,9 @@ export interface paths {
          *     Works for any authenticated user, not just ones flagged
          *     must_change_password, so it also serves as a general change-password
          *     endpoint later on.
+         *
+         *     Changing the password signs out every other session; the response carries
+         *     the new token pair for this one.
          */
         post: operations["complete_profile_api_v1_auth_complete_profile_post"];
         delete?: never;
@@ -410,7 +436,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * List My Exports
+         * @description The signed-in user's own exports, newest first.
+         */
+        get: operations["list_my_exports_api_v1_exports_get"];
         put?: never;
         /** Create Export */
         post: operations["create_export_api_v1_exports_post"];
@@ -827,8 +857,6 @@ export interface components {
             filters: components["schemas"]["ExportFilters"] | null;
             /** Status */
             status: string;
-            /** File Path */
-            file_path: string | null;
             /**
              * Created At
              * Format: date-time
@@ -919,6 +947,19 @@ export interface components {
             /** Password */
             password: string;
         };
+        /** Page[ProtectedSpeciesListItem] */
+        Page_ProtectedSpeciesListItem_: {
+            /** Items */
+            items: components["schemas"]["ProtectedSpeciesListItem"][];
+            /** Total */
+            total: number;
+            /** Page */
+            page: number;
+            /** Page Size */
+            page_size: number;
+            /** Pages */
+            pages: number;
+        };
         /** Page[SpeciesListItem] */
         Page_SpeciesListItem_: {
             /** Items */
@@ -938,6 +979,24 @@ export interface components {
             scientific_name: string;
             /** Source Reference */
             source_reference?: string | null;
+        };
+        /** ProtectedSpeciesListItem */
+        ProtectedSpeciesListItem: {
+            /** Id */
+            id: number;
+            /** Scientific Name */
+            scientific_name: string;
+            /** Source Reference */
+            source_reference: string | null;
+            /** Added By */
+            added_by: number | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Iucn Status */
+            iucn_status?: string | null;
         };
         /** ProtectedSpeciesResponse */
         ProtectedSpeciesResponse: {
@@ -977,6 +1036,32 @@ export interface components {
             code?: string | null;
             /** Description */
             description?: string | null;
+        };
+        /**
+         * SiteListItem
+         * @description GET /sites row: the site plus its species counters.
+         */
+        SiteListItem: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /** Code */
+            code: string | null;
+            /** Description */
+            description: string | null;
+            /** Created By */
+            created_by: number | null;
+            /** Species Count */
+            species_count: number;
+            /** Species Share */
+            species_share: number;
+            /** Protected Count */
+            protected_count: number;
+            /** Threatened Count */
+            threatened_count: number;
+            /** Complete Count */
+            complete_count: number;
         };
         /** SiteResponse */
         SiteResponse: {
@@ -1039,9 +1124,13 @@ export interface components {
             /** Common Name */
             common_name?: string | null;
             /** Raw Taxonomy Extra */
-            raw_taxonomy_extra?: Record<string, never> | null;
+            raw_taxonomy_extra?: {
+                [key: string]: unknown;
+            } | null;
             /** Field Sources */
-            field_sources?: Record<string, never> | null;
+            field_sources?: {
+                [key: string]: unknown;
+            } | null;
             /** Iucn Status */
             iucn_status?: string | null;
             /** Iucn Trend */
@@ -1062,6 +1151,8 @@ export interface components {
             reference?: string | null;
             /** Site Id */
             site_id: number;
+            /** Input Scientific Name */
+            input_scientific_name?: string | null;
         };
         /** SpeciesDraft */
         SpeciesDraft: {
@@ -1073,7 +1164,9 @@ export interface components {
             conservation: components["schemas"]["ConservationStatus"];
             traits: components["schemas"]["EcologicalTraits"];
             /** Field Sources */
-            field_sources: Record<string, never>;
+            field_sources: {
+                [key: string]: unknown;
+            };
             /**
              * National Status
              * @default Non Protected
@@ -1130,9 +1223,13 @@ export interface components {
             /** Common Name */
             common_name: string | null;
             /** Raw Taxonomy Extra */
-            raw_taxonomy_extra: Record<string, never> | null;
+            raw_taxonomy_extra: {
+                [key: string]: unknown;
+            } | null;
             /** Field Sources */
-            field_sources: Record<string, never> | null;
+            field_sources: {
+                [key: string]: unknown;
+            } | null;
             /** Iucn Status */
             iucn_status: string | null;
             /** Iucn Trend */
@@ -1201,7 +1298,10 @@ export interface components {
             iucn_status?: string | null;
             /** Iucn Trend */
             iucn_trend?: string | null;
-            /** Updated At */
+            /**
+             * Updated At
+             * Format: date-time
+             */
             updated_at: string;
         };
         /** Taxonomy */
@@ -1221,7 +1321,9 @@ export interface components {
             /** Common Name */
             common_name?: string | null;
             /** Raw Extra */
-            raw_extra?: Record<string, never> | null;
+            raw_extra?: {
+                [key: string]: unknown;
+            } | null;
         };
         /** TokenResponse */
         TokenResponse: {
@@ -1243,7 +1345,7 @@ export interface components {
         /**
          * UpdateOwnProfileRequest
          * @description Lets the signed-in user edit their own display info — no password
-         *     required, unlike complete-profile/change-password.
+         *     required, unlike complete-profile.
          */
         UpdateOwnProfileRequest: {
             /** Full Name */
@@ -1320,6 +1422,10 @@ export interface components {
             msg: string;
             /** Error Type */
             type: string;
+            /** Input */
+            input?: unknown;
+            /** Context */
+            ctx?: Record<string, never>;
         };
         /** ValidationHistoryResponse */
         ValidationHistoryResponse: {
@@ -1330,7 +1436,9 @@ export interface components {
             /** Action */
             action: string;
             /** Changed Fields */
-            changed_fields: Record<string, never>;
+            changed_fields: {
+                [key: string]: unknown;
+            };
             /** Validated By */
             validated_by: number | null;
             /**
@@ -1447,6 +1555,26 @@ export interface operations {
             };
         };
     };
+    logout_all_api_v1_auth_logout_all_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
     me_api_v1_auth_me_get: {
         parameters: {
             query?: never;
@@ -1519,7 +1647,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["UserResponse"];
+                    "application/json": components["schemas"]["TokenResponse"];
                 };
             };
             /** @description Validation Error */
@@ -1720,7 +1848,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SiteResponse"][];
+                    "application/json": components["schemas"]["SiteListItem"][];
                 };
             };
             /** @description Validation Error */
@@ -2360,6 +2488,26 @@ export interface operations {
             };
         };
     };
+    list_my_exports_api_v1_exports_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExportResponse"][];
+                };
+            };
+        };
+    };
     create_export_api_v1_exports_post: {
         parameters: {
             query?: never;
@@ -2512,6 +2660,8 @@ export interface operations {
         parameters: {
             query?: {
                 search?: string | null;
+                page?: number;
+                page_size?: number;
             };
             header?: never;
             path?: never;
@@ -2525,7 +2675,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ProtectedSpeciesResponse"][];
+                    "application/json": components["schemas"]["Page_ProtectedSpeciesListItem_"];
                 };
             };
             /** @description Validation Error */

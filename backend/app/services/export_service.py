@@ -14,7 +14,8 @@ from app.core.utils import purge_old_entries
 from app.models.export import Export
 from app.models.site import Site
 from app.models.site_species import SiteSpecies
-from app.models.species import Species, name_search_filter
+from app.models.species import Species, escape_like, name_search_filter
+from app.models.user import User
 
 EXPORTS_DIR = get_settings().exports_dir
 
@@ -66,27 +67,27 @@ def _build_export_query(db: Session, filters: dict[str, Any] | None):
     # Taxonomy filters
     if filters.get("kingdom"):
         query = query.filter(
-            Species.kingdom.ilike(f"%{filters['kingdom']}%")
+            Species.kingdom.ilike(f"%{escape_like(filters['kingdom'])}%", escape="\\")
         )
 
     if filters.get("class_name"):
         query = query.filter(
-            Species.class_name.ilike(f"%{filters['class_name']}%")
+            Species.class_name.ilike(f"%{escape_like(filters['class_name'])}%", escape="\\")
         )
 
     if filters.get("order_name"):
         query = query.filter(
-            Species.order_name.ilike(f"%{filters['order_name']}%")
+            Species.order_name.ilike(f"%{escape_like(filters['order_name'])}%", escape="\\")
         )
 
     if filters.get("family"):
         query = query.filter(
-            Species.family.ilike(f"%{filters['family']}%")
+            Species.family.ilike(f"%{escape_like(filters['family'])}%", escape="\\")
         )
 
     if filters.get("genus"):
         query = query.filter(
-            Species.genus.ilike(f"%{filters['genus']}%")
+            Species.genus.ilike(f"%{escape_like(filters['genus'])}%", escape="\\")
         )
 
     # Search
@@ -179,6 +180,21 @@ EXPORT_COLUMNS = [
 _SPECIES_ATTRS = EXPORT_COLUMNS[:19]
 
 
+# A cell starting with one of these is evaluated as a formula by Excel / LibreOffice /
+# Google Sheets (e.g. =HYPERLINK(...) leaking other cells to a remote site).
+_FORMULA_TRIGGERS = ("=", "+", "-", "@", "\t", "\r")
+
+
+def _looks_like_formula(value: Any) -> bool:
+    return isinstance(value, str) and value.startswith(_FORMULA_TRIGGERS)
+
+
+def _csv_safe(value: Any) -> Any:
+    """CSV has no cell types, so formula-looking text gets a leading apostrophe
+    (the OWASP recommendation): spreadsheets then read it as plain text."""
+    return "'" + value if _looks_like_formula(value) else value
+
+
 def _row(species: Species, site_names: str | None) -> list[Any]:
     """One export row (shared by CSV and XLSX); order follows EXPORT_COLUMNS."""
     return [
@@ -197,7 +213,7 @@ def generate_csv(db: Session, filters: dict[str, Any] | None) -> str:
     writer = csv.writer(output)
     writer.writerow(EXPORT_COLUMNS)
     for species, site_names in rows:
-        writer.writerow(_row(species, site_names))
+        writer.writerow([_csv_safe(v) for v in _row(species, site_names)])
 
     # BOM so Excel opens the UTF-8 file with French accents intact.
     return "\ufeff" + output.getvalue()
@@ -213,6 +229,11 @@ def generate_xlsx(db: Session, filters: dict[str, Any] | None) -> bytes:
     ws.append(EXPORT_COLUMNS)
     for species, site_names in rows:
         ws.append(_row(species, site_names))
+        # openpyxl stores any "=..." string as a live formula; mark such cells as
+        # plain text so the original value is shown but never evaluated.
+        for cell in ws[ws.max_row]:
+            if _looks_like_formula(cell.value):
+                cell.data_type = "s"
     buffer = io.BytesIO()
     wb.save(buffer)
     return buffer.getvalue()
@@ -229,21 +250,29 @@ def create_export(db: Session, format: str, filters: dict[str, Any] | None, user
     db.commit()
     db.refresh(export)
 
-    filename = f"export_{export.id}_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}"
-    if format == "csv":
-        content = generate_csv(db, filters)
-        filepath = os.path.join(EXPORTS_DIR, f"{filename}.csv")
-        with open(filepath, "w", encoding="utf-8") as f:
-            f.write(content)
-    elif format == "xlsx":
-        content = generate_xlsx(db, filters)
-        filepath = os.path.join(EXPORTS_DIR, f"{filename}.xlsx")
-        with open(filepath, "wb") as f:
-            f.write(content)
-    else:
+    if format not in ("csv", "xlsx"):
         export.status = "failed"
         db.commit()
         raise BadRequestError("Unsupported export format")
+
+    filename = f"export_{export.id}_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}"
+    filepath = os.path.join(EXPORTS_DIR, f"{filename}.{format}")
+    try:
+        if format == "csv":
+            content = generate_csv(db, filters)
+            with open(filepath, "w", encoding="utf-8") as f:
+                f.write(content)
+        else:
+            content = generate_xlsx(db, filters)
+            with open(filepath, "wb") as f:
+                f.write(content)
+    except Exception:
+        # Never leave the row stuck in "processing".
+        db.rollback()
+        export.status = "failed"
+        export.completed_at = datetime.now(timezone.utc)
+        db.commit()
+        raise
 
     export.status = "done"
     export.file_path = filepath
@@ -260,7 +289,14 @@ def get_export(db: Session, export_id: int) -> Export:
     return export
 
 
+def get_export_for_user(db: Session, export_id: int, user: User) -> Export:
+    """Exports are private to whoever requested them (admins can see all). Someone
+    else's export is reported as missing, so ids cannot be probed."""
+    export = get_export(db, export_id)
+    if export.requested_by != user.id and user.role.name != "admin":
+        raise NotFoundError("Export not found")
+    return export
+
+
 def list_exports(db: Session, user_id: int) -> list[Export]:
     return db.query(Export).filter(Export.requested_by == user_id).order_by(Export.created_at.desc()).all()
-
-

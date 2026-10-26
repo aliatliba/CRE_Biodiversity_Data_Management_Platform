@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from pathlib import Path
+from tempfile import TemporaryDirectory
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse
@@ -9,7 +10,8 @@ from sqlalchemy.orm import Session
 
 from app.core.background import spawn
 from app.core.config import get_settings
-from app.core.dependencies import ActiveUser
+from app.core.dependencies import ActiveUser, DBSession
+from app.core.exceptions import TooManyRequestsError, UserFacingError
 from app.core.job_store import GraphicsJob, graphics_job_store, run_job
 from app.core.utils import purge_old_entries
 from app.schemas.graphics import (
@@ -18,24 +20,30 @@ from app.schemas.graphics import (
     GraphicTypeResponse,
 )
 from app.scripts.graphics_registry import GRAPHIC_SPECS, GraphicSpec, get_spec
-from app.services import graphics_service
+from app.services import graphics_service, site_service
 
 router = APIRouter()
+
+GRAPHICS_JOB_KIND = "graphics"
+
 
 async def _execute_graphics_job(job: GraphicsJob, site_id: int, spec: GraphicSpec) -> None:
     # R is memory hungry, but concurrency is already limited by graphics_service._R_SLOT.
     async def work(db: Session) -> None:
-        with graphics_service.TemporaryDirectory(prefix=f"graphics_{job.id}_") as tmp:
+        with TemporaryDirectory(prefix=f"graphics_{job.id}_") as tmp:
             input_excel = Path(tmp) / "input.xlsx"
 
             site_name, total = await asyncio.to_thread(
                 graphics_service.build_site_excel, db, site_id, spec, input_excel
             )
+            # The database is not needed while R runs (up to spec.timeout seconds, plus
+            # the wait for the R slot): give the pooled connection back now.
+            await asyncio.to_thread(db.close)
             job.site_name = site_name
             job.total_species = total
 
             if total == 0:
-                raise ValueError(
+                raise UserFacingError(
                     f"This research site has no validated species "
                     f"records usable for “{spec.label}”."
                 )
@@ -44,9 +52,7 @@ async def _execute_graphics_job(job: GraphicsJob, site_id: int, spec: GraphicSpe
                 graphics_service.GRAPHICS_DIR
                 / f"{job.id}_{graphics_service._safe_filename(site_name)}"
             )
-            files = await asyncio.to_thread(
-                graphics_service.run_r_script, spec, input_excel, output_dir
-            )
+            files = await graphics_service.run_r_script(spec, input_excel, output_dir)
 
         job.files = {fmt: str(path) for fmt, path in files.items()}
         job.processed = total
@@ -65,34 +71,48 @@ def list_graphic_types(user: ActiveUser):
 
 
 @router.post("/jobs", response_model=GraphicsJobResponse, status_code=202)
-async def generate_graphics(data: GraphicsGenerateRequest, user: ActiveUser):
+async def generate_graphics(data: GraphicsGenerateRequest, db: DBSession, user: ActiveUser):
     try:
         spec = get_spec(data.graphic_type)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    await asyncio.to_thread(site_service.get_site, db, data.site_id)
+
+    # R renders one graphic at a time; cap the queue so it cannot grow without bound.
+    if len(graphics_job_store.active_jobs(kind=GRAPHICS_JOB_KIND)) >= (
+        get_settings().graphics_max_pending_jobs
+    ):
+        raise TooManyRequestsError(
+            "The graphics queue is full. Try again in a few minutes."
+        )
 
     await asyncio.to_thread(
         purge_old_entries,
         graphics_service.GRAPHICS_DIR,
         get_settings().graphics_retention_hours,
     )
-    job = graphics_job_store.create(graphic_type=spec.key, site_id=data.site_id)
+    job = graphics_job_store.create_for_user(
+        user.id, GRAPHICS_JOB_KIND, graphic_type=spec.key, site_id=data.site_id
+    )
     spawn(_execute_graphics_job(job, data.site_id, spec))
     return graphics_service.graphics_job_response(job)
 
 
+def _get_job(job_id: str, user) -> GraphicsJob:
+    job = graphics_job_store.get_for_user(job_id, user)
+    if job is None:
+        raise HTTPException(status_code=404, detail="Graphics job not found.")
+    return job
+
+
 @router.get("/jobs/{job_id}", response_model=GraphicsJobResponse)
 def get_graphics_job(job_id: str, user: ActiveUser):
-    job = graphics_job_store.get(job_id)
-    if job is None:
-        raise HTTPException(status_code=404, detail="Graphics job not found.")
-    return graphics_service.graphics_job_response(job)
+    return graphics_service.graphics_job_response(_get_job(job_id, user))
 
 
-def _get_file(job_id: str, file_type: str) -> tuple[Path, str]:
-    job = graphics_job_store.get(job_id)
-    if job is None:
-        raise HTTPException(status_code=404, detail="Graphics job not found.")
+def _get_file(job_id: str, file_type: str, user) -> tuple[Path, str]:
+    job = _get_job(job_id, user)
     if job.status != "completed":
         raise HTTPException(status_code=404, detail="Graphics are not ready yet.")
 
@@ -106,7 +126,7 @@ def _get_file(job_id: str, file_type: str) -> tuple[Path, str]:
 
 @router.get("/jobs/{job_id}/preview")
 def preview_graphics(job_id: str, user: ActiveUser):
-    path, _ = _get_file(job_id, "png")
+    path, _ = _get_file(job_id, "png", user)
     return FileResponse(path=path, media_type="image/png")
 
 
@@ -114,7 +134,7 @@ def preview_graphics(job_id: str, user: ActiveUser):
 def download_graphics(job_id: str, file_type: str, user: ActiveUser):
     if file_type not in graphics_service.MEDIA_TYPES:
         raise HTTPException(status_code=400, detail="Unsupported graphics format.")
-    path, filename = _get_file(job_id, file_type)
+    path, filename = _get_file(job_id, file_type, user)
     return FileResponse(
         path=path,
         filename=filename,

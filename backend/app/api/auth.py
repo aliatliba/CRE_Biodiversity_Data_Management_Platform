@@ -4,7 +4,7 @@ from app.core.dependencies import CurrentUser, DBSession
 from app.core.limiter import limiter
 from app.models.user import User
 from app.schemas.auth import LoginRequest, RefreshRequest, TokenResponse, UserProfileResponse
-from app.schemas.user import CompleteProfileRequest, UpdateOwnProfileRequest, UserResponse
+from app.schemas.user import CompleteProfileRequest, UpdateOwnProfileRequest
 from app.services import auth_service
 
 router = APIRouter()
@@ -17,14 +17,25 @@ def login(request: Request, login_data: LoginRequest, db: DBSession):
 
 
 @router.post("/refresh", response_model=TokenResponse)
-def refresh(refresh_data: RefreshRequest, db: DBSession):
+@limiter.limit("30/minute")
+def refresh(request: Request, refresh_data: RefreshRequest, db: DBSession):
+    """Rotates the refresh token: the one sent is revoked, a new pair is returned."""
     return auth_service.refresh_access_token(db, refresh_data)
 
 
 @router.post("/logout")
-def logout(refresh_data: RefreshRequest):
-    auth_service.revoke_refresh_token(refresh_data.refresh_token)
+@limiter.limit("30/minute")
+def logout(request: Request, refresh_data: RefreshRequest, db: DBSession):
+    auth_service.revoke_refresh_token(db, refresh_data.refresh_token)
     return {"detail": "Logged out successfully"}
+
+
+@router.post("/logout-all")
+def logout_all(db: DBSession, current_user: CurrentUser):
+    """Signs the user out on every device (all access and refresh tokens)."""
+    auth_service.revoke_all_sessions(db, current_user)
+    db.commit()
+    return {"detail": "Signed out of all sessions"}
 
 
 def _profile(user: User) -> UserProfileResponse:
@@ -54,13 +65,19 @@ def update_me(data: UpdateOwnProfileRequest, db: DBSession, current_user: Curren
     return _profile(user)
 
 
-@router.post("/complete-profile", response_model=UserResponse)
-def complete_profile(data: CompleteProfileRequest, db: DBSession, current_user: CurrentUser):
+@router.post("/complete-profile", response_model=TokenResponse)
+@limiter.limit("10/minute")
+def complete_profile(
+    request: Request, data: CompleteProfileRequest, db: DBSession, current_user: CurrentUser
+):
     """First-login flow: the user swaps the temporary password an admin
     gave them for a real one, and (optionally) fills in name/phone.
     Works for any authenticated user, not just ones flagged
     must_change_password, so it also serves as a general change-password
     endpoint later on.
+
+    Changing the password signs out every other session; the response carries
+    the new token pair for this one.
     """
     return auth_service.complete_profile(
         db,
