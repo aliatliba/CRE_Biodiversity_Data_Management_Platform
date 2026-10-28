@@ -8,7 +8,7 @@ import { PROFILE_NAV_ITEM, visibleNavItems } from './navConfig'
 const itemClass = (isActive: boolean) =>
   cn(
     'flex min-w-0 flex-1 flex-col items-center justify-center gap-1 py-2.5 text-[11px] font-medium transition-colors',
-    isActive ? 'text-canopy-700' : 'text-ink-950/45',
+    isActive ? 'text-primary' : 'text-fg-subtle hover:text-fg',
   )
 
 export function MobileNav() {
@@ -44,7 +44,7 @@ export function MobileNav() {
       {isMoreOpen && (
         <div
           id="mobile-more-menu"
-          className="fixed inset-x-3 bottom-[calc(4.25rem+env(safe-area-inset-bottom))] z-40 rounded-2xl border border-canopy-900/10 bg-paper-0 p-2 shadow-2xl"
+          className="fixed inset-x-3 bottom-[calc(4.25rem+env(safe-area-inset-bottom))] z-40 rounded-xl border border-line bg-surface p-1.5 shadow-overlay"
         >
           {more.map(({ to, label, icon: Icon }) => (
             <NavLink
@@ -53,14 +53,14 @@ export function MobileNav() {
               onClick={() => setIsMoreOpen(false)}
               className={({ isActive }) =>
                 cn(
-                  'flex items-center gap-3 rounded-xl px-3.5 py-3 text-sm font-medium transition-colors',
+                  'flex items-center gap-3 rounded-lg px-3.5 py-3 text-sm font-medium transition-colors',
                   isActive
-                    ? 'bg-canopy-700 text-paper-0'
-                    : 'text-ink-950/75 hover:bg-mist-100',
+                    ? 'bg-primary-soft text-primary'
+                    : 'text-fg-muted hover:bg-surface-muted hover:text-fg',
                 )
               }
             >
-              <Icon size={18} strokeWidth={2} />
+              <Icon size={18} strokeWidth={2} aria-hidden="true" />
               {label}
             </NavLink>
           ))}
@@ -68,12 +68,12 @@ export function MobileNav() {
       )}
 
       <nav
-        className="fixed inset-x-0 bottom-0 z-40 flex border-t border-canopy-900/[0.08] bg-paper-0/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md"
+        className="fixed inset-x-0 bottom-0 z-40 flex border-t border-line bg-surface/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md"
         aria-label="Mobile navigation"
       >
         {primary.map(({ to, label, mobileLabel, icon: Icon }) => (
           <NavLink key={to} to={to} className={({ isActive }) => itemClass(isActive)}>
-            <Icon size={19} strokeWidth={2} />
+            <Icon size={19} strokeWidth={2} aria-hidden="true" />
             <span className="truncate">{mobileLabel ?? label}</span>
           </NavLink>
         ))}
@@ -85,7 +85,7 @@ export function MobileNav() {
           aria-controls="mobile-more-menu"
           className={itemClass(isMoreOpen || moreIsActive)}
         >
-          <Ellipsis size={19} strokeWidth={2} />
+          <Ellipsis size={19} strokeWidth={2} aria-hidden="true" />
           <span className="truncate">More</span>
         </button>
       </nav>

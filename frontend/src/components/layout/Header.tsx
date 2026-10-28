@@ -14,20 +14,20 @@ export function Header({ title }: { title: string }) {
   }
 
   return (
-    <header className="relative z-30 flex min-h-16 w-full shrink-0 items-center justify-between gap-3 border-b border-canopy-900/[0.08] bg-paper-0/95 px-4 backdrop-blur-md sm:px-6">
-      <h1 className="min-w-0 truncate font-display text-base font-bold tracking-tight text-canopy-950 sm:text-lg">
+    <header className="relative z-30 flex h-14 w-full shrink-0 items-center justify-between gap-3 border-b border-line bg-surface/95 px-4 backdrop-blur-md sm:px-6 md:px-8">
+      <h1 className="min-w-0 truncate font-display text-base font-bold tracking-tight text-fg sm:text-lg">
         {title}
       </h1>
 
-      <div className="flex shrink-0 items-center gap-1.5">
+      <div className="flex shrink-0 items-center gap-1">
         <ThemeToggle />
 
         <button
           onClick={handleSignOut}
-          className="flex items-center gap-2 rounded-full px-2.5 py-1.5 text-sm font-medium text-ink-950/60 transition-colors hover:bg-mist-100 hover:text-canopy-900 sm:px-3"
+          className="flex h-9 items-center gap-2 rounded-lg px-2.5 text-sm font-medium text-fg-muted transition-colors hover:bg-surface-muted hover:text-fg sm:px-3"
           aria-label="Sign out"
         >
-          <LogOut size={15} />
+          <LogOut size={15} aria-hidden="true" />
           <span className="hidden sm:inline">Sign out</span>
         </button>
       </div>
