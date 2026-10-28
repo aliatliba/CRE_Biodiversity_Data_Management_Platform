@@ -26,14 +26,14 @@ function pointOnCircle(angleDeg: number, radius: number) {
 
 export function EcosystemIntegrations() {
   return (
-    <section id="ecosystem" className="border-b border-canopy-900/[0.06] bg-paper-0">
+    <section id="ecosystem" className="border-b border-line bg-surface">
       <div className="mx-auto grid w-full max-w-6xl grid-cols-1 items-center gap-10 px-6 py-24 sm:px-8 lg:grid-cols-[1fr_1.1fr]">
         <Reveal>
           <p className="font-mono text-xs uppercase tracking-[0.14em] text-canopy-700">A connected record</p>
-          <h2 className="mt-3 font-display text-3xl font-bold tracking-tight text-canopy-950 sm:text-4xl">
+          <h2 className="mt-3 font-display text-3xl font-bold tracking-tight text-fg sm:text-4xl">
             Every entry is checked against the wider world.
           </h2>
-          <p className="mt-5 max-w-md text-[15px] leading-relaxed text-ink-950/65">
+          <p className="mt-5 max-w-md text-[15px] leading-relaxed text-fg-muted">
             BioData doesn't work in isolation. Names, taxonomy, and
             conservation status are cross-referenced against the same public
             registries researchers already trust.
@@ -88,8 +88,7 @@ export function EcosystemIntegrations() {
                     y={p.y + (source.angle < 0 ? 4 : 34)}
                     textAnchor={anchor}
                     className="font-mono text-[8px]"
-                    fill="var(--color-ink-950)"
-                    fillOpacity={0.45}
+                    fill="var(--color-fg-subtle)"
                   >
                     {source.detail}
                   </text>
