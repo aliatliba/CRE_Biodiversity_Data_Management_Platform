@@ -71,7 +71,7 @@ export function Hero() {
             className="mt-9 flex flex-wrap items-center gap-4"
           >
             <Link to={ROUTES.login}>
-              <Button variant="primary" size="lg" className="bg-lichen-400 !text-canopy-950 hover:bg-lichen-300">
+              <Button variant="primary" size="lg" className="!bg-lichen-400 !text-canopy-950 hover:!bg-lichen-300">
                 Sign in to BioData
               </Button>
             </Link>

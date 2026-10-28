@@ -14,18 +14,18 @@ interface StatCardProps {
 export function StatCard({ label, value, icon: Icon, hint, delay = 0 }: StatCardProps) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 12 }}
+      initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, delay, ease: [0.22, 1, 0.36, 1] }}
+      transition={{ duration: 0.3, delay, ease: [0.22, 1, 0.36, 1] }}
     >
-      <Card className="flex items-center gap-4">
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-canopy-700/10 text-canopy-700">
-          <Icon size={20} />
-        </div>
+      <Card className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="font-display text-2xl font-bold tabular-nums text-canopy-950">{value}</p>
-          <p className="text-xs font-medium text-ink-950/50">{label}</p>
-          {hint && <p className="mt-0.5 truncate text-xs text-ink-950/40" title={hint}>{hint}</p>}
+          <p className="text-xs font-medium text-fg-muted">{label}</p>
+          <p className="mt-1 text-2xl font-semibold tabular-nums tracking-tight text-fg">{value}</p>
+          {hint && <p className="mt-0.5 truncate text-xs text-fg-subtle" title={hint}>{hint}</p>}
+        </div>
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary" aria-hidden="true">
+          <Icon size={18} />
         </div>
       </Card>
     </motion.div>

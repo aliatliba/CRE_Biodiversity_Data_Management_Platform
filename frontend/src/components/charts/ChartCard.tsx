@@ -14,14 +14,14 @@ export function ChartCard({ title, subtitle, delay = 0, children }: ChartCardPro
   return (
     <motion.div
       className="h-full min-w-0"
-      initial={{ opacity: 0, y: 16 }}
+      initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.45, delay }}
+      transition={{ duration: 0.3, delay, ease: 'easeOut' }}
     >
       <Card className="h-full min-w-0 overflow-hidden">
-        <h2 className="font-display text-sm font-bold text-canopy-950">{title}</h2>
-        {subtitle && <p className="mt-1 text-xs text-ink-950/50">{subtitle}</p>}
-        <div className="mt-5 min-w-0 overflow-hidden">{children}</div>
+        <h2 className="text-sm font-semibold text-fg">{title}</h2>
+        {subtitle && <p className="mt-0.5 text-xs text-fg-subtle">{subtitle}</p>}
+        <div className="mt-4 min-w-0 overflow-hidden">{children}</div>
       </Card>
     </motion.div>
   )
