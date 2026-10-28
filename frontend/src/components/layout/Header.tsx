@@ -14,12 +14,12 @@ export function Header({ title }: { title: string }) {
   }
 
   return (
-    <header className="relative z-30 flex h-14 w-full shrink-0 items-center justify-between gap-3 border-b border-line bg-surface/95 px-4 backdrop-blur-md sm:px-6 md:px-8">
-      <h1 className="min-w-0 truncate font-display text-base font-bold tracking-tight text-fg sm:text-lg">
+    <header className="relative z-30 flex h-16 w-full shrink-0 items-center justify-between gap-3 px-4 sm:px-6 md:px-8 md:pt-3">
+      <h1 className="min-w-0 truncate font-display text-lg font-bold tracking-tight text-fg sm:text-2xl">
         {title}
       </h1>
 
-      <div className="flex shrink-0 items-center gap-1">
+      <div className="glass flex shrink-0 items-center gap-1 rounded-xl p-1">
         <ThemeToggle />
 
         <button
