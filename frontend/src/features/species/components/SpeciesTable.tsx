@@ -5,20 +5,20 @@ import type { SpeciesListItem } from '../types'
 
 export function SpeciesTable({ species }: { species: SpeciesListItem[] }) {
   return (
-    <div className="overflow-hidden rounded-2xl border border-canopy-900/10 bg-paper-0">
+    <div className="overflow-hidden rounded-xl border border-line bg-surface">
       <div className="overflow-x-auto">
         <table className="w-full min-w-[680px] text-left text-sm">
           <thead>
-            <tr className="border-b border-canopy-900/[0.08] bg-mist-100/50 text-xs font-semibold uppercase tracking-wide text-ink-950/50">
-              <th className="px-5 py-3">Scientific name</th>
-              <th className="hidden px-5 py-3 md:table-cell">
+            <tr className="border-b border-line bg-surface-muted text-xs font-semibold uppercase tracking-wide text-fg-muted">
+              <th className="px-4 py-2.5">Scientific name</th>
+              <th className="hidden px-4 py-2.5 md:table-cell">
                 Family
               </th>
-              <th className="hidden px-5 py-3 lg:table-cell">
+              <th className="hidden px-4 py-2.5 lg:table-cell">
                 Kingdom
               </th>
-              <th className="px-5 py-3">IUCN</th>
-              <th className="px-5 py-3">National status</th>
+              <th className="px-4 py-2.5">IUCN</th>
+              <th className="px-4 py-2.5">National status</th>
             </tr>
           </thead>
 
@@ -26,9 +26,9 @@ export function SpeciesTable({ species }: { species: SpeciesListItem[] }) {
             {species.map((sp) => (
               <tr
                 key={sp.id}
-                className="border-b border-canopy-900/[0.05] transition-colors last:border-0 hover:bg-mist-100/40"
+                className="border-b border-line transition-colors last:border-0 hover:bg-surface-muted"
               >
-                <td className="px-5 py-3.5">
+                <td className="px-4 py-2.5">
                   <Link
                     to={`/species/${sp.id}`}
                     className="font-medium italic text-canopy-900 hover:underline"
@@ -37,19 +37,19 @@ export function SpeciesTable({ species }: { species: SpeciesListItem[] }) {
                   </Link>
                 </td>
 
-                <td className="hidden px-5 py-3.5 text-ink-950/65 md:table-cell">
+                <td className="hidden px-4 py-2.5 text-fg-muted md:table-cell">
                   {sp.family ?? (
-                    <span className="text-red-500">Missing</span>
+                    <span className="text-danger">Missing</span>
                   )}
                 </td>
 
-                <td className="hidden px-5 py-3.5 text-ink-950/65 lg:table-cell">
+                <td className="hidden px-4 py-2.5 text-fg-muted lg:table-cell">
                   {sp.kingdom ?? (
-                    <span className="text-red-500">Missing</span>
+                    <span className="text-danger">Missing</span>
                   )}
                 </td>
 
-                <td className="px-5 py-3.5">
+                <td className="px-4 py-2.5">
                   {sp.iucn_status ? (
                     <Badge tone={getIucnTone(sp.iucn_status)}>
                       {sp.iucn_status}
@@ -59,7 +59,7 @@ export function SpeciesTable({ species }: { species: SpeciesListItem[] }) {
                   )}
                 </td>
 
-                <td className="px-5 py-3.5">
+                <td className="px-4 py-2.5">
                   <Badge
                     tone={
                       sp.national_status === 'Protected'

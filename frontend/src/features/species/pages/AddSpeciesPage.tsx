@@ -528,7 +528,7 @@ export default function AddSpeciesPage() {
           <button
             type="button"
             onClick={() => navigate(ROUTES.species)}
-            className="mb-4 flex items-center gap-1.5 text-sm font-medium text-canopy-700 transition-colors hover:text-canopy-950"
+            className="mb-4 flex items-center gap-1.5 text-sm font-medium text-canopy-700 transition-colors hover:text-fg"
           >
             <ArrowLeft className="h-4 w-4" />
             Back to species
@@ -540,11 +540,11 @@ export default function AddSpeciesPage() {
                 Species registry
               </p>
 
-              <h1 className="mt-1 font-display text-2xl font-bold text-canopy-950">
+              <h1 className="mt-1 font-display text-2xl font-bold text-fg">
                 Log a species
               </h1>
 
-              <p className="mt-1.5 max-w-2xl text-sm text-ink-950/60">
+              <p className="mt-1.5 max-w-2xl text-sm text-fg-muted">
                 Look up one or more species, review the
                 automatically fetched information, and
                 save each validated record to the
@@ -574,7 +574,7 @@ export default function AddSpeciesPage() {
         {displayError && (
           <div
             role="alert"
-            className="mb-5 flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 px-3.5 py-2.5 text-sm font-medium text-red-700"
+            className="mb-5 flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 px-3.5 py-2.5 text-sm font-medium text-danger"
           >
             <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
 
@@ -596,11 +596,11 @@ export default function AddSpeciesPage() {
             SEARCH / BATCH SETUP
         ====================================================== */}
         <Card className="mx-auto max-w-3xl">
-          <h2 className="font-display text-lg font-bold text-canopy-950">
+          <h2 className="font-display text-lg font-bold text-fg">
             Start with names
           </h2>
 
-          <p className="mt-1.5 text-sm text-ink-950/60">
+          <p className="mt-1.5 text-sm text-fg-muted">
             We'll check the catalogue for duplicates,
             then pull in taxonomy and conservation data
             automatically.
@@ -611,13 +611,13 @@ export default function AddSpeciesPage() {
             <div className="flex flex-col gap-1.5">
               <label
                 htmlFor="species-site"
-                className="text-xs font-semibold uppercase tracking-[0.08em] text-canopy-900/70"
+                className="text-xs font-semibold uppercase tracking-[0.08em] text-fg-muted"
               >
                 Site
               </label>
 
               <div className="relative">
-                <MapPin className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-950/35" />
+                <MapPin className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-fg-subtle" />
 
                 <select
                   id="species-site"
@@ -631,7 +631,7 @@ export default function AddSpeciesPage() {
                     setItems([])
                     setError(null)
                   }}
-                  className="h-12 w-full appearance-none rounded-xl border border-mist-200 bg-paper-0 pl-11 pr-10 text-[15px] outline-none transition-colors focus:border-canopy-600"
+                  className="h-10 w-full appearance-none rounded-lg border border-line-strong bg-surface pl-11 pr-10 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/20"
                 >
                   <option value="">
                     Select a site…
@@ -650,7 +650,7 @@ export default function AddSpeciesPage() {
                   ))}
                 </select>
 
-                <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-950/35" />
+                <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-fg-subtle" />
               </div>
             </div>
 
@@ -658,13 +658,13 @@ export default function AddSpeciesPage() {
             <div className="flex flex-col gap-1.5">
               <label
                 htmlFor="scientific-names"
-                className="text-xs font-semibold uppercase tracking-[0.08em] text-canopy-900/70"
+                className="text-xs font-semibold uppercase tracking-[0.08em] text-fg-muted"
               >
                 Scientific names
               </label>
 
               <div className="relative">
-                <Search className="pointer-events-none absolute left-4 top-4 h-4 w-4 text-ink-950/35" />
+                <Search className="pointer-events-none absolute left-4 top-4 h-4 w-4 text-fg-subtle" />
 
                 <textarea
                   id="scientific-names"
@@ -680,12 +680,12 @@ export default function AddSpeciesPage() {
 Panthera leo
 Canis lupus
 Aquila chrysaetos`}
-                  className="w-full resize-y rounded-xl border border-mist-200 bg-paper-0 px-4 py-3 pl-11 text-[15px] leading-6 outline-none transition-colors placeholder:text-ink-950/30 focus:border-canopy-600 disabled:bg-mist-50"
+                  className="w-full resize-y rounded-lg border border-line-strong bg-surface px-4 py-3 pl-11 text-sm leading-6 outline-none transition-colors placeholder:text-fg-subtle focus:border-ring focus:ring-2 focus:ring-ring/20 disabled:bg-surface-muted"
                 />
               </div>
 
               <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-                <p className="text-xs text-ink-950/45">
+                <p className="text-xs text-fg-subtle">
                   Enter one scientific name per line.
                   Blank lines and duplicates are ignored.
                 </p>
@@ -723,11 +723,11 @@ Aquila chrysaetos`}
                     <Loader2 className="h-4 w-4 shrink-0 animate-spin text-canopy-700" />
 
                     <div className="min-w-0">
-                      <p className="text-sm font-semibold text-canopy-950">
+                      <p className="text-sm font-semibold text-fg">
                         Looking up species…
                       </p>
 
-                      <p className="mt-0.5 text-xs text-ink-950/55">
+                      <p className="mt-0.5 text-xs text-fg-subtle">
                         Checking biodiversity data sources one species at a time.
                       </p>
                     </div>
@@ -756,7 +756,7 @@ Aquila chrysaetos`}
                   />
                 </div>
 
-                <div className="mt-2 flex items-center justify-between text-[11px] text-ink-950/45">
+                <div className="mt-2 flex items-center justify-between text-[11px] text-fg-subtle">
                   <span>
                     {lookupProgress.processed === 0
                       ? 'Preparing lookup…'
@@ -794,7 +794,7 @@ Aquila chrysaetos`}
                   Batch review
                 </p>
 
-                <h2 className="mt-1 font-display text-xl font-bold text-canopy-950">
+                <h2 className="mt-1 font-display text-xl font-bold text-fg">
                   {lookedUpCount} species looked up
                 </h2>
 
@@ -909,7 +909,7 @@ Aquila chrysaetos`}
 
                           <div className="min-w-0">
                             <div className="flex flex-wrap items-center gap-2">
-                              <h3 className="font-display text-lg font-bold italic text-canopy-950">
+                              <h3 className="font-display text-lg font-bold italic text-fg">
                                 {draft?.scientific_name ??
                                   item.inputScientificName}
                               </h3>
@@ -969,7 +969,7 @@ Aquila chrysaetos`}
                                 )}
                             </div>
 
-                            <p className="mt-1 text-xs text-ink-950/45">
+                            <p className="mt-1 text-xs text-fg-subtle">
                               Input:{' '}
                               {
                                 item.inputScientificName
@@ -977,7 +977,7 @@ Aquila chrysaetos`}
                             </p>
 
                             {taxonomy?.common_name && (
-                              <p className="mt-1.5 text-sm font-medium text-ink-950/65">
+                              <p className="mt-1.5 text-sm font-medium text-fg-muted">
                                 {
                                   taxonomy.common_name
                                 }
@@ -1054,7 +1054,7 @@ Aquila chrysaetos`}
                           TAXONOMY SUMMARY
                       ------------------------------------------ */}
                       {draft && (
-                        <div className="mt-5 grid grid-cols-2 gap-x-5 gap-y-4 border-t border-mist-200 pt-4 sm:grid-cols-3 lg:grid-cols-7">
+                        <div className="mt-5 grid grid-cols-2 gap-x-5 gap-y-4 border-t border-line pt-4 sm:grid-cols-3 lg:grid-cols-7">
                           <SummaryField
                             label="Kingdom"
                             value={
@@ -1223,7 +1223,7 @@ Aquila chrysaetos`}
                           REVIEW TOGGLE
                       ------------------------------------------ */}
                       {draft && (
-                        <div className="mt-5 flex items-center justify-between border-t border-mist-200 pt-4">
+                        <div className="mt-5 flex items-center justify-between border-t border-line pt-4">
                           <button
                             type="button"
                             onClick={() =>
@@ -1232,7 +1232,7 @@ Aquila chrysaetos`}
                                   !item.expanded,
                               })
                             }
-                            className="flex items-center gap-2 text-sm font-semibold text-canopy-700 transition-colors hover:text-canopy-950"
+                            className="flex items-center gap-2 text-sm font-semibold text-canopy-700 transition-colors hover:text-fg"
                           >
                             {item.expanded ? (
                               <ChevronUp className="h-4 w-4" />
@@ -1245,7 +1245,7 @@ Aquila chrysaetos`}
                               : 'Review & Edit'}
                           </button>
 
-                          <p className="hidden text-xs text-ink-950/40 sm:block">
+                          <p className="hidden text-xs text-fg-subtle sm:block">
                             {item.expanded
                               ? 'Review the enriched data below'
                               : 'Open to edit before saving'}
@@ -1259,7 +1259,7 @@ Aquila chrysaetos`}
                     ================================================== */}
                     {draft &&
                       item.expanded && (
-                        <div className="border-t border-mist-200 bg-paper-0">
+                        <div className="border-t border-line bg-surface">
                           <div className="p-5 sm:p-6">
                             <SpeciesReviewForm
                               draft={draft}
@@ -1290,7 +1290,7 @@ Aquila chrysaetos`}
                           {/* ---------------------------------------
                               SAVE FOOTER
                           ---------------------------------------- */}
-                          <div className="border-t border-mist-200 bg-mist-50/50 px-5 py-4 sm:px-6">
+                          <div className="border-t border-line bg-surface-muted px-5 py-4 sm:px-6">
                             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                               <div>
                                 {item.saveStatus ===
@@ -1305,7 +1305,7 @@ Aquila chrysaetos`}
                                       successfully
                                     </p>
 
-                                    <p className="mt-1 text-xs text-ink-950/45">
+                                    <p className="mt-1 text-xs text-fg-subtle">
                                       The record has been
                                       added to the
                                       species registry.
@@ -1313,11 +1313,11 @@ Aquila chrysaetos`}
                                   </>
                                 ) : (
                                   <>
-                                    <p className="text-sm font-semibold text-ink-950">
+                                    <p className="text-sm font-semibold text-fg">
                                       Ready to save?
                                     </p>
 
-                                    <p className="mt-1 text-xs text-ink-950/45">
+                                    <p className="mt-1 text-xs text-fg-subtle">
                                       Review the fields
                                       above, then save
                                       the validated
@@ -1380,8 +1380,8 @@ Aquila chrysaetos`}
                         LOOKUP ERROR FOOTER
                     ================================================== */}
                     {!draft && !item.existingSpecies && (
-                      <div className="border-t border-mist-200 bg-mist-50/50 px-5 py-4 sm:px-6">
-                        <p className="text-xs text-ink-950/45">
+                      <div className="border-t border-line bg-surface-muted px-5 py-4 sm:px-6">
+                        <p className="text-xs text-fg-subtle">
                           This item cannot be saved
                           because the lookup did not
                           produce a usable species
@@ -1406,11 +1406,11 @@ Aquila chrysaetos`}
                     <Check className="h-5 w-5" />
                   </div>
 
-                  <p className="mt-3 font-display text-base font-bold text-canopy-950">
+                  <p className="mt-3 font-display text-base font-bold text-fg">
                     Batch complete
                   </p>
 
-                  <p className="mt-1 text-sm text-ink-950/60">
+                  <p className="mt-1 text-sm text-fg-muted">
                     All {savedCount} species have
                     been successfully saved.
                   </p>
@@ -1426,11 +1426,11 @@ Aquila chrysaetos`}
           items.length === 0 &&
           !displayError && (
             <div className="mt-8 text-center">
-              <p className="font-display text-base font-semibold text-canopy-950">
+              <p className="font-display text-base font-semibold text-fg">
                 Add several species at once
               </p>
 
-              <p className="mx-auto mt-1.5 max-w-md text-sm text-ink-950/50">
+              <p className="mx-auto mt-1.5 max-w-md text-sm text-fg-subtle">
                 Enter one scientific name per line
                 above. You can review and edit each
                 enriched record before saving it.
@@ -1451,11 +1451,11 @@ function SummaryField({
 }) {
   return (
     <div className="min-w-0">
-      <p className="truncate text-[10px] font-semibold uppercase tracking-[0.08em] text-canopy-900/55">
+      <p className="truncate text-[10px] font-semibold uppercase tracking-[0.08em] text-fg-muted">
         {label}
       </p>
 
-      <p className="mt-1 truncate text-sm font-medium text-ink-950/75">
+      <p className="mt-1 truncate text-sm font-medium text-fg-muted">
         {value || '—'}
       </p>
     </div>

@@ -121,7 +121,7 @@ export function UsersPage() {
   return (
     <>
       <div className="mb-6 flex items-center justify-between">
-        <p className="text-sm text-ink-950/55">
+        <p className="text-sm text-fg-subtle">
           Every account here signs in with a temporary password and must set their own on first login.
         </p>
         <Button onClick={openModal} className="shrink-0 gap-2">
@@ -147,31 +147,31 @@ export function UsersPage() {
       )}
 
       {!isPending && !loadError && users.length > 0 && (
-        <div className="overflow-hidden rounded-2xl border border-canopy-900/10 bg-paper-0">
+        <div className="overflow-hidden rounded-xl border border-line bg-surface">
           <table className="w-full text-left text-sm">
             <thead>
-              <tr className="border-b border-canopy-900/[0.08] bg-mist-100/50 text-xs font-semibold uppercase tracking-wide text-ink-950/50">
-                <th className="px-5 py-3">Name</th>
-                <th className="hidden px-5 py-3 sm:table-cell">Email</th>
-                <th className="px-5 py-3">Role</th>
-                <th className="px-5 py-3">Status</th>
-                <th className="px-5 py-3" />
+              <tr className="border-b border-line bg-surface-muted text-xs font-semibold uppercase tracking-wide text-fg-muted">
+                <th className="px-4 py-2.5">Name</th>
+                <th className="hidden px-4 py-2.5 sm:table-cell">Email</th>
+                <th className="px-4 py-2.5">Role</th>
+                <th className="px-4 py-2.5">Status</th>
+                <th className="px-4 py-2.5" />
               </tr>
             </thead>
             <tbody>
               {users.map((u) => (
-                <tr key={u.id} className="border-b border-canopy-900/[0.05] last:border-0">
-                  <td className="px-5 py-3.5">
-                    <p className="font-medium text-ink-950">{u.full_name}</p>
-                    <p className="text-xs text-ink-950/45 sm:hidden">{u.email}</p>
+                <tr key={u.id} className="border-b border-line last:border-0">
+                  <td className="px-4 py-2.5">
+                    <p className="font-medium text-fg">{u.full_name}</p>
+                    <p className="text-xs text-fg-subtle sm:hidden">{u.email}</p>
                   </td>
-                  <td className="hidden px-5 py-3.5 text-ink-950/65 sm:table-cell">{u.email}</td>
-                  <td className="px-5 py-3.5">
+                  <td className="hidden px-4 py-2.5 text-fg-muted sm:table-cell">{u.email}</td>
+                  <td className="px-4 py-2.5">
                     <Badge tone={roleName(u.role_id) === 'admin' ? 'accent' : 'neutral'} className="capitalize">
                       {roleName(u.role_id)}
                     </Badge>
                   </td>
-                  <td className="px-5 py-3.5">
+                  <td className="px-4 py-2.5">
                     {!u.is_active ? (
                       <Badge tone="danger">Deactivated</Badge>
                     ) : u.must_change_password ? (
@@ -180,7 +180,7 @@ export function UsersPage() {
                       <Badge tone="success">Active</Badge>
                     )}
                   </td>
-                  <td className="px-5 py-3.5 text-right">
+                  <td className="px-4 py-2.5 text-right">
                     {u.id !== currentUser?.id && (
                       <>
                         {u.is_active ? (
@@ -189,7 +189,7 @@ export function UsersPage() {
                               setActionError(null)
                               setUserToDeactivate(u)
                             }}
-                            className="inline-flex h-8 w-8 items-center justify-center rounded-full text-ink-950/45 transition-colors hover:bg-red-50 hover:text-red-600 sm:h-auto sm:w-auto sm:gap-1.5 sm:px-2.5 sm:py-1"
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-fg-subtle transition-colors hover:bg-danger/10 hover:text-danger sm:h-8 sm:w-auto sm:gap-1.5 sm:px-2.5"
                             aria-label={`Deactivate ${u.full_name}`}
                             title={`Deactivate ${u.full_name}`}
                           >
@@ -202,7 +202,7 @@ export function UsersPage() {
                               setActionError(null)
                               setUserToDelete(u)
                             }}
-                            className="inline-flex h-8 w-8 items-center justify-center rounded-full text-ink-950/45 transition-colors hover:bg-red-50 hover:text-red-600 sm:h-auto sm:w-auto sm:gap-1.5 sm:px-2.5 sm:py-1"
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-fg-subtle transition-colors hover:bg-danger/10 hover:text-danger sm:h-8 sm:w-auto sm:gap-1.5 sm:px-2.5"
                             aria-label={`Delete ${u.full_name}`}
                             title={`Permanently delete ${u.full_name}`}
                           >
@@ -286,12 +286,12 @@ export function UsersPage() {
           </form>
         ) : (
           <div className="flex flex-col gap-4">
-            <div className="rounded-xl border border-canopy-900/10 bg-mist-100/50 p-4 font-mono text-sm">
+            <div className="rounded-xl border border-line bg-surface-muted p-4 font-mono text-sm">
               <p>
-                <span className="text-ink-950/50">email</span> {createdCredentials.email}
+                <span className="text-fg-subtle">email</span> {createdCredentials.email}
               </p>
               <p className="mt-1">
-                <span className="text-ink-950/50">password</span> {createdCredentials.password}
+                <span className="text-fg-subtle">password</span> {createdCredentials.password}
               </p>
             </div>
             <Button variant="secondary" onClick={copyCredentials} className="gap-2">

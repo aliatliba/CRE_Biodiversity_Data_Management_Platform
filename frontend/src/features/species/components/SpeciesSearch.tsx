@@ -75,27 +75,27 @@ function IucnStatusMultiSelect({
         onClick={() => setIsOpen((v) => !v)}
         aria-haspopup="listbox"
         aria-expanded={isOpen}
-        className="flex h-11 items-center gap-2 whitespace-nowrap rounded-xl border border-mist-200 bg-paper-0 px-3.5 text-sm text-ink-950/80 outline-none transition-colors focus:border-canopy-600"
+        className="flex h-10 items-center gap-2 whitespace-nowrap rounded-lg border border-line-strong bg-surface px-3.5 text-sm text-fg-muted outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/20"
       >
         {buttonLabel}
-        <ChevronDown size={14} className="text-ink-950/40" />
+        <ChevronDown size={14} className="text-fg-subtle" />
       </button>
 
       {isOpen && (
         <div
           role="listbox"
-          className="absolute left-0 z-10 mt-2 w-56 rounded-xl border border-mist-200 bg-paper-0 p-2 shadow-lg"
+          className="absolute left-0 z-10 mt-2 w-56 rounded-lg border border-line bg-surface p-1.5 shadow-overlay"
         >
           {IUCN_OPTIONS.map((option) => (
             <label
               key={option.value}
-              className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-ink-950/80 transition-colors hover:bg-mist-100"
+              className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-fg-muted transition-colors hover:bg-surface-muted"
             >
               <input
                 type="checkbox"
                 checked={selected.includes(option.value)}
                 onChange={() => toggleStatus(option.value)}
-                className="h-3.5 w-3.5 rounded border-mist-300 text-canopy-700 focus:ring-canopy-600"
+                className="h-3.5 w-3.5 rounded border-line-strong text-canopy-700 focus:ring-ring"
               />
               {option.label}
             </label>
@@ -156,7 +156,7 @@ export function SpeciesSearch({ filters, onChange, sites }: SpeciesSearchProps) 
         <button
           type="button"
           onClick={() => setShowAdvanced((v) => !v)}
-          className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-mist-200 bg-paper-0 px-4 text-sm font-medium text-ink-950/75 transition-colors hover:bg-mist-100"
+          className="inline-flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-lg border border-line-strong bg-surface px-3.5 text-sm font-medium text-fg-muted transition-colors hover:bg-surface-muted hover:text-fg"
         >
           <Filter size={15} />
           {showAdvanced ? 'Hide filters' : 'More filters'}
@@ -166,7 +166,7 @@ export function SpeciesSearch({ filters, onChange, sites }: SpeciesSearchProps) 
           <button
             type="button"
             onClick={() => onChange(EMPTY_SPECIES_FILTERS)}
-            className="inline-flex h-11 items-center gap-1.5 rounded-xl px-3 text-sm font-medium text-red-600 transition-colors hover:bg-red-50"
+            className="inline-flex h-10 items-center gap-1.5 whitespace-nowrap rounded-lg px-3 text-sm font-medium text-danger transition-colors hover:bg-danger/10"
           >
             <X size={14} />
             Clear
@@ -175,17 +175,17 @@ export function SpeciesSearch({ filters, onChange, sites }: SpeciesSearchProps) 
       </div>
 
       {showAdvanced && (
-        <div className="grid grid-cols-1 gap-3 rounded-2xl border border-canopy-900/10 bg-mist-100/30 p-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 rounded-xl border border-line bg-surface-muted p-4 sm:grid-cols-2 lg:grid-cols-3">
           {FILTER_FIELDS.filter((f) => f.key !== 'search').map((field) => (
             <label key={field.key} className="flex flex-col gap-1.5">
-              <span className="text-xs font-semibold uppercase tracking-wide text-canopy-900/60">
+              <span className="text-xs font-medium text-fg-muted">
                 {field.label}
               </span>
               <input
                 value={filters[field.key]}
                 onChange={(e) => setField(field.key, e.target.value)}
                 placeholder={field.placeholder}
-                className="h-10 rounded-lg border border-mist-200 bg-paper-0 px-3 text-sm outline-none focus:border-canopy-600"
+                className="h-10 rounded-lg border border-line-strong bg-surface px-3 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/20"
               />
             </label>
           ))}
