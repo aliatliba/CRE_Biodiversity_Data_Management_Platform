@@ -19,7 +19,7 @@ export function ChartCard({ title, subtitle, delay = 0, children }: ChartCardPro
       transition={{ duration: 0.3, delay, ease: 'easeOut' }}
     >
       <Card className="h-full min-w-0 overflow-hidden">
-        <h2 className="text-sm font-semibold text-fg">{title}</h2>
+        <h2 className="font-display text-[15px] font-bold tracking-tight text-fg">{title}</h2>
         {subtitle && <p className="mt-0.5 text-xs text-fg-subtle">{subtitle}</p>}
         <div className="mt-4 min-w-0 overflow-hidden">{children}</div>
       </Card>

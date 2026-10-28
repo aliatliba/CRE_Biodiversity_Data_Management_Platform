@@ -76,7 +76,7 @@ export function Modal({ isOpen, onClose, title, description, children }: ModalPr
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto px-4 py-6">
       <div
-        className="fixed inset-0 bg-ink-950/45 backdrop-blur-[2px] dark:bg-black/60"
+        className="fixed inset-0 bg-ink-950/40 backdrop-blur-sm dark:bg-black/60"
         onClick={onClose}
         aria-hidden="true"
       />
@@ -84,7 +84,7 @@ export function Modal({ isOpen, onClose, title, description, children }: ModalPr
       <div
         ref={dialogRef}
         tabIndex={-1}
-        className="relative z-10 max-h-[calc(100vh-3rem)] w-full max-w-md overflow-y-auto rounded-xl border border-line bg-surface p-5 shadow-overlay outline-none sm:p-6"
+        className="relative z-10 max-h-[calc(100vh-3rem)] w-full max-w-md overflow-y-auto rounded-2xl border border-line bg-surface/90 p-5 shadow-overlay outline-none backdrop-blur-2xl sm:p-6"
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}

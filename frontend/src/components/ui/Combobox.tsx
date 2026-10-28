@@ -101,7 +101,7 @@ export function Combobox({
             setIsOpen(true)
           }}
           onKeyDown={handleKeyDown}
-          className="h-10 w-full rounded-lg border border-line-strong bg-surface px-3 pr-16 text-sm text-fg outline-none transition-colors duration-150 placeholder:text-fg-subtle hover:border-fg-subtle/50 focus:border-ring focus:ring-2 focus:ring-ring/20"
+          className="h-10 w-full rounded-xl border border-line-strong bg-surface px-3 pr-16 text-sm text-fg outline-none transition-colors duration-150 placeholder:text-fg-subtle hover:border-fg-subtle/50 focus:border-ring focus:ring-2 focus:ring-ring/20"
         />
 
         {value && (
@@ -126,7 +126,7 @@ export function Combobox({
         <ul
           id={listId}
           role="listbox"
-          className="absolute z-30 mt-2 max-h-60 w-full overflow-y-auto rounded-lg border border-line bg-surface p-1 shadow-overlay"
+          className="absolute z-30 mt-2 max-h-60 w-full overflow-y-auto rounded-xl border border-line bg-surface p-1 shadow-overlay"
         >
           {matches.length === 0 && (
             <li className="px-3 py-4 text-center text-sm text-fg-subtle">No matches.</li>
