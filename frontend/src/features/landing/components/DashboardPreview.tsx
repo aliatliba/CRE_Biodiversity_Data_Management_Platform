@@ -21,6 +21,9 @@ export function DashboardPreview() {
   const { scrollYProgress } = useScroll({ target: ref, offset: ['start end', 'end start'] })
   const yBack = useTransform(scrollYProgress, [0, 1], shouldReduceMotion ? [0, 0] : [30, -30])
   const yFront = useTransform(scrollYProgress, [0, 1], shouldReduceMotion ? [0, 0] : [-16, 16])
+  // Tilts up from the table into view, like a screen being raised.
+  const rotateX = useTransform(scrollYProgress, [0, 0.42], shouldReduceMotion ? [0, 0] : [24, 0])
+  const scale = useTransform(scrollYProgress, [0, 0.42], shouldReduceMotion ? [1, 1] : [0.92, 1])
 
   return (
     <section id="dashboard" className="border-b border-line bg-surface-muted">
@@ -36,7 +39,7 @@ export function DashboardPreview() {
           </p>
         </Reveal>
 
-        <div ref={ref} className="relative mt-14">
+        <div ref={ref} className="relative mt-14" style={{ perspective: 1400 }}>
           <motion.div
             style={{ y: yBack }}
             className="absolute -inset-x-4 -top-6 hidden h-[420px] rounded-3xl border border-line bg-paper-0/60 sm:block"
@@ -44,7 +47,7 @@ export function DashboardPreview() {
           />
 
           <motion.div
-            style={{ y: yFront }}
+            style={{ y: yFront, rotateX, scale, transformOrigin: '50% 100%' }}
             className="relative overflow-hidden rounded-xl border border-line bg-surface shadow-[0_40px_80px_-40px_rgba(5,39,7,0.35)]"
           >
             <div className="flex items-center gap-2 border-b border-line px-4 py-3">

@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion'
 import { Reveal } from '@/components/common/Reveal'
 import { EditorialImage } from './EditorialImage'
+import { TiltCard } from './TiltCard'
 
 /**
  * Editorial imagery only — common knowledge about representative species,
@@ -39,16 +40,21 @@ export function ProtectedSpeciesShowcase() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: '-10% 0px' }}
               transition={{ duration: 0.5, delay: i * 0.1, ease: [0.22, 1, 0.36, 1] }}
-              className="group relative h-72 overflow-hidden rounded-xl"
             >
-              <div className="absolute inset-0 transition-transform duration-500 ease-out group-hover:scale-105">
-                <EditorialImage src={sp.src} seed={sp.id} alt={`${sp.common} (${sp.name})`} />
-              </div>
-              <div className="absolute inset-0 bg-gradient-to-t from-canopy-950 via-canopy-950/10 to-transparent" />
-              <div className="absolute inset-x-0 bottom-0 p-4">
-                <p className="font-display text-[15px] font-bold italic leading-tight">{sp.name}</p>
-                <p className="mt-0.5 text-[12.5px] text-paper-0/60">{sp.common}</p>
-              </div>
+              <TiltCard
+                className="h-72"
+                overlay={
+                  <div className="p-4">
+                    <p className="font-display text-[15px] font-bold italic leading-tight drop-shadow-[0_2px_8px_rgba(0,0,0,0.5)]">{sp.name}</p>
+                    <p className="mt-0.5 text-[12.5px] text-paper-0/80">{sp.common}</p>
+                  </div>
+                }
+              >
+                <div className="absolute inset-0 scale-105 transition-transform duration-700 ease-out group-hover:scale-110">
+                  <EditorialImage src={sp.src} seed={sp.id} alt={`${sp.common} (${sp.name})`} />
+                </div>
+                <div className="absolute inset-0 bg-gradient-to-t from-canopy-950 via-canopy-950/10 to-transparent" />
+              </TiltCard>
             </motion.article>
           ))}
         </div>
