@@ -191,7 +191,7 @@ export function SiteDetailPage() {
 
                 <Button
                   variant="ghost"
-                  className="gap-2 text-red-600 hover:bg-red-50"
+                  className="gap-2 !text-danger hover:!bg-danger/10"
                   onClick={() => {
                     setDeleteError(null)
                     setIsDeleteOpen(true)

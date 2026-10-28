@@ -43,7 +43,7 @@ export function LandingNav() {
           <Button
             variant="ghost"
             size="md"
-            className="border border-paper-0/25 bg-transparent text-paper-0 hover:border-paper-0/50 hover:bg-paper-0/10 hover:text-paper-0"
+            className="border border-paper-0/30 !bg-transparent !text-paper-0 hover:border-paper-0/60 hover:!bg-paper-0/10 hover:!text-paper-0"
           >
             Sign in
           </Button>

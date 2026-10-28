@@ -560,7 +560,7 @@ export function ExportsPage() {
             <Button
               onClick={() => createMutation.mutate()}
               isLoading={isCreating}
-              className="mt-5 w-full dark:!bg-canopy-700 dark:!text-white dark:hover:!bg-canopy-600"
+              className="mt-5 w-full"
             >
               Generate export
             </Button>
