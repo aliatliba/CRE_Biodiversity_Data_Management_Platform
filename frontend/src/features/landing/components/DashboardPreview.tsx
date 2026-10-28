@@ -1,6 +1,7 @@
 import { useRef } from 'react'
 import { motion, useReducedMotion, useScroll, useTransform } from 'framer-motion'
 import { Reveal } from '@/components/common/Reveal'
+import { AuroraBackground } from '@/components/common/AuroraBackground'
 
 /**
  * A glimpse of the interface, not its content. Rows are abstracted bars
@@ -26,8 +27,9 @@ export function DashboardPreview() {
   const scale = useTransform(scrollYProgress, [0, 0.42], shouldReduceMotion ? [1, 1] : [0.92, 1])
 
   return (
-    <section id="dashboard" className="border-b border-line bg-surface-muted">
-      <div className="mx-auto w-full max-w-6xl px-6 py-24 sm:px-8">
+    <section id="dashboard" className="relative overflow-hidden border-b border-line bg-bg">
+      <AuroraBackground />
+      <div className="relative mx-auto w-full max-w-6xl px-6 py-24 sm:px-8">
         <Reveal className="mx-auto max-w-xl text-center">
           <p className="font-mono text-xs uppercase tracking-[0.14em] text-canopy-700">Inside the registry</p>
           <h2 className="mt-3 font-display text-3xl font-bold tracking-tight text-fg sm:text-4xl">
@@ -42,13 +44,13 @@ export function DashboardPreview() {
         <div ref={ref} className="relative mt-14" style={{ perspective: 1400 }}>
           <motion.div
             style={{ y: yBack }}
-            className="absolute -inset-x-4 -top-6 hidden h-[420px] rounded-3xl border border-line bg-paper-0/60 sm:block"
+            className="absolute -inset-x-4 -top-6 hidden h-[420px] glass rounded-3xl sm:block"
             aria-hidden="true"
           />
 
           <motion.div
             style={{ y: yFront, rotateX, scale, transformOrigin: '50% 100%' }}
-            className="relative overflow-hidden rounded-xl border border-line bg-surface shadow-[0_40px_80px_-40px_rgba(5,39,7,0.35)]"
+            className="glass relative overflow-hidden rounded-2xl !shadow-[0_40px_80px_-40px_rgba(5,39,7,0.4)]"
           >
             <div className="flex items-center gap-2 border-b border-line px-4 py-3">
               <span className="h-2.5 w-2.5 rounded-full bg-canopy-900/15" />

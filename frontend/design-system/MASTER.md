@@ -6,26 +6,32 @@ green brand. Page-specific deviations go in `pages/<page>.md` and override this 
 
 Tokens live in `src/index.css` (`@theme` for light, `.dark` for dark).
 
-## Style
+## Style — Aurora Glass
 
-- **App pages:** Data-Dense Dashboard. Border-first separation, flat surfaces, shadows only
-  on overlays (modals, dropdowns, popovers). KPI row → charts → tables.
+- **Everywhere:** frosted glass panels (`glass` utility: translucent fill, 18px backdrop blur,
+  hairline border, top highlight) floating over a slowly drifting aurora (`AuroraBackground`,
+  green / lime / teal glows). The brand gradient (`--gradient-primary`) marks primary actions,
+  icon tiles and the active nav indicator, with a soft `--color-glow` shadow.
+- **App pages:** data-first layout on glass: KPI row → charts → tables. Floating sidebar and
+  mobile tab bar. Popovers, dropdowns and inputs stay solid (`bg-surface`) for legibility.
 - **Landing:** Enterprise Gateway. Mission hero, role split, trust signals (CRE, GBIF, IUCN).
-- Avoid: ornate decoration on data pages, ambient looping motion, low-contrast grey text.
+- Avoid: glass on top of glass, glass for dropdowns/inputs, glows behind text, low-contrast grey text.
 
 ## Color tokens
 
 | Token | Light | Dark | Use |
 |---|---|---|---|
-| `bg` | `#F7FAF7` | `#0D1410` | Page background |
-| `surface` | `#FFFFFF` | `#121B15` | Cards, sidebar, header, inputs |
-| `surface-muted` | `#F0F5F1` | `#16211A` | Table header, hover rows, wells |
+| `bg` | `#F2F7F3` | `#060D09` | Page background under the aurora |
+| `surface` | `#FFFFFF` | `#101A14` | Solid layers: inputs, dropdowns, popovers |
+| `--glass-bg` | `rgba(255,255,255,.66)` | `rgba(16,28,21,.58)` | Cards, sidebar, panels (via `glass`) |
+| `surface-muted` | `rgba(15,31,23,.045)` | `rgba(255,255,255,.045)` | Table header, hover rows, wells |
 | `fg` | `#0F1F17` | `#EEF4EF` | Primary text (16 : 1) |
-| `fg-muted` | `#4B5B52` | `#9DB0A3` | Secondary text (7 : 1) |
-| `fg-subtle` | `#5F6E65` | `#7F9488` | Meta text, placeholders, icons (≥ 4.5 : 1) |
-| `line` / `line-strong` | `#E2EBE4` / `#C9D8CD` | `#223228` / `#2F4638` | Borders |
+| `fg-muted` | `#4B5B52` | `#A6B8AC` | Secondary text (7 : 1) |
+| `fg-subtle` | `#5F6E65` | `#8A9E92` | Meta text, placeholders, icons (≥ 4.5 : 1) |
+| `line` / `line-strong` | 9% / 20% ink | 8% / 16% white | Borders |
 | `primary` / `on-primary` | `#0B5D1E` / white | `#4CC596` / `#052707` | Primary actions, active nav (8 : 1) |
-| `primary-soft` | `#E6F2E8` | `#17301F` | Active/selected tint |
+| `--gradient-primary` | `#064E1A → #0F7A2C` | `#4CC596 → #9EF01A` | Primary buttons, icon tiles, avatar |
+| `primary-soft` | 10% green | 14% green | Active/selected tint |
 | `link` | `#0F7A2C` | `#4CC596` | Links, focus ring |
 | `accent` / `accent-fg` | `#D97706` / `#B45309` | `#F59E0B` | Needs-review, highlights |
 | `danger` | `#DC2626` | `#F87171` | Destructive actions, errors |
@@ -45,25 +51,32 @@ Tokens live in `src/index.css` (`@theme` for light, `.dark` for dark).
 ## Spacing, radius, elevation
 
 - 4px base: 4 · 8 · 12 · 16 · 24 · 32 · 48. Grid gap 16px. Card padding 16px (20px ≥ lg).
-- Radius: controls 8px (`rounded-lg`), cards 12px (`rounded-xl`), pills only for badges/chips.
-- Elevation: `border-line` for cards; `shadow-overlay` only for floating layers.
+- Radius: controls 12px (`rounded-xl`), cards and panels 16px (`rounded-2xl`), auth cards 24px,
+  pills only for badges/chips.
+- Elevation: `glass` for panels (its own shadow); `lift` for clickable cards; `shadow-overlay`
+  for popovers and dialogs.
 
 ## Components
 
-- **Button:** `primary` · `secondary` · `ghost` · `danger`; `md` 40px, `lg` 48px.
+- **Button:** `primary` (gradient + glow) · `secondary` (translucent) · `ghost` · `danger`;
+  `md` 40px, `lg` 48px; press scales to 0.97.
 - **Input / Select / Search:** 40px, `border-line`, 2px `ring` on focus, label above,
   helper/error below linked via `aria-describedby`.
 - **Table:** `surface-muted` header, 40px rows (`px-4 py-2.5` cells), hover tint, numeric columns right-aligned
   and `tabular-nums`, wrapped in `overflow-x-auto`.
-- **StatCard:** small muted label above a large tabular value; icon in a `primary-soft` tile.
-- **Sidebar:** active item = `primary-soft` tint + 3px left bar in `primary`.
+- **StatCard:** glass, small muted label above a large count-up value (`CountUp`); icon in a
+  gradient tile.
+- **Sidebar:** floating glass panel; the active item is a `primary-soft` pill that slides between
+  items (framer `layoutId`) with a glowing gradient bar.
 - **Loading:** skeleton blocks (`animate-pulse bg-mist-100`) for lists; spinner only for full-page.
 
-## Motion
+## Motion (lively)
 
-- Transitions 150–200ms ease-out on colour/border/shadow. Entrances ≤ 300ms, 8px rise.
-- No looping ambient motion on app pages. `MotionConfig reducedMotion="user"` at the root and a
-  global `prefers-reduced-motion` CSS override.
+- Page change: content fades up 10px (350ms). Lists and tables: `stagger-in` (rows rise 8px,
+  40ms apart). KPI numbers count up. Clickable cards `lift` with a glow. Nav indicator springs.
+- Ambient: the aurora drifts over 26–38s; landing hero has a three.js relief.
+- `MotionConfig reducedMotion="user"` at the root, a global `prefers-reduced-motion` CSS override,
+  and `useReducedMotion` checks for scroll-linked and imperative animations.
 
 ## Accessibility checklist
 

@@ -1,4 +1,5 @@
 import { Reveal } from '@/components/common/Reveal'
+import { AuroraBackground } from '@/components/common/AuroraBackground'
 
 const ROLES = [
   {
@@ -23,8 +24,9 @@ const ROLES = [
 
 export function RoleSplit() {
   return (
-    <section id="roles" className="border-b border-line bg-surface-muted">
-      <div className="mx-auto w-full max-w-6xl px-6 py-24 sm:px-8">
+    <section id="roles" className="relative overflow-hidden border-b border-line bg-bg">
+      <AuroraBackground />
+      <div className="relative mx-auto w-full max-w-6xl px-6 py-24 sm:px-8">
         <Reveal className="max-w-lg">
           <p className="font-mono text-xs uppercase tracking-[0.14em] text-canopy-700">Two roles, one registry</p>
           <h2 className="mt-3 font-display text-3xl font-bold tracking-tight text-fg sm:text-4xl">
@@ -35,7 +37,7 @@ export function RoleSplit() {
         <div className="mt-12 grid grid-cols-1 gap-6 md:grid-cols-2">
           {ROLES.map((role, i) => (
             <Reveal key={role.tag} delay={i * 0.12}>
-              <div className="h-full rounded-xl border border-line bg-surface p-8 transition-shadow duration-300 hover:shadow-[0_20px_40px_-24px_rgba(5,59,6,0.25)]">
+              <div className="glass lift h-full rounded-2xl p-8">
                 <span className="font-mono text-[11px] uppercase tracking-[0.12em] text-canopy-600">
                   {role.tag}
                 </span>

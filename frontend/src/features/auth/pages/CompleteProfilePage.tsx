@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
 import { Input } from '@/components/ui/Input'
+import { AuroraBackground } from '@/components/common/AuroraBackground'
 import { Button } from '@/components/ui/Button'
 import { useAuth } from '@/hooks/useAuth'
 import * as authService from '@/features/auth/services/authService'
@@ -46,8 +47,9 @@ export function CompleteProfilePage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-surface-muted px-6 py-16">
-      <div className="w-full max-w-sm rounded-2xl glass p-8">
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-bg px-6 py-16">
+      <AuroraBackground />
+      <div className="glass relative w-full max-w-md rounded-3xl p-8 sm:p-10">
         <h1 className="font-display text-2xl font-bold tracking-tight text-fg">
           Set your password
         </h1>
@@ -78,7 +80,7 @@ export function CompleteProfilePage() {
           <Input label="Phone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />
 
           {error && (
-            <div role="alert" className="rounded-lg border border-red-200 bg-red-50 px-3.5 py-2.5 text-sm font-medium text-danger">
+            <div role="alert" className="rounded-xl border border-danger/30 bg-danger/8 px-3.5 py-2.5 text-sm font-medium text-danger">
               {error}
             </div>
           )}
