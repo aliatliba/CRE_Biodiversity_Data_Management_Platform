@@ -50,10 +50,14 @@ export function Hero() {
             {headlineWords.map((word, i) => (
               <motion.span
                 key={`${word}-${i}`}
-                initial={{ opacity: 0, y: 22 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 0.06 * i, ease: [0.22, 1, 0.36, 1] }}
-                className="mr-[0.28em] inline-block"
+                initial={{ opacity: 0, y: 22, filter: 'blur(8px)' }}
+                animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+                transition={{ duration: 0.7, delay: 0.06 * i, ease: [0.22, 1, 0.36, 1] }}
+                className={`mr-[0.28em] inline-block ${
+                  i === headlineWords.length - 1
+                    ? 'bg-[linear-gradient(100deg,#c3f56b_0%,#9ef01a_40%,#4cc596_100%)] bg-clip-text pb-[0.08em] text-transparent'
+                    : ''
+                }`}
               >
                 {word}
               </motion.span>
@@ -78,7 +82,7 @@ export function Hero() {
             className="mt-9 flex flex-wrap items-center gap-4"
           >
             <Link to={ROUTES.login}>
-              <Button variant="primary" size="lg" className="!bg-lichen-400 !text-fg hover:!bg-lichen-300">
+              <Button variant="primary" size="lg" className="!bg-lichen-400 !bg-none !text-canopy-950 shadow-[0_10px_30px_-8px_rgba(158,240,26,0.6)] hover:!bg-lichen-300">
                 Sign in to BioData
               </Button>
             </Link>
