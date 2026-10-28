@@ -5,7 +5,7 @@ import type { SpeciesListItem } from '../types'
 
 export function SpeciesTable({ species }: { species: SpeciesListItem[] }) {
   return (
-    <div className="overflow-hidden rounded-xl border border-line bg-surface">
+    <div className="overflow-hidden rounded-2xl glass">
       <div className="overflow-x-auto">
         <table className="w-full min-w-[680px] text-left text-sm">
           <thead>
@@ -22,7 +22,7 @@ export function SpeciesTable({ species }: { species: SpeciesListItem[] }) {
             </tr>
           </thead>
 
-          <tbody>
+          <tbody className="stagger-in">
             {species.map((sp) => (
               <tr
                 key={sp.id}

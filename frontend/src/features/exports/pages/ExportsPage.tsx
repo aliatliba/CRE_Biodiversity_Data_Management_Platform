@@ -284,7 +284,7 @@ export function ExportsPage() {
                           }
                           placeholder="Search sites..."
                           autoFocus
-                          className="h-10 w-full rounded-lg border border-line-strong bg-surface-muted pl-9 pr-3 text-sm text-fg outline-none transition placeholder:text-fg-subtle focus:border-ring focus:bg-white focus:ring-2 focus:ring-ring/20 dark:focus:bg-paper-50"
+                          className="h-10 w-full rounded-xl border border-line-strong bg-surface-muted pl-9 pr-3 text-sm text-fg outline-none transition placeholder:text-fg-subtle focus:border-ring focus:bg-white focus:ring-2 focus:ring-ring/20 dark:focus:bg-paper-50"
                         />
                       </div>
 
@@ -743,7 +743,7 @@ function FilterSelect({
         <select
           value={value}
           onChange={(event) => onChange(event.target.value)}
-          className="h-10 w-full appearance-none rounded-lg border border-line-strong bg-white px-3.5 pr-10 text-sm text-fg outline-none transition hover:border-line-strong focus:border-ring focus:ring-2 focus:ring-ring/20 dark:bg-paper-50 dark:hover:border-canopy-400/40 dark:[color-scheme:dark]"
+          className="h-10 w-full appearance-none rounded-xl border border-line-strong bg-white px-3.5 pr-10 text-sm text-fg outline-none transition hover:border-line-strong focus:border-ring focus:ring-2 focus:ring-ring/20 dark:bg-paper-50 dark:hover:border-canopy-400/40 dark:[color-scheme:dark]"
         >
           <option
             value=""
@@ -801,7 +801,7 @@ function DateField({
           type="date"
           value={value}
           onChange={(event) => onChange(event.target.value)}
-          className="h-10 w-full rounded-lg border border-line-strong bg-white pl-10 pr-3.5 text-sm text-fg outline-none transition hover:border-line-strong focus:border-ring focus:ring-2 focus:ring-ring/20 dark:bg-paper-50 dark:hover:border-canopy-400/40 dark:[color-scheme:dark]"
+          className="h-10 w-full rounded-xl border border-line-strong bg-white pl-10 pr-3.5 text-sm text-fg outline-none transition hover:border-line-strong focus:border-ring focus:ring-2 focus:ring-ring/20 dark:bg-paper-50 dark:hover:border-canopy-400/40 dark:[color-scheme:dark]"
         />
       </div>
     </div>
