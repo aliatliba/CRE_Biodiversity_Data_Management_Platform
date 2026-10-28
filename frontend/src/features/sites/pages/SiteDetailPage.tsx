@@ -169,11 +169,11 @@ export function SiteDetailPage() {
                 </span>
               </div>
 
-              <h1 className="mt-1 break-words font-display text-2xl font-bold text-canopy-950">
+              <h1 className="mt-1 break-words font-display text-2xl font-bold text-fg">
                 {site.name}
               </h1>
 
-              <p className="mt-3 max-w-2xl text-sm leading-relaxed text-ink-950/65">
+              <p className="mt-3 max-w-2xl text-sm leading-relaxed text-fg-muted">
                 {site.description || 'No description provided.'}
               </p>
             </div>
@@ -219,7 +219,7 @@ export function SiteDetailPage() {
 
             <Link
               to={speciesListUrl({ site_id: siteId, national_status: 'Protected' })}
-              className="block rounded-2xl transition-transform duration-200 hover:-translate-y-0.5"
+              className="block rounded-xl transition-transform duration-200 hover:-translate-y-0.5"
             >
               <StatCard
                 label="Protected species"
@@ -231,7 +231,7 @@ export function SiteDetailPage() {
 
             <Link
               to={speciesListUrl({ site_id: siteId, iucn_status: THREATENED_STATUSES_PARAM })}
-              className="block rounded-2xl transition-transform duration-200 hover:-translate-y-0.5"
+              className="block rounded-xl transition-transform duration-200 hover:-translate-y-0.5"
             >
               <StatCard
                 label="IUCN threatened species - VU · EN · CR"
@@ -302,11 +302,11 @@ export function SiteDetailPage() {
           <Card>
             <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h2 className="font-display text-sm font-bold text-canopy-950">
+                <h2 className="font-display text-sm font-bold text-fg">
                   Species at this site
                 </h2>
 
-                <p className="mt-1 text-xs text-ink-950/50">
+                <p className="mt-1 text-xs text-fg-subtle">
                   Species records associated with {site.name}
                 </p>
               </div>

@@ -148,10 +148,10 @@ export function GraphicsPage() {
               <BarChart3 size={19} />
             </div>
             <div>
-              <h1 className="font-display text-lg font-bold text-canopy-950">
+              <h1 className="font-display text-lg font-bold text-fg">
                 Biodiversity graphics
               </h1>
-              <p className="mt-0.5 text-sm text-ink-950/50">
+              <p className="mt-0.5 text-sm text-fg-subtle">
                 Generate a graphic from the validated species of a research site.
               </p>
             </div>
@@ -166,24 +166,24 @@ export function GraphicsPage() {
                 <MapPin size={17} />
               </div>
               <div>
-                <h2 className="font-display text-sm font-bold text-canopy-950">
+                <h2 className="font-display text-sm font-bold text-fg">
                   Settings
                 </h2>
-                <p className="mt-0.5 text-xs text-ink-950/50">
+                <p className="mt-0.5 text-xs text-fg-subtle">
                   Choose a graphic and the site to visualize.
                 </p>
               </div>
             </div>
 
             {loading ? (
-              <div className="mt-6 flex h-11 items-center justify-center rounded-xl border border-mist-200">
+              <div className="mt-6 flex h-11 items-center justify-center rounded-xl border border-line">
                 <LoadingSpinner className="h-5 w-5" />
               </div>
             ) : (
               <>
                 {/* GRAPHIC TYPE */}
                 <div className="mt-6">
-                  <span className="mb-1.5 block text-xs font-semibold text-ink-950/70">
+                  <span className="mb-1.5 block text-xs font-semibold text-fg-muted">
                     Graphic type
                   </span>
                   <div className="space-y-2" role="radiogroup">
@@ -203,13 +203,13 @@ export function GraphicsPage() {
                           className={`w-full rounded-xl border px-3.5 py-3 text-left transition disabled:opacity-60 ${
                             active
                               ? 'border-canopy-600 bg-canopy-700/5 ring-4 ring-canopy-600/10'
-                              : 'border-mist-200 hover:border-mist-300'
+                              : 'border-line hover:border-line-strong'
                           }`}
                         >
-                          <p className="text-sm font-semibold text-canopy-950">
+                          <p className="text-sm font-semibold text-fg">
                             {type.label}
                           </p>
-                          <p className="mt-0.5 text-xs leading-relaxed text-ink-950/50">
+                          <p className="mt-0.5 text-xs leading-relaxed text-fg-subtle">
                             {type.description}
                           </p>
                         </button>
@@ -257,7 +257,7 @@ export function GraphicsPage() {
             {error && (
               <div
                 role="alert"
-                className="mt-4 flex gap-2 rounded-xl border border-red-200 bg-red-50 px-3.5 py-3 text-sm font-medium text-red-700 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-300"
+                className="mt-4 flex gap-2 rounded-xl border border-red-200 bg-red-50 px-3.5 py-3 text-sm font-medium text-danger dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-300"
               >
                 <XCircle size={17} className="mt-0.5 shrink-0" />
                 <span>{error}</span>
@@ -269,13 +269,13 @@ export function GraphicsPage() {
           <Card className="min-w-0 overflow-hidden">
             {!job && (
               <div className="flex min-h-[420px] flex-col items-center justify-center px-6 py-12 text-center">
-                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-canopy-700/10 text-canopy-700 dark:bg-canopy-700/15">
+                <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-canopy-700/10 text-canopy-700 dark:bg-canopy-700/15">
                   <FileImage size={28} />
                 </div>
-                <h2 className="mt-5 font-display text-base font-bold text-canopy-950">
+                <h2 className="mt-5 font-display text-base font-bold text-fg">
                   No graphic generated yet
                 </h2>
-                <p className="mt-2 max-w-md text-sm leading-relaxed text-ink-950/50">
+                <p className="mt-2 max-w-md text-sm leading-relaxed text-fg-subtle">
                   Select a graphic type and a research site, then generate. The
                   calculation runs in the background.
                 </p>
@@ -285,23 +285,23 @@ export function GraphicsPage() {
             {job && (
               <div>
                 {/* JOB HEADER */}
-                <div className="border-b border-mist-200 pb-5">
+                <div className="border-b border-line pb-5">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div>
                       <div className="flex items-center gap-2">
                         {job.status === 'completed' ? (
                           <CheckCircle2 size={18} className="text-canopy-600" />
                         ) : job.status === 'failed' ? (
-                          <XCircle size={18} className="text-red-500" />
+                          <XCircle size={18} className="text-danger" />
                         ) : (
                           <RefreshCw size={17} className="animate-spin text-canopy-700" />
                         )}
-                        <h2 className="font-display text-sm font-bold text-canopy-950">
+                        <h2 className="font-display text-sm font-bold text-fg">
                           {jobType?.label ?? 'Graphic'}
                           {job.site_name ? ` — ${job.site_name}` : ''}
                         </h2>
                       </div>
-                      <p className="mt-1 text-xs text-ink-950/45">
+                      <p className="mt-1 text-xs text-fg-subtle">
                         {job.total_species > 0
                           ? `${job.total_species} species`
                           : 'Preparing data…'}
@@ -313,8 +313,8 @@ export function GraphicsPage() {
                         job.status === 'completed'
                           ? 'bg-canopy-700/10 text-canopy-800'
                           : job.status === 'failed'
-                            ? 'bg-red-500/10 text-red-600'
-                            : 'bg-mist-100 text-ink-950/60'
+                            ? 'bg-red-500/10 text-danger'
+                            : 'bg-mist-100 text-fg-muted'
                       }`}
                     >
                       {job.status}
@@ -324,7 +324,7 @@ export function GraphicsPage() {
                   {(isRunning || job.status === 'completed') && (
                     <div className="mt-5">
                       <div className="mb-2 flex items-center justify-between text-xs">
-                        <span className="font-medium text-ink-950/55">
+                        <span className="font-medium text-fg-subtle">
                           {job.status === 'completed'
                             ? 'Generation complete'
                             : 'Generating graphic…'}
@@ -348,8 +348,8 @@ export function GraphicsPage() {
                 {/* FAILED */}
                 {job.status === 'failed' && (
                   <div className="flex min-h-[300px] flex-col items-center justify-center px-6 py-10 text-center">
-                    <XCircle size={30} className="text-red-500" />
-                    <h3 className="mt-4 font-display text-sm font-bold text-canopy-950">
+                    <XCircle size={30} className="text-danger" />
+                    <h3 className="mt-4 font-display text-sm font-bold text-fg">
                       Generation failed
                     </h3>
                     <p className="mt-2 max-w-lg whitespace-pre-line text-sm leading-relaxed text-red-600/80">
@@ -362,7 +362,7 @@ export function GraphicsPage() {
                 {job.status === 'completed' && (
                   <div className="pt-5">
                     {previewUrl && (
-                      <div className="overflow-hidden rounded-xl border border-mist-200 bg-white dark:bg-paper-50">
+                      <div className="overflow-hidden rounded-xl border border-line bg-white dark:bg-paper-50">
                         <img
                           src={previewUrl}
                           alt={`${jobType?.label ?? 'Graphic'} for ${job.site_name || 'research site'}`}
@@ -386,7 +386,7 @@ export function GraphicsPage() {
                       ))}
                     </div>
 
-                    <p className="mt-3 text-xs text-ink-950/40">
+                    <p className="mt-3 text-xs text-fg-subtle">
                       PNG and TIFF are high-resolution rasters. PDF is exported as vector graphics.
                     </p>
                   </div>

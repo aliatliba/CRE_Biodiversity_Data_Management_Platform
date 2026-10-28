@@ -53,7 +53,7 @@ Tokens live in `src/index.css` (`@theme` for light, `.dark` for dark).
 - **Button:** `primary` · `secondary` · `ghost` · `danger`; `md` 40px, `lg` 48px.
 - **Input / Select / Search:** 40px, `border-line`, 2px `ring` on focus, label above,
   helper/error below linked via `aria-describedby`.
-- **Table:** `surface-muted` sticky header, 40px rows, hover tint, numeric columns right-aligned
+- **Table:** `surface-muted` header, 40px rows (`px-4 py-2.5` cells), hover tint, numeric columns right-aligned
   and `tabular-nums`, wrapped in `overflow-x-auto`.
 - **StatCard:** small muted label above a large tabular value; icon in a `primary-soft` tile.
 - **Sidebar:** active item = `primary-soft` tint + 3px left bar in `primary`.

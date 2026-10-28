@@ -56,9 +56,9 @@ export function DashboardPage() {
 
   return (
     <>
-      <p className="mb-6 text-sm text-ink-950/55">
+      <p className="mb-6 text-sm text-fg-subtle">
         Welcome back,{' '}
-        <span className="font-medium text-ink-950">
+        <span className="font-medium text-fg">
           {user?.full_name}
         </span>
         . Here's what's in the registry right now.
@@ -101,7 +101,7 @@ export function DashboardPage() {
 
             <Link
               to={speciesListUrl({ iucn_status: THREATENED_STATUSES_PARAM })}
-              className="block rounded-2xl transition-transform duration-200 hover:-translate-y-0.5"
+              className="block rounded-xl transition-transform duration-200 hover:-translate-y-0.5"
             >
               <StatCard
                 label="IUCN threatened species - VU · EN · CR "
@@ -145,31 +145,31 @@ export function DashboardPage() {
 
           {stats.site_stats.length > 0 && (
             <Card className="min-w-0 overflow-hidden">
-              <h2 className="mb-4 font-display text-sm font-bold text-canopy-950">
+              <h2 className="mb-4 font-display text-sm font-bold text-fg">
                 Per-site statistics
               </h2>
 
               <div className="mt-5 min-w-0 overflow-x-auto">
                 <table className="w-full min-w-[620px] text-left text-sm">
                   <thead>
-                    <tr className="border-b border-canopy-900/[0.08] text-xs font-semibold uppercase tracking-wide text-ink-950/50">
-                      <th className="px-4 py-3">
+                    <tr className="border-b border-line bg-surface-muted text-xs font-semibold uppercase tracking-wide text-fg-muted">
+                      <th className="px-4 py-2.5">
                         Site
                       </th>
 
-                      <th className="px-4 py-3">
+                      <th className="px-4 py-2.5">
                         Share of species
                       </th>
 
-                      <th className="px-4 py-3">
+                      <th className="px-4 py-2.5">
                         Protected
                       </th>
 
-                      <th className="px-4 py-3">
+                      <th className="px-4 py-2.5">
                         Complete
                       </th>
 
-                      <th className="px-4 py-3">
+                      <th className="px-4 py-2.5">
                         Incomplete
                       </th>
                     </tr>
@@ -189,12 +189,12 @@ export function DashboardPage() {
                             x: 0,
                           }}
                           transition={{
-                            duration: 0.35,
-                            delay: 0.05 * index,
+                            duration: 0.25,
+                            delay: Math.min(0.03 * index, 0.3),
                           }}
-                          className="border-b border-canopy-900/[0.05] last:border-0 hover:bg-mist-100/40"
+                          className="border-b border-line last:border-0 hover:bg-surface-muted"
                         >
-                          <td className="px-4 py-3">
+                          <td className="px-4 py-2.5">
                             <Link
                               to={siteUrl(site.site_id)}
                               className="font-medium text-canopy-900 hover:underline"
@@ -204,11 +204,11 @@ export function DashboardPage() {
                           </td>
 
                           <td
-                            className="px-4 py-3"
+                            className="px-4 py-2.5"
                             title={`${site.species_count} species`}
                           >
                             <div className="flex items-center gap-3">
-                              <span className="w-12 shrink-0 font-semibold tabular-nums text-canopy-950">
+                              <span className="w-12 shrink-0 font-semibold tabular-nums text-fg">
                                 {site.species_share.toFixed(1)}%
                               </span>
                               <div
@@ -223,15 +223,15 @@ export function DashboardPage() {
                             </div>
                           </td>
 
-                          <td className="px-4 py-3 tabular-nums">
+                          <td className="px-4 py-2.5 tabular-nums">
                             {site.protected_count}
                           </td>
 
-                          <td className="px-4 py-3 tabular-nums text-green-700">
+                          <td className="px-4 py-2.5 tabular-nums text-primary">
                             {site.complete_count}
                           </td>
 
-                          <td className="px-4 py-3 tabular-nums text-amber-700">
+                          <td className="px-4 py-2.5 tabular-nums text-accent-fg">
                             {site.incomplete_count}
                           </td>
                         </motion.tr>
@@ -248,13 +248,13 @@ export function DashboardPage() {
           {/* -------------------------------------------------------- */}
 
           <Card className="flex flex-col gap-3">
-            <h2 className="font-display text-sm font-bold text-canopy-950">
+            <h2 className="font-display text-sm font-bold text-fg">
               Quick links
             </h2>
 
             <Link
               to={ROUTES.addSpecies}
-              className="flex items-center gap-3 rounded-xl border border-canopy-900/10 px-3.5 py-3 text-sm font-medium text-ink-950/75 transition-colors hover:border-canopy-700/30 hover:bg-mist-100"
+              className="flex items-center gap-3 rounded-xl border border-line px-3.5 py-3 text-sm font-medium text-fg-muted transition-colors hover:border-canopy-700/30 hover:bg-surface-muted"
             >
               <Leaf
                 size={16}
@@ -265,7 +265,7 @@ export function DashboardPage() {
 
             <Link
               to={ROUTES.protectedSpecies}
-              className="flex items-center gap-3 rounded-xl border border-canopy-900/10 px-3.5 py-3 text-sm font-medium text-ink-950/75 transition-colors hover:border-canopy-700/30 hover:bg-mist-100"
+              className="flex items-center gap-3 rounded-xl border border-line px-3.5 py-3 text-sm font-medium text-fg-muted transition-colors hover:border-canopy-700/30 hover:bg-surface-muted"
             >
               <ShieldCheck
                 size={16}
@@ -276,7 +276,7 @@ export function DashboardPage() {
 
             <Link
               to={ROUTES.sites}
-              className="flex items-center gap-3 rounded-xl border border-canopy-900/10 px-3.5 py-3 text-sm font-medium text-ink-950/75 transition-colors hover:border-canopy-700/30 hover:bg-mist-100"
+              className="flex items-center gap-3 rounded-xl border border-line px-3.5 py-3 text-sm font-medium text-fg-muted transition-colors hover:border-canopy-700/30 hover:bg-surface-muted"
             >
               <MapPin
                 size={16}

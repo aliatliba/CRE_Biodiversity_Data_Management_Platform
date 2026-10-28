@@ -78,10 +78,10 @@ export function ProfilePage() {
                 <UserRound size={22} />
               </div>
               <div>
-                <h2 className="font-display text-lg font-bold text-canopy-950">
+                <h2 className="font-display text-lg font-bold text-fg">
                   {user?.full_name}
                 </h2>
-                <p className="text-sm text-ink-950/55">{user?.email}</p>
+                <p className="text-sm text-fg-subtle">{user?.email}</p>
               </div>
             </div>
             <Badge tone="accent" className="capitalize">
@@ -89,9 +89,9 @@ export function ProfilePage() {
             </Badge>
           </div>
 
-          <form onSubmit={handleSaveInfo} className="mt-6 flex flex-col gap-4 border-t border-canopy-900/[0.08] pt-6">
+          <form onSubmit={handleSaveInfo} className="mt-6 flex flex-col gap-4 border-t border-line pt-6">
             <div className="flex items-center justify-between">
-              <h3 className="font-display text-sm font-bold text-canopy-950">Profile information</h3>
+              <h3 className="font-display text-sm font-bold text-fg">Profile information</h3>
               {!isEditingInfo && (
                 <button
                   type="button"
@@ -126,7 +126,7 @@ export function ProfilePage() {
             </div>
 
             {infoError && (
-              <div role="alert" className="rounded-lg border border-red-200 bg-red-50 px-3.5 py-2.5 text-sm font-medium text-red-700">
+              <div role="alert" className="rounded-lg border border-red-200 bg-red-50 px-3.5 py-2.5 text-sm font-medium text-danger">
                 {infoError}
               </div>
             )}
@@ -161,7 +161,7 @@ export function ProfilePage() {
         <Card>
           <div className="mb-5 flex items-center gap-2">
             <KeyRound size={17} className="text-canopy-800" />
-            <h3 className="font-display text-sm font-bold text-canopy-950">Change password</h3>
+            <h3 className="font-display text-sm font-bold text-fg">Change password</h3>
           </div>
           <form onSubmit={handleChangePassword} className="flex flex-col gap-4">
             <Input
@@ -183,7 +183,7 @@ export function ProfilePage() {
             />
 
             {passwordError && (
-              <div role="alert" className="rounded-lg border border-red-200 bg-red-50 px-3.5 py-2.5 text-sm font-medium text-red-700">
+              <div role="alert" className="rounded-lg border border-red-200 bg-red-50 px-3.5 py-2.5 text-sm font-medium text-danger">
                 {passwordError}
               </div>
             )}
@@ -202,7 +202,7 @@ export function ProfilePage() {
         <Card>
           <div className="mb-5 flex items-center gap-2">
             <Palette size={17} className="text-canopy-800" />
-            <h3 className="font-display text-sm font-bold text-canopy-950">Appearance</h3>
+            <h3 className="font-display text-sm font-bold text-fg">Appearance</h3>
           </div>
           <div className="flex gap-3">
             {(['light', 'dark'] as const).map((t) => (
@@ -212,7 +212,7 @@ export function ProfilePage() {
                 className={`flex-1 rounded-xl border px-4 py-3 text-sm font-medium capitalize transition-colors ${
                   theme === t
                     ? 'border-canopy-700 bg-canopy-700/10 text-canopy-800'
-                    : 'border-mist-200 text-ink-950/60 hover:bg-mist-100'
+                    : 'border-line text-fg-muted hover:bg-surface-muted'
                 }`}
               >
                 {t} mode

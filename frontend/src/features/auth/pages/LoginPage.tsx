@@ -92,7 +92,7 @@ export function LoginPage() {
       </div>
 
       {/* Form panel */}
-      <div className="flex min-h-screen items-center justify-center bg-paper-0 px-6 sm:px-10">
+      <div className="flex min-h-screen items-center justify-center bg-surface px-6 sm:px-10">
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
@@ -104,13 +104,13 @@ export function LoginPage() {
               <path d="M6 26C6 14 14 6 26 6C26 18 18 26 6 26Z" fill="var(--color-canopy-600)" />
               <path d="M6 26C10 22 16 16 24 8" stroke="var(--color-canopy-900)" strokeWidth="1.4" strokeLinecap="round" />
             </svg>
-            <span className="font-display text-[16px] font-extrabold tracking-tight text-canopy-950">BioData</span>
+            <span className="font-display text-[16px] font-extrabold tracking-tight text-fg">BioData</span>
           </Link>
 
-          <h1 className="font-display text-[1.7rem] font-bold tracking-tight text-canopy-950">
+          <h1 className="font-display text-[1.7rem] font-bold tracking-tight text-fg">
             Sign in
           </h1>
-          <p className="mt-2 text-[14.5px] text-ink-950/60">
+          <p className="mt-2 text-[14.5px] text-fg-muted">
             Use the email and temporary password your administrator sent you.
           </p>
 
@@ -137,7 +137,7 @@ export function LoginPage() {
             {formError && (
               <div
                 role="alert"
-                className="rounded-lg border border-red-200 bg-red-50 px-3.5 py-2.5 text-sm font-medium text-red-700"
+                className="rounded-lg border border-red-200 bg-red-50 px-3.5 py-2.5 text-sm font-medium text-danger"
               >
                 {formError}
               </div>
@@ -148,7 +148,7 @@ export function LoginPage() {
             </Button>
           </form>
 
-          <p className="mt-8 text-center text-xs text-ink-950/40">
+          <p className="mt-8 text-center text-xs text-fg-subtle">
             First time signing in? You'll be asked to set a new password
             right after this.
           </p>

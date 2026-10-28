@@ -46,12 +46,12 @@ export function CompleteProfilePage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-mist-100/50 px-6 py-16">
-      <div className="w-full max-w-sm rounded-2xl border border-canopy-900/10 bg-paper-0 p-8">
-        <h1 className="font-display text-2xl font-bold tracking-tight text-canopy-950">
+    <div className="flex min-h-screen items-center justify-center bg-surface-muted px-6 py-16">
+      <div className="w-full max-w-sm rounded-xl border border-line bg-surface p-8">
+        <h1 className="font-display text-2xl font-bold tracking-tight text-fg">
           Set your password
         </h1>
-        <p className="mt-2 text-sm text-ink-950/60">
+        <p className="mt-2 text-sm text-fg-muted">
           Replace the temporary password with one only you know, and confirm
           a few details before continuing.
         </p>
@@ -78,7 +78,7 @@ export function CompleteProfilePage() {
           <Input label="Phone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />
 
           {error && (
-            <div role="alert" className="rounded-lg border border-red-200 bg-red-50 px-3.5 py-2.5 text-sm font-medium text-red-700">
+            <div role="alert" className="rounded-lg border border-red-200 bg-red-50 px-3.5 py-2.5 text-sm font-medium text-danger">
               {error}
             </div>
           )}

@@ -54,13 +54,13 @@ function Field({
   const isMissing = !value || value.trim() === ''
   const showWarning = isMissing && (critical || warnIfMissing)
   const missingClass = critical
-    ? 'border-red-200 bg-red-50 text-red-700'
+    ? 'border-red-200 bg-red-50 text-danger'
     : 'border-amber-200 bg-amber-50 text-amber-800'
 
   return (
     <div>
       <div className="flex items-center justify-between">
-        <span className="text-xs font-semibold uppercase tracking-[0.08em] text-canopy-900/60">
+        <span className="text-xs font-semibold uppercase tracking-[0.08em] text-fg-muted">
           {label}
         </span>
         <SourceBadge source={source} />
@@ -70,7 +70,7 @@ function Field({
           {critical ? 'Missing — critical taxonomy data' : 'Missing — conservation data'}
         </p>
       ) : (
-        <p className="mt-1 text-[15px] text-ink-950/85">{value || '—'}</p>
+        <p className="mt-1 text-[15px] text-fg-muted">{value || '—'}</p>
       )}
     </div>
   )
@@ -271,10 +271,10 @@ export function SpeciesDetailPage() {
               <p className="font-mono text-xs uppercase tracking-[0.1em] text-canopy-700">
                 {species.family ?? 'Unclassified family'}
               </p>
-              <h1 className="mt-1 font-display text-2xl font-bold italic text-canopy-950">
+              <h1 className="mt-1 font-display text-2xl font-bold italic text-fg">
                 {species.scientific_name}
               </h1>
-              {species.common_name && <p className="text-ink-950/60">{species.common_name}</p>}
+              {species.common_name && <p className="text-fg-muted">{species.common_name}</p>}
               <div className="mt-3 flex flex-wrap gap-2">
                 {species.iucn_status ? (
                   <Badge tone={getIucnTone(species.iucn_status)}>
@@ -296,7 +296,7 @@ export function SpeciesDetailPage() {
             </Card>
 
             <Card>
-              <h2 className="mb-4 font-display text-sm font-bold text-canopy-950">Taxonomy</h2>
+              <h2 className="mb-4 font-display text-sm font-bold text-fg">Taxonomy</h2>
               {!isEditing ? (
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   {Object.entries(CRITICAL_TAXONOMY_LABELS).map(([key, label]) => (
@@ -339,7 +339,7 @@ export function SpeciesDetailPage() {
             </Card>
 
             <Card>
-              <h2 className="mb-4 font-display text-sm font-bold text-canopy-950">
+              <h2 className="mb-4 font-display text-sm font-bold text-fg">
                 Conservation &amp; ecology
               </h2>
               {!isEditing ? (
@@ -360,7 +360,7 @@ export function SpeciesDetailPage() {
                     <Field label="Potential threats" value={species.potential_threats} />
                   </div>
                   {species.reference && (
-                    <div className="mt-4 border-t border-canopy-900/[0.08] pt-4">
+                    <div className="mt-4 border-t border-line pt-4">
                       <Field label="Reference" value={species.reference} />
                     </div>
                   )}
@@ -386,7 +386,7 @@ export function SpeciesDetailPage() {
                         onChange={(e) => set('potential_threats', e.target.value)}
                       />
                     </div>
-                    <div className="mt-4 border-t border-canopy-900/[0.08] pt-4">
+                    <div className="mt-4 border-t border-line pt-4">
                       <Input label="Reference" value={form.reference ?? ''} onChange={(e) => set('reference', e.target.value)} />
                     </div>
                   </>
@@ -396,7 +396,7 @@ export function SpeciesDetailPage() {
               {isEditing && (
                 <div className="mt-6 flex flex-col gap-3">
                   {saveError && (
-                    <div role="alert" className="rounded-lg border border-red-200 bg-red-50 px-3.5 py-2.5 text-sm font-medium text-red-700">
+                    <div role="alert" className="rounded-lg border border-red-200 bg-red-50 px-3.5 py-2.5 text-sm font-medium text-danger">
                       {saveError}
                     </div>
                   )}
@@ -414,7 +414,7 @@ export function SpeciesDetailPage() {
           </div>
 
           <Card className="h-fit">
-            <h2 className="mb-4 font-display text-sm font-bold text-canopy-950">Validation history</h2>
+            <h2 className="mb-4 font-display text-sm font-bold text-fg">Validation history</h2>
             <ValidationHistory entries={history} />
           </Card>
         </div>
