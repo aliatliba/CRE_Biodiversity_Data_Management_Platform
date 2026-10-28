@@ -11,14 +11,14 @@ const STAGES = [
 
 export function ValidationPipeline() {
   return (
-    <section id="validation" className="bg-paper-0">
+    <section id="validation" className="bg-surface">
       <div className="mx-auto w-full max-w-6xl px-6 py-24 sm:px-8">
         <Reveal className="max-w-lg">
           <p className="font-mono text-xs uppercase tracking-[0.14em] text-canopy-700">Before it hits the record</p>
-          <h2 className="mt-3 font-display text-3xl font-bold tracking-tight text-canopy-950 sm:text-4xl">
+          <h2 className="mt-3 font-display text-3xl font-bold tracking-tight text-fg sm:text-4xl">
             No duplicate entries. No unverified names.
           </h2>
-          <p className="mt-5 max-w-md text-[15px] leading-relaxed text-ink-950/65">
+          <p className="mt-5 max-w-md text-[15px] leading-relaxed text-fg-muted">
             Every observation moves through the same five checkpoints before
             it's added to the registry — the same path, whether it's a common
             species or one flagged as protected.
@@ -61,8 +61,8 @@ export function ValidationPipeline() {
                   {i + 1}
                 </motion.span>
                 <div>
-                  <h3 className="font-display text-[15px] font-bold text-canopy-950">{stage.label}</h3>
-                  <p className="mt-1 text-[13px] leading-relaxed text-ink-950/60">{stage.detail}</p>
+                  <h3 className="font-display text-[15px] font-bold text-fg">{stage.label}</h3>
+                  <p className="mt-1 text-[13px] leading-relaxed text-fg-muted">{stage.detail}</p>
                 </div>
               </motion.li>
             ))}

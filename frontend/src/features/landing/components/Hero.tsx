@@ -71,7 +71,7 @@ export function Hero() {
             className="mt-9 flex flex-wrap items-center gap-4"
           >
             <Link to={ROUTES.login}>
-              <Button variant="primary" size="lg" className="!bg-lichen-400 !text-canopy-950 hover:!bg-lichen-300">
+              <Button variant="primary" size="lg" className="!bg-lichen-400 !text-fg hover:!bg-lichen-300">
                 Sign in to BioData
               </Button>
             </Link>
@@ -120,7 +120,7 @@ export function Hero() {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.8, delay: 1.3 }}
-        className="absolute bottom-6 left-1/2 z-10 -translate-x-1/2 text-paper-0/50"
+        className="absolute bottom-6 left-1/2 z-10 hidden -translate-x-1/2 text-paper-0/70 sm:block"
         aria-hidden="true"
       >
         <motion.div

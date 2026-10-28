@@ -41,14 +41,14 @@ export function ResearchSitesMap() {
   const active = REGIONS.find((s) => s.id === activeId) ?? null
 
   return (
-    <section id="map" className="border-b border-canopy-900/[0.06] bg-mist-100/40">
+    <section id="map" className="border-b border-line bg-surface-muted">
       <div className="mx-auto grid w-full max-w-6xl grid-cols-1 items-center gap-12 px-6 py-28 sm:px-8 lg:grid-cols-[0.9fr_1.1fr]">
         <Reveal>
           <p className="font-mono text-xs uppercase tracking-[0.14em] text-canopy-700">Where the data comes from</p>
-          <h2 className="mt-3 font-display text-3xl font-bold tracking-tight text-canopy-950 sm:text-4xl">
+          <h2 className="mt-3 font-display text-3xl font-bold tracking-tight text-fg sm:text-4xl">
             Research sites, spread across the country.
           </h2>
-          <p className="mt-5 max-w-md text-[15px] leading-relaxed text-ink-950/65">
+          <p className="mt-5 max-w-md text-[15px] leading-relaxed text-fg-muted">
             Each marker represents a region where field teams are actively
             registering sites and logging observations. Site-level detail
             lives inside the platform, not on this page.
@@ -106,7 +106,7 @@ export function ResearchSitesMap() {
               )
             })}
           </svg>
-          <p className="mt-3 text-center font-mono text-[10px] uppercase tracking-[0.12em] text-ink-950/30">
+          <p className="mt-3 text-center font-mono text-[10px] uppercase tracking-[0.12em] text-fg-subtle">
             Algeria · selected research regions
           </p>
         </Reveal>

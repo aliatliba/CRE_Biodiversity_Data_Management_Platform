@@ -85,7 +85,7 @@ export function LoginPage() {
           <p className="font-display max-w-sm text-2xl font-semibold leading-snug text-paper-0">
             "Every site, every specimen, every source — traceable."
           </p>
-          <p className="mt-4 font-mono text-xs uppercase tracking-[0.12em] text-paper-0/50">
+          <p className="mt-4 font-mono text-xs uppercase tracking-[0.12em] text-paper-0/70">
             Field Biodiversity Registry
           </p>
         </motion.div>

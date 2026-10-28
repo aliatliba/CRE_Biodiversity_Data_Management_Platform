@@ -28,7 +28,7 @@ export function LandingFooter() {
           </Link>
         </Reveal>
 
-        <div className="flex flex-col items-center justify-between gap-4 pt-8 text-xs text-paper-0/40 sm:flex-row">
+        <div className="flex flex-col items-center justify-between gap-4 pt-8 text-xs text-paper-0/70 sm:flex-row">
           <span>© {new Date().getFullYear()} BioData — Field Biodiversity Registry</span>
           <span className="font-mono">Internal research tool · not for public use</span>
         </div>

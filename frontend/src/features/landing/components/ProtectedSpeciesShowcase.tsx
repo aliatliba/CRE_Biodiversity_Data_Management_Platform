@@ -39,7 +39,7 @@ export function ProtectedSpeciesShowcase() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: '-10% 0px' }}
               transition={{ duration: 0.5, delay: i * 0.1, ease: [0.22, 1, 0.36, 1] }}
-              className="group relative h-72 overflow-hidden rounded-2xl"
+              className="group relative h-72 overflow-hidden rounded-xl"
             >
               <div className="absolute inset-0 transition-transform duration-500 ease-out group-hover:scale-105">
                 <EditorialImage src={sp.src} seed={sp.id} alt={`${sp.common} (${sp.name})`} />
