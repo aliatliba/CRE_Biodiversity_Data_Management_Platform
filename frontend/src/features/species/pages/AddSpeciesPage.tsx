@@ -631,7 +631,7 @@ export default function AddSpeciesPage() {
                     setItems([])
                     setError(null)
                   }}
-                  className="h-10 w-full appearance-none rounded-lg border border-line-strong bg-surface pl-11 pr-10 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/20"
+                  className="h-10 w-full appearance-none rounded-xl border border-line-strong bg-surface pl-11 pr-10 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/20"
                 >
                   <option value="">
                     Select a site…
@@ -680,7 +680,7 @@ export default function AddSpeciesPage() {
 Panthera leo
 Canis lupus
 Aquila chrysaetos`}
-                  className="w-full resize-y rounded-lg border border-line-strong bg-surface px-4 py-3 pl-11 text-sm leading-6 outline-none transition-colors placeholder:text-fg-subtle focus:border-ring focus:ring-2 focus:ring-ring/20 disabled:bg-surface-muted"
+                  className="w-full resize-y rounded-xl border border-line-strong bg-surface px-4 py-3 pl-11 text-sm leading-6 outline-none transition-colors placeholder:text-fg-subtle focus:border-ring focus:ring-2 focus:ring-ring/20 disabled:bg-surface-muted"
                 />
               </div>
 

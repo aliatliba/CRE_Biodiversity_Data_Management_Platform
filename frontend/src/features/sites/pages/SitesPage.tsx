@@ -165,10 +165,10 @@ export function SitesPage() {
       )}
 
       {query.isSuccess && sites.length > 0 && (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="stagger-in grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {sites.map((site, index) => (
-            <Link key={site.id} to={siteUrl(site.id)}>
-              <Card className="flex h-full min-h-[210px] flex-col transition-colors hover:border-canopy-700/30 hover:bg-surface-muted">
+            <Link key={site.id} to={siteUrl(site.id)} className="rounded-2xl">
+              <Card className="lift flex h-full min-h-[210px] flex-col">
                 {/* Header */}
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex min-w-0 items-start gap-2.5">
@@ -286,7 +286,7 @@ export function SitesPage() {
               }
               placeholder="Mixed oak forest, north-facing slope. The site includes a dense woodland area with seasonal streams."
               rows={4}
-              className="w-full resize-none rounded-lg border border-line-strong bg-surface px-4 py-3 text-sm text-fg outline-none transition-all placeholder:text-fg-subtle focus:border-ring focus:ring-2 focus:ring-ring/20"
+              className="w-full resize-none rounded-xl border border-line-strong bg-surface px-4 py-3 text-sm text-fg outline-none transition-all placeholder:text-fg-subtle focus:border-ring focus:ring-2 focus:ring-ring/20"
             />
           </div>
           {formError && <Alert>{formError}</Alert>}

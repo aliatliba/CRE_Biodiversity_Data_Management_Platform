@@ -147,7 +147,7 @@ export function UsersPage() {
       )}
 
       {!isPending && !loadError && users.length > 0 && (
-        <div className="overflow-hidden rounded-xl border border-line bg-surface">
+        <div className="overflow-hidden rounded-2xl glass">
           <table className="w-full text-left text-sm">
             <thead>
               <tr className="border-b border-line bg-surface-muted text-xs font-semibold uppercase tracking-wide text-fg-muted">
@@ -158,7 +158,7 @@ export function UsersPage() {
                 <th className="px-4 py-2.5" />
               </tr>
             </thead>
-            <tbody>
+            <tbody className="stagger-in">
               {users.map((u) => (
                 <tr key={u.id} className="border-b border-line last:border-0">
                   <td className="px-4 py-2.5">

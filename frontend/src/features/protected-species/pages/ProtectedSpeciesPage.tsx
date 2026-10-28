@@ -150,7 +150,7 @@ export function ProtectedSpeciesPage() {
 
       {query.isSuccess && entries.length > 0 && (
         <div className={query.isPlaceholderData ? 'opacity-60 transition-opacity' : undefined}>
-          <div className="overflow-hidden rounded-xl border border-line bg-surface">
+          <div className="overflow-hidden rounded-2xl glass">
             <table className="w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-line bg-surface-muted text-xs font-semibold uppercase tracking-wide text-fg-muted">
@@ -160,7 +160,7 @@ export function ProtectedSpeciesPage() {
                   {isAdmin && <th className="px-4 py-2.5" />}
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="stagger-in">
                 {entries.map((entry) => (
                   <tr key={entry.id} className="border-b border-line last:border-0">
                     <td className="px-4 py-2.5 font-medium italic text-canopy-900">{entry.scientific_name}</td>

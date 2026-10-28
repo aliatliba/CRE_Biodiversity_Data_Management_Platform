@@ -56,9 +56,9 @@ export function DashboardPage() {
 
   return (
     <>
-      <p className="mb-6 text-sm text-fg-subtle">
+      <p className="mb-6 text-[15px] text-fg-muted">
         Welcome back,{' '}
-        <span className="font-medium text-fg">
+        <span className="text-gradient font-semibold">
           {user?.full_name}
         </span>
         . Here's what's in the registry right now.
@@ -101,7 +101,7 @@ export function DashboardPage() {
 
             <Link
               to={speciesListUrl({ iucn_status: THREATENED_STATUSES_PARAM })}
-              className="block rounded-xl transition-transform duration-200 hover:-translate-y-0.5"
+              className="lift block rounded-2xl"
             >
               <StatCard
                 label="IUCN threatened species - VU · EN · CR "
@@ -254,7 +254,7 @@ export function DashboardPage() {
 
             <Link
               to={ROUTES.addSpecies}
-              className="flex items-center gap-3 rounded-xl border border-line px-3.5 py-3 text-sm font-medium text-fg-muted transition-colors hover:border-canopy-700/30 hover:bg-surface-muted"
+              className="flex items-center gap-3 rounded-xl border border-line px-3.5 py-3 text-sm font-medium text-fg-muted transition-all duration-200 hover:translate-x-1 hover:border-primary/30 hover:bg-primary-soft hover:text-fg"
             >
               <Leaf
                 size={16}
@@ -265,7 +265,7 @@ export function DashboardPage() {
 
             <Link
               to={ROUTES.protectedSpecies}
-              className="flex items-center gap-3 rounded-xl border border-line px-3.5 py-3 text-sm font-medium text-fg-muted transition-colors hover:border-canopy-700/30 hover:bg-surface-muted"
+              className="flex items-center gap-3 rounded-xl border border-line px-3.5 py-3 text-sm font-medium text-fg-muted transition-all duration-200 hover:translate-x-1 hover:border-primary/30 hover:bg-primary-soft hover:text-fg"
             >
               <ShieldCheck
                 size={16}
@@ -276,7 +276,7 @@ export function DashboardPage() {
 
             <Link
               to={ROUTES.sites}
-              className="flex items-center gap-3 rounded-xl border border-line px-3.5 py-3 text-sm font-medium text-fg-muted transition-colors hover:border-canopy-700/30 hover:bg-surface-muted"
+              className="flex items-center gap-3 rounded-xl border border-line px-3.5 py-3 text-sm font-medium text-fg-muted transition-all duration-200 hover:translate-x-1 hover:border-primary/30 hover:bg-primary-soft hover:text-fg"
             >
               <MapPin
                 size={16}

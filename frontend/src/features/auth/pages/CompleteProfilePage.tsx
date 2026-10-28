@@ -47,7 +47,7 @@ export function CompleteProfilePage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-surface-muted px-6 py-16">
-      <div className="w-full max-w-sm rounded-xl border border-line bg-surface p-8">
+      <div className="w-full max-w-sm rounded-2xl glass p-8">
         <h1 className="font-display text-2xl font-bold tracking-tight text-fg">
           Set your password
         </h1>

@@ -75,7 +75,7 @@ function IucnStatusMultiSelect({
         onClick={() => setIsOpen((v) => !v)}
         aria-haspopup="listbox"
         aria-expanded={isOpen}
-        className="flex h-10 items-center gap-2 whitespace-nowrap rounded-lg border border-line-strong bg-surface px-3.5 text-sm text-fg-muted outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/20"
+        className="flex h-10 items-center gap-2 whitespace-nowrap rounded-xl border border-line-strong bg-surface px-3.5 text-sm text-fg-muted outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/20"
       >
         {buttonLabel}
         <ChevronDown size={14} className="text-fg-subtle" />
@@ -156,7 +156,7 @@ export function SpeciesSearch({ filters, onChange, sites }: SpeciesSearchProps) 
         <button
           type="button"
           onClick={() => setShowAdvanced((v) => !v)}
-          className="inline-flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-lg border border-line-strong bg-surface px-3.5 text-sm font-medium text-fg-muted transition-colors hover:bg-surface-muted hover:text-fg"
+          className="inline-flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-line-strong bg-surface px-3.5 text-sm font-medium text-fg-muted transition-colors hover:bg-surface-muted hover:text-fg"
         >
           <Filter size={15} />
           {showAdvanced ? 'Hide filters' : 'More filters'}
@@ -166,7 +166,7 @@ export function SpeciesSearch({ filters, onChange, sites }: SpeciesSearchProps) 
           <button
             type="button"
             onClick={() => onChange(EMPTY_SPECIES_FILTERS)}
-            className="inline-flex h-10 items-center gap-1.5 whitespace-nowrap rounded-lg px-3 text-sm font-medium text-danger transition-colors hover:bg-danger/10"
+            className="inline-flex h-10 items-center gap-1.5 whitespace-nowrap rounded-xl px-3 text-sm font-medium text-danger transition-colors hover:bg-danger/10"
           >
             <X size={14} />
             Clear
@@ -185,7 +185,7 @@ export function SpeciesSearch({ filters, onChange, sites }: SpeciesSearchProps) 
                 value={filters[field.key]}
                 onChange={(e) => setField(field.key, e.target.value)}
                 placeholder={field.placeholder}
-                className="h-10 rounded-lg border border-line-strong bg-surface px-3 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/20"
+                className="h-10 rounded-xl border border-line-strong bg-surface px-3 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/20"
               />
             </label>
           ))}
