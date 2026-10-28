@@ -17,7 +17,7 @@ export function SearchInput({ className, wrapperClassName, ...props }: SearchInp
       <input
         type="search"
         className={cn(
-          'h-10 w-full rounded-lg border border-line-strong bg-surface pl-9 pr-3 text-sm text-fg outline-none transition-colors duration-150 placeholder:text-fg-subtle hover:border-fg-subtle/50 focus:border-ring focus:ring-2 focus:ring-ring/20',
+          'h-10 w-full rounded-xl border border-line-strong bg-surface pl-9 pr-3 text-sm text-fg outline-none transition-colors duration-150 placeholder:text-fg-subtle hover:border-fg-subtle/50 focus:border-ring focus:ring-2 focus:ring-ring/20',
           className,
         )}
         {...props}

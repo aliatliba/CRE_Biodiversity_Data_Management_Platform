@@ -5,10 +5,11 @@ type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger'
 type ButtonSize = 'md' | 'lg'
 
 const VARIANTS: Record<ButtonVariant, string> = {
-  primary: 'bg-primary text-on-primary shadow-sm hover:bg-primary-hover',
-  secondary: 'border border-line-strong bg-surface text-fg hover:border-fg-subtle/40 hover:bg-surface-muted',
+  primary:
+    'bg-primary bg-[image:var(--gradient-primary)] text-on-primary shadow-[0_8px_22px_-10px_var(--color-glow)] hover:shadow-[0_12px_30px_-10px_var(--color-glow)] hover:brightness-110',
+  secondary: 'border border-line-strong bg-surface/70 text-fg backdrop-blur-md hover:border-primary/40 hover:bg-surface',
   ghost: 'text-fg-muted hover:bg-surface-muted hover:text-fg',
-  danger: 'bg-danger text-on-danger shadow-sm hover:bg-danger-hover',
+  danger: 'bg-danger text-on-danger shadow-[0_8px_22px_-10px_rgba(220,38,38,0.55)] hover:bg-danger-hover',
 }
 
 const SIZES: Record<ButtonSize, string> = {
@@ -35,9 +36,9 @@ export function Button({
     <button
       disabled={disabled || isLoading}
       className={cn(
-        'relative inline-flex cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-lg font-semibold transition-colors duration-150 ease-out',
+        'relative inline-flex cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-xl font-semibold transition-[color,background-color,border-color,box-shadow,filter,transform] duration-200 ease-out',
         'disabled:pointer-events-none disabled:opacity-50',
-        'active:translate-y-px',
+        'active:scale-[0.97]',
         VARIANTS[variant],
         SIZES[size],
         className,
