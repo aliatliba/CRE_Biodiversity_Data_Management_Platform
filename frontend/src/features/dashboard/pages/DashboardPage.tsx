@@ -13,15 +13,13 @@ import { ErrorState } from '@/components/common/ErrorState'
 import { AnimatedBarChart } from '@/components/charts/AnimatedBarChart'
 import { AnimatedPieChart } from '@/components/charts/AnimatedPieChart'
 import { ChartCard } from '@/components/charts/ChartCard'
-import { toChartData } from '@/lib/chartData'
+import { toChartData, toCompositionData, toIucnChartData } from '@/lib/chartData'
 import { getErrorMessage } from '@/lib/errors'
 import { IUCN_COLORS, THREATENED_STATUSES_PARAM } from '@/lib/iucn'
 import { queryKeys } from '@/lib/queryKeys'
 import { ROUTES, siteUrl, speciesListUrl } from '@/lib/constants'
 import * as dashboardService from '../services/dashboardService'
 import { StatCard } from '@/components/common/StatCard'
-
-const COMPOSITION_LABELS = ['Fauna', 'Flora', 'Micro-organisms', 'Fungi', 'Unclassified']
 
 export function DashboardPage() {
   const { user } = useAuth()
@@ -32,11 +30,8 @@ export function DashboardPage() {
   })
   const stats = query.data
 
-  const compositionData = COMPOSITION_LABELS.map((label) => ({
-    label,
-    value: stats?.biodiversity_composition[label] ?? 0,
-  }))
-  const iucnData = toChartData(stats?.iucn_breakdown)
+  const compositionData = toCompositionData(stats?.biodiversity_composition)
+  const iucnData = toIucnChartData(stats?.iucn_breakdown)
   const statusData = toChartData(stats?.status_breakdown)
   // Richest sites first (the API already orders them; kept explicit for the table).
   const siteRecords = (stats?.site_stats ?? []).reduce((sum, s) => sum + s.species_count, 0)
@@ -104,7 +99,7 @@ export function DashboardPage() {
               className="lift block rounded-2xl"
             >
               <StatCard
-                label="IUCN threatened species - VU · EN · CR "
+                label="IUCN threatened species - NT · VU · EN · CR"
                 value={stats.iucn_threatened_species}
                 icon={ShieldCheck}
                 delay={0.1}
