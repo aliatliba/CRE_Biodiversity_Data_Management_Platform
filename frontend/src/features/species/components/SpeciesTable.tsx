@@ -1,9 +1,17 @@
 import { Link } from 'react-router-dom'
+import { Unlink } from 'lucide-react'
 import { Badge } from '@/components/ui/Badge'
 import { getIucnTone } from '@/lib/iucn'
 import type { SpeciesListItem } from '../types'
 
-export function SpeciesTable({ species }: { species: SpeciesListItem[] }) {
+interface SpeciesTableProps {
+  species: SpeciesListItem[]
+  /** Adds a "Remove from site" action column; rows where `canRemove` is false get no button. */
+  onRemove?: (species: SpeciesListItem) => void
+  canRemove?: (species: SpeciesListItem) => boolean
+}
+
+export function SpeciesTable({ species, onRemove, canRemove }: SpeciesTableProps) {
   return (
     <div className="overflow-hidden rounded-2xl glass">
       <div className="overflow-x-auto">
@@ -19,6 +27,11 @@ export function SpeciesTable({ species }: { species: SpeciesListItem[] }) {
               </th>
               <th className="px-4 py-2.5">IUCN</th>
               <th className="px-4 py-2.5">National status</th>
+              {onRemove && (
+                <th className="px-4 py-2.5 text-right">
+                  <span className="sr-only">Actions</span>
+                </th>
+              )}
             </tr>
           </thead>
 
@@ -70,6 +83,22 @@ export function SpeciesTable({ species }: { species: SpeciesListItem[] }) {
                     {sp.national_status}
                   </Badge>
                 </td>
+
+                {onRemove && (
+                  <td className="px-4 py-2.5 text-right">
+                    {(canRemove?.(sp) ?? true) && (
+                      <button
+                        type="button"
+                        onClick={() => onRemove(sp)}
+                        title="Remove from site"
+                        aria-label={`Remove ${sp.scientific_name} from this site`}
+                        className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-fg-muted transition-colors hover:bg-danger/10 hover:text-danger"
+                      >
+                        <Unlink size={15} />
+                      </button>
+                    )}
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>

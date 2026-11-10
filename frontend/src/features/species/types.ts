@@ -40,6 +40,15 @@ export type SpeciesListItem = Pick<
   'id' | 'scientific_name' | 'common_name' | 'family' | 'kingdom' | 'iucn_status' | 'national_status'
 >
 
+/** A species-to-site link (GET /sites/{id}/species). */
+export interface SiteSpeciesLink {
+  id: number
+  site_id: number
+  species_id: number
+  recorded_by: number | null
+  notes: string | null
+}
+
 export type { Page } from '@/types/common'
 
 export interface SpeciesLookupDraft {
