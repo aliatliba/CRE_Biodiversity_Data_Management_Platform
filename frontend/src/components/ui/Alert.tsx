@@ -4,10 +4,10 @@ import { cn } from '@/lib/utils'
 type AlertTone = 'error' | 'warning' | 'success' | 'info'
 
 const TONES: Record<AlertTone, string> = {
-  error: 'border-red-200 bg-red-50 text-red-700',
-  warning: 'border-amber-200 bg-amber-50 text-amber-900',
-  success: 'border-canopy-600/25 bg-canopy-500/10 text-canopy-900',
-  info: 'border-violet-200 bg-violet-50 text-violet-800',
+  error: 'border-danger/30 bg-danger/8 text-danger',
+  warning: 'border-accent/30 bg-accent/10 text-accent-fg',
+  success: 'border-primary/25 bg-primary-soft text-primary',
+  info: 'border-sky-600/25 bg-sky-500/10 text-sky-800 dark:text-sky-300',
 }
 
 interface AlertProps {

@@ -76,7 +76,7 @@ export function Modal({ isOpen, onClose, title, description, children }: ModalPr
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto px-4 py-6">
       <div
-        className="fixed inset-0 bg-black/40 backdrop-blur-[2px]"
+        className="fixed inset-0 bg-ink-950/40 backdrop-blur-sm dark:bg-black/60"
         onClick={onClose}
         aria-hidden="true"
       />
@@ -84,7 +84,7 @@ export function Modal({ isOpen, onClose, title, description, children }: ModalPr
       <div
         ref={dialogRef}
         tabIndex={-1}
-        className="relative z-10 max-h-[calc(100vh-3rem)] w-full max-w-md overflow-y-auto rounded-2xl border border-canopy-900/10 bg-paper-0 p-5 shadow-2xl outline-none sm:p-6"
+        className="relative z-10 max-h-[calc(100vh-3rem)] w-full max-w-md overflow-y-auto rounded-2xl border border-line bg-surface/90 p-5 shadow-overlay outline-none backdrop-blur-2xl sm:p-6"
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
@@ -92,12 +92,12 @@ export function Modal({ isOpen, onClose, title, description, children }: ModalPr
       >
         <div className="mb-5 flex items-start justify-between gap-4">
           <div className="min-w-0">
-            <h2 id={titleId} className="font-display text-lg font-bold text-canopy-950">
+            <h2 id={titleId} className="font-display text-lg font-bold text-fg">
               {title}
             </h2>
 
             {description && (
-              <p id={descriptionId} className="mt-1.5 text-sm leading-relaxed text-ink-950/55">
+              <p id={descriptionId} className="mt-1.5 text-sm leading-relaxed text-fg-muted">
                 {description}
               </p>
             )}
@@ -106,7 +106,7 @@ export function Modal({ isOpen, onClose, title, description, children }: ModalPr
           <button
             type="button"
             onClick={onClose}
-            className="shrink-0 rounded-full p-2 text-ink-950/45 transition-colors hover:bg-mist-100 hover:text-ink-950"
+            className="shrink-0 rounded-lg p-2 text-fg-subtle transition-colors hover:bg-surface-muted hover:text-fg"
             aria-label="Close modal"
           >
             <X size={18} />

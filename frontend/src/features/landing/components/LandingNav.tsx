@@ -16,7 +16,7 @@ export function LandingNav() {
       initial={{ opacity: 0, y: -16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-      className="fixed inset-x-0 top-0 z-20 flex w-full items-center justify-between border-b border-paper-0/10 bg-canopy-950/80 px-10 py-4 backdrop-blur-md"
+      className="fixed inset-x-3 top-3 z-20 flex items-center justify-between rounded-2xl border border-paper-0/10 bg-canopy-950/88 px-4 py-2.5 shadow-[0_16px_40px_-20px_rgba(0,0,0,0.6)] backdrop-blur-xl sm:inset-x-6 sm:px-6"
     >
       <div className="flex items-center gap-2.5">
         <svg width="26" height="26" viewBox="0 0 32 32" fill="none" aria-hidden="true">
@@ -43,7 +43,7 @@ export function LandingNav() {
           <Button
             variant="ghost"
             size="md"
-            className="border border-paper-0/25 bg-transparent text-paper-0 hover:border-paper-0/50 hover:bg-paper-0/10 hover:text-paper-0"
+            className="border border-paper-0/30 !bg-transparent !text-paper-0 hover:border-paper-0/60 hover:!bg-paper-0/10 hover:!text-paper-0"
           >
             Sign in
           </Button>

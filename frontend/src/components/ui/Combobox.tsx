@@ -79,7 +79,7 @@ export function Combobox({
     <div ref={containerRef} className="relative">
       <label
         htmlFor={id}
-        className="mb-1.5 block text-xs font-semibold text-ink-950/70"
+        className="mb-1.5 block text-xs font-medium text-fg-muted"
       >
         {label}
       </label>
@@ -101,7 +101,7 @@ export function Combobox({
             setIsOpen(true)
           }}
           onKeyDown={handleKeyDown}
-          className="h-11 w-full rounded-xl border border-mist-200 bg-paper-0 px-3.5 pr-16 text-sm text-ink-950 outline-none transition placeholder:text-ink-950/45 hover:border-mist-300 focus:border-canopy-600 focus:ring-4 focus:ring-canopy-600/10"
+          className="h-10 w-full rounded-xl border border-line-strong bg-surface px-3 pr-16 text-sm text-fg outline-none transition-colors duration-150 placeholder:text-fg-subtle hover:border-fg-subtle/50 focus:border-ring focus:ring-2 focus:ring-ring/20"
         />
 
         {value && (
@@ -109,7 +109,7 @@ export function Combobox({
             type="button"
             onClick={() => select('')}
             aria-label={`Clear ${label}`}
-            className="absolute right-9 top-1/2 -translate-y-1/2 rounded-md p-1 text-ink-950/40 transition hover:bg-mist-100 hover:text-ink-950"
+            className="absolute right-9 top-1/2 -translate-y-1/2 rounded-md p-1 text-fg-subtle transition-colors hover:bg-surface-muted hover:text-fg"
           >
             <X size={14} />
           </button>
@@ -118,7 +118,7 @@ export function Combobox({
         <ChevronDown
           size={16}
           aria-hidden="true"
-          className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-ink-950/35"
+          className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-fg-subtle"
         />
       </div>
 
@@ -126,10 +126,10 @@ export function Combobox({
         <ul
           id={listId}
           role="listbox"
-          className="absolute z-30 mt-2 max-h-60 w-full overflow-y-auto rounded-xl border border-mist-200 bg-paper-0 p-1.5 shadow-lg"
+          className="absolute z-30 mt-2 max-h-60 w-full overflow-y-auto rounded-xl border border-line bg-surface p-1 shadow-overlay"
         >
           {matches.length === 0 && (
-            <li className="px-3 py-4 text-center text-sm text-ink-950/45">No matches.</li>
+            <li className="px-3 py-4 text-center text-sm text-fg-subtle">No matches.</li>
           )}
 
           {matches.map((option, index) => (
@@ -143,9 +143,9 @@ export function Combobox({
               }}
               onMouseEnter={() => setActiveIndex(index)}
               className={cn(
-                'cursor-pointer rounded-lg px-3 py-2 text-sm text-ink-950/80',
-                index === activeIndex && 'bg-mist-100',
-                option === value && 'font-semibold text-canopy-900',
+                'cursor-pointer rounded-md px-3 py-2 text-sm text-fg',
+                index === activeIndex && 'bg-surface-muted',
+                option === value && 'font-semibold text-primary',
               )}
             >
               {option}
@@ -153,7 +153,7 @@ export function Combobox({
           ))}
 
           {options.length > matches.length && (
-            <li className="px-3 py-2 text-center text-xs text-ink-950/40">
+            <li className="px-3 py-2 text-center text-xs text-fg-subtle">
               Type to narrow {options.length.toLocaleString()} options…
             </li>
           )}

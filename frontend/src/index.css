@@ -4,8 +4,35 @@
 
 
 
+/*
+ * Design system: see design-system/MASTER.md.
+ * Semantic tokens (bg, surface, fg, line, primary…) are what new code should use.
+ * The brand scales below (canopy, mist, ink, paper) are kept so existing classes
+ * keep working, and are tuned to the same values.
+ */
 @theme {
+  /* ── Semantic tokens ─────────────────────── */
+  --color-bg: #f2f7f3;
+  --color-surface: #ffffff;
+  --color-surface-muted: rgba(15, 31, 23, 0.045);
+  --color-fg: #0f1f17;
+  --color-fg-muted: #4b5b52;
+  --color-fg-subtle: #5f6e65;
+  --color-line: rgba(15, 31, 23, 0.09);
+  --color-line-strong: rgba(15, 31, 23, 0.2);
+  --color-primary: #0b5d1e;
+  --color-primary-hover: #053b06;
+  --color-on-primary: #ffffff;
+  --color-primary-soft: rgba(15, 122, 44, 0.1);
+  --color-link: #0f7a2c;
+  --color-accent: #d97706;
+  --color-accent-fg: #b45309;
+  --color-danger: #dc2626;
+  --color-danger-hover: #b91c1c;
+  --color-on-danger: #ffffff;
+  --color-ring: #0f7a2c;
 
+  /* ── Brand scales ────────────────────────── */
   --color-canopy-950: #052707;
   --color-canopy-900: #053b06;
   --color-canopy-800: #0b5d1e;
@@ -20,20 +47,37 @@
   --color-lichen-400: #9ef01a;
   --color-lichen-300: #c3f56b;
 
-  --color-ink-950: #081209;
-  --color-ink-800: #10231a;
+  --color-ink-950: #0f1f17;
+  --color-ink-800: #1f3328;
 
-  --color-paper-0: #fbfdf9;
-  --color-paper-50: #f5f8f2;
+  --color-paper-0: #ffffff;
+  --color-paper-50: #f7faf7;
 
-  --color-mist-50: #f3f8f1;
-  --color-mist-100: #e7efe4;
-  --color-mist-200: #d7e5d3;
-  --color-mist-300: #bfd3ba;
+  --color-mist-50: #f3f7f4;
+  --color-mist-100: #eaf1ec;
+  --color-mist-200: #e2ebe4;
+  --color-mist-300: #c9d8cd;
 
-  --font-display: "Montserrat", ui-sans-serif, system-ui, sans-serif;
-  --font-body: "Montserrat", ui-sans-serif, system-ui, sans-serif;
-  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace;
+  --font-sans: "Fira Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Montserrat", "Fira Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-body: "Fira Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Fira Code", ui-monospace, SFMono-Regular, monospace;
+
+  --radius-control: 0.75rem;
+  --radius-card: 1rem;
+
+  /* Aurora Glass */
+  --color-glow: rgba(19, 154, 67, 0.4);
+  --glass-bg: rgba(255, 255, 255, 0.66);
+  --glass-border: rgba(15, 31, 23, 0.08);
+  --glass-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85), 0 10px 32px -14px rgba(5, 59, 6, 0.2);
+  --aurora-1: rgba(76, 197, 150, 0.32);
+  --aurora-2: rgba(158, 240, 26, 0.22);
+  --aurora-3: rgba(20, 184, 166, 0.2);
+  --gradient-primary: linear-gradient(135deg, #064e1a 0%, #0b5d1e 45%, #0f7a2c 100%);
+  --gradient-text: linear-gradient(100deg, #0b5d1e 0%, #0f7a2c 45%, #0d9b6c 100%);
+
+  --shadow-overlay: 0 12px 32px -12px rgba(5, 39, 7, 0.22), 0 2px 6px rgba(5, 39, 7, 0.06);
 
   --animate-drift: drift 14s ease-in-out infinite;
   --animate-drift-slow: drift 22s ease-in-out infinite;
@@ -43,6 +87,25 @@
 }
 
 .dark {
+  --color-bg: #060d09;
+  --color-surface: #101a14;
+  --color-surface-muted: rgba(255, 255, 255, 0.045);
+  --color-fg: #eef4ef;
+  --color-fg-muted: #a6b8ac;
+  --color-fg-subtle: #8a9e92;
+  --color-line: rgba(255, 255, 255, 0.08);
+  --color-line-strong: rgba(255, 255, 255, 0.16);
+  --color-primary: #4cc596;
+  --color-primary-hover: #6fd3ab;
+  --color-on-primary: #052707;
+  --color-primary-soft: rgba(76, 197, 150, 0.14);
+  --color-link: #4cc596;
+  --color-accent: #f59e0b;
+  --color-accent-fg: #f59e0b;
+  --color-danger: #f87171;
+  --color-danger-hover: #fca5a5;
+  --color-on-danger: #1a0505;
+  --color-ring: #4cc596;
 
   --color-canopy-950: #eaf7ec;
   --color-canopy-900: #d8f0dc;
@@ -61,13 +124,25 @@
   --color-ink-950: #eef4ef;
   --color-ink-800: #cfdad1;
 
-  --color-paper-0: #0d1410;
-  --color-paper-50: #101a14;
+  --color-paper-0: #121b15;
+  --color-paper-50: #0f1712;
 
-  --color-mist-50: #121b15;
-  --color-mist-100: #16211a;
+  --color-mist-50: #141e17;
+  --color-mist-100: #18241c;
   --color-mist-200: #223228;
   --color-mist-300: #2f4638;
+
+  --shadow-overlay: 0 12px 32px -12px rgba(0, 0, 0, 0.6), 0 2px 6px rgba(0, 0, 0, 0.3);
+
+  --color-glow: rgba(158, 240, 26, 0.3);
+  --glass-bg: rgba(16, 28, 21, 0.58);
+  --glass-border: rgba(255, 255, 255, 0.075);
+  --glass-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 16px 40px -18px rgba(0, 0, 0, 0.7);
+  --aurora-1: rgba(76, 197, 150, 0.22);
+  --aurora-2: rgba(158, 240, 26, 0.12);
+  --aurora-3: rgba(20, 184, 166, 0.16);
+  --gradient-primary: linear-gradient(135deg, #4cc596 0%, #7ddc6a 55%, #9ef01a 100%);
+  --gradient-text: linear-gradient(100deg, #8fd9a0 0%, #4cc596 40%, #c3f56b 100%);
 
   color-scheme: dark;
 }
@@ -88,8 +163,11 @@
 
     font-family: var(--font-body);
 
-    background-color: var(--color-paper-0);
-    color: var(--color-ink-950);
+    font-size: 15px;
+    line-height: 1.5;
+
+    background-color: var(--color-bg);
+    color: var(--color-fg);
 
     -webkit-font-smoothing: antialiased;
 
@@ -111,9 +189,16 @@
   }
 
   :focus-visible {
-    outline: 2px solid var(--color-canopy-600);
+    outline: 2px solid var(--color-ring);
     outline-offset: 3px;
     border-radius: 2px;
+  }
+
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  summary,
+  select {
+    cursor: pointer;
   }
 
   ::selection {
@@ -160,6 +245,51 @@
   background: #365b48;
 }
 
+/* Frosted panel: translucent fill, blur, hairline border and top highlight. */
+@utility glass {
+  background-color: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  -webkit-backdrop-filter: blur(18px) saturate(150%);
+  backdrop-filter: blur(18px) saturate(150%);
+}
+
+/* Interactive card: lifts and glows on hover. */
+@utility lift {
+  transition:
+    transform 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.25s ease,
+    border-color 0.25s ease;
+  &:hover {
+    transform: translateY(-3px);
+    border-color: color-mix(in oklab, var(--color-primary) 30%, transparent);
+    box-shadow: var(--glass-shadow), 0 18px 40px -18px var(--color-glow);
+  }
+}
+
+@utility text-gradient {
+  background-image: var(--gradient-text);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Children fade up one after another (tables rows, card grids). */
+@utility stagger-in {
+  & > * {
+    animation: rise-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  & > :nth-child(2) { animation-delay: 40ms; }
+  & > :nth-child(3) { animation-delay: 80ms; }
+  & > :nth-child(4) { animation-delay: 120ms; }
+  & > :nth-child(5) { animation-delay: 160ms; }
+  & > :nth-child(6) { animation-delay: 200ms; }
+  & > :nth-child(7) { animation-delay: 240ms; }
+  & > :nth-child(8) { animation-delay: 280ms; }
+  & > :nth-child(9) { animation-delay: 320ms; }
+  & > :nth-child(n + 10) { animation-delay: 360ms; }
+}
+
 @layer utilities {
 
   .bg-grain {
@@ -177,6 +307,28 @@
 
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.35'/%3E%3C/svg%3E");
   }
+}
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+@keyframes aurora-a {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  50% { transform: translate3d(8%, 6%, 0) scale(1.12); }
+}
+
+@keyframes aurora-b {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1.05); }
+  50% { transform: translate3d(-10%, -4%, 0) scale(0.95); }
+}
+
+@keyframes aurora-c {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  50% { transform: translate3d(-6%, 8%, 0) scale(1.15); }
 }
 
 @keyframes drift {

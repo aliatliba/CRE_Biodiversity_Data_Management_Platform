@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { motion, useReducedMotion } from 'framer-motion'
+import { useRef, useState, type PointerEvent } from 'react'
+import { motion, useReducedMotion, useScroll, useSpring, useTransform } from 'framer-motion'
 import { Reveal } from '@/components/common/Reveal'
 
 /**
@@ -31,6 +31,8 @@ const REGIONS = [
   { id: 'illizi', name: 'Illizi', x: 215.8, y: 187.1 },
 ]
 
+const PIN_HEIGHT = 9
+
 // Simplified from the Natural Earth Algeria country boundary (public-domain data).
 const OUTLINE =
   'M48.6 213.7 L0 173.2 L0 148.4 L13.4 136.1 L39.6 133.7 L54.3 116.3 L63.4 112.7 L63.2 96.2 L73.7 93.6 L73 88.6 L94.1 88.4 L96.3 81.2 L88.2 68.1 L87 41.6 L81.3 35.4 L87.1 34.7 L103.3 21.3 L108.3 23 L113.6 15.7 L126.3 9.7 L158.1 3.1 L169.6 3.5 L176.1 8 L190.1 0 L196.8 3.6 L200.2 0.1 L208.9 4.3 L217.6 2.7 L212.2 10 L215.5 32.7 L213 43.2 L203.5 56.5 L206.6 68.2 L223.2 88.7 L229.2 121.2 L226.2 123.2 L233 140.7 L233.9 184.4 L227.4 193 L238.3 220.7 L254.6 226 L260 239.8 L203.5 286.5 L182.3 311.6 L151.3 320 L148.4 317.2 L149.6 305.1 L131.7 296.5 L123.8 288.9 L123.7 282.4 L48.6 213.7 Z'
@@ -40,15 +42,29 @@ export function ResearchSitesMap() {
   const shouldReduceMotion = useReducedMotion()
   const active = REGIONS.find((s) => s.id === activeId) ?? null
 
+  // The map lies like a relief model on a table: steep while it scrolls in,
+  // settling to a gentle tilt; the mouse turns it slightly.
+  const mapRef = useRef<HTMLDivElement>(null)
+  const { scrollYProgress } = useScroll({ target: mapRef, offset: ['start end', 'center center'] })
+  const scrollTilt = useTransform(scrollYProgress, [0, 1], shouldReduceMotion ? [20, 20] : [48, 20])
+  const rotateX = useSpring(scrollTilt, { stiffness: 120, damping: 24 })
+  const rotateZ = useSpring(0, { stiffness: 120, damping: 20 })
+
+  function onPointerMove(event: PointerEvent<HTMLDivElement>) {
+    if (shouldReduceMotion || event.pointerType !== 'mouse') return
+    const rect = event.currentTarget.getBoundingClientRect()
+    rotateZ.set(((event.clientX - rect.left) / rect.width - 0.5) * -8)
+  }
+
   return (
-    <section id="map" className="border-b border-canopy-900/[0.06] bg-mist-100/40">
+    <section id="map" className="border-b border-line bg-surface-muted">
       <div className="mx-auto grid w-full max-w-6xl grid-cols-1 items-center gap-12 px-6 py-28 sm:px-8 lg:grid-cols-[0.9fr_1.1fr]">
         <Reveal>
           <p className="font-mono text-xs uppercase tracking-[0.14em] text-canopy-700">Where the data comes from</p>
-          <h2 className="mt-3 font-display text-3xl font-bold tracking-tight text-canopy-950 sm:text-4xl">
+          <h2 className="mt-3 font-display text-3xl font-bold tracking-tight text-fg sm:text-4xl">
             Research sites, spread across the country.
           </h2>
-          <p className="mt-5 max-w-md text-[15px] leading-relaxed text-ink-950/65">
+          <p className="mt-5 max-w-md text-[15px] leading-relaxed text-fg-muted">
             Each marker represents a region where field teams are actively
             registering sites and logging observations. Site-level detail
             lives inside the platform, not on this page.
@@ -59,13 +75,29 @@ export function ResearchSitesMap() {
         </Reveal>
 
         <Reveal delay={0.1} className="relative mx-auto w-full max-w-[36rem]">
-          <svg
-            viewBox="-15 -15 290 350"
+          <div
+            ref={mapRef}
+            style={{ perspective: 1100 }}
+            onPointerMove={onPointerMove}
+            onPointerLeave={() => rotateZ.set(0)}
+          >
+          <motion.svg
+            viewBox="-15 -25 290 360"
             preserveAspectRatio="none"
-            className="h-[400px] w-full sm:h-[450px]"
+            className="h-[400px] w-full overflow-visible sm:h-[450px]"
+            style={{ rotateX, rotateZ, transformOrigin: '50% 60%' }}
             role="img"
             aria-label="Map of Algeria showing regions where BioData field teams operate"
           >
+            <defs>
+              <filter id="map-shadow" x="-20%" y="-20%" width="140%" height="140%">
+                <feGaussianBlur stdDeviation="7" />
+              </filter>
+            </defs>
+            {/* Ground shadow and slab edge give the outline physical thickness. */}
+            <path d={OUTLINE} transform="translate(4 16)" fill="var(--color-canopy-950)" opacity={0.22} filter="url(#map-shadow)" />
+            <path d={OUTLINE} transform="translate(0 7)" fill="var(--color-canopy-800)" opacity={0.45} />
+            <path d={OUTLINE} transform="translate(0 3.5)" fill="var(--color-canopy-700)" opacity={0.35} />
             <path
               d={OUTLINE}
               fill="var(--color-mist-200)"
@@ -77,14 +109,29 @@ export function ResearchSitesMap() {
 
             {REGIONS.map((site, i) => {
               const isActive = activeId === site.id
+              const top = site.y - PIN_HEIGHT
               return (
                 <g key={site.id}>
+                  <ellipse cx={site.x} cy={site.y} rx={3.2} ry={1.4} fill="var(--color-canopy-950)" opacity={0.25} />
+                  <motion.line
+                    x1={site.x}
+                    y1={site.y}
+                    x2={site.x}
+                    y2={top}
+                    stroke="var(--color-canopy-800)"
+                    strokeWidth={1.2}
+                    strokeLinecap="round"
+                    initial={{ pathLength: 0 }}
+                    whileInView={{ pathLength: 1 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.35, delay: i * 0.06 }}
+                  />
                   {!shouldReduceMotion && (
-                    <circle cx={site.x} cy={site.y} r={6} fill="none" stroke="var(--color-canopy-600)" strokeWidth={1.5} className="origin-center animate-pulse-ring" style={{ transformBox: 'fill-box' }} />
+                    <circle cx={site.x} cy={top} r={6} fill="none" stroke="var(--color-canopy-600)" strokeWidth={1.5} className="origin-center animate-pulse-ring" style={{ transformBox: 'fill-box' }} />
                   )}
                   <motion.circle
                     cx={site.x}
-                    cy={site.y}
+                    cy={top}
                     r={isActive ? 7 : 5}
                     fill={isActive ? 'var(--color-lichen-400)' : 'var(--color-canopy-600)'}
                     stroke="var(--color-paper-0)"
@@ -92,7 +139,7 @@ export function ResearchSitesMap() {
                     initial={{ opacity: 0, scale: 0 }}
                     whileInView={{ opacity: 1, scale: 1 }}
                     viewport={{ once: true }}
-                    transition={{ duration: 0.4, delay: i * 0.08, ease: 'backOut' }}
+                    transition={{ duration: 0.4, delay: i * 0.06 + 0.2, ease: 'backOut' }}
                     style={{ cursor: 'pointer', transformBox: 'fill-box', transformOrigin: 'center' }}
                     onMouseEnter={() => setActiveId(site.id)}
                     onMouseLeave={() => setActiveId(null)}
@@ -105,8 +152,9 @@ export function ResearchSitesMap() {
                 </g>
               )
             })}
-          </svg>
-          <p className="mt-3 text-center font-mono text-[10px] uppercase tracking-[0.12em] text-ink-950/30">
+          </motion.svg>
+          </div>
+          <p className="mt-3 text-center font-mono text-[10px] uppercase tracking-[0.12em] text-fg-subtle">
             Algeria · selected research regions
           </p>
         </Reveal>

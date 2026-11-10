@@ -1,8 +1,21 @@
 import type { ButtonHTMLAttributes } from 'react'
 import { cn } from '@/lib/utils'
 
-type ButtonVariant = 'primary' | 'secondary' | 'ghost'
+type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger'
 type ButtonSize = 'md' | 'lg'
+
+const VARIANTS: Record<ButtonVariant, string> = {
+  primary:
+    'bg-primary bg-[image:var(--gradient-primary)] text-on-primary shadow-[0_8px_22px_-10px_var(--color-glow)] hover:shadow-[0_12px_30px_-10px_var(--color-glow)] hover:brightness-110',
+  secondary: 'border border-line-strong bg-surface/70 text-fg backdrop-blur-md hover:border-primary/40 hover:bg-surface',
+  ghost: 'text-fg-muted hover:bg-surface-muted hover:text-fg',
+  danger: 'bg-danger text-on-danger shadow-[0_8px_22px_-10px_rgba(220,38,38,0.55)] hover:bg-danger-hover',
+}
+
+const SIZES: Record<ButtonSize, string> = {
+  md: 'h-10 px-4 text-sm',
+  lg: 'h-12 px-6 text-[15px]',
+}
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant
@@ -19,39 +32,15 @@ export function Button({
   children,
   ...props
 }: ButtonProps) {
-  const variantClasses =
-    variant === 'primary'
-      ? [
-          'bg-canopy-900 text-white shadow-sm',
-          'hover:bg-canopy-800',
-          'dark:bg-canopy-700 dark:text-white dark:hover:bg-canopy-600',
-        ].join(' ')
-      : variant === 'secondary'
-        ? [
-            'border border-canopy-900/15 bg-paper-0 text-canopy-900',
-            'hover:bg-mist-100',
-            'dark:border-canopy-400/20 dark:bg-paper-50 dark:text-canopy-800',
-            'dark:hover:bg-mist-100',
-          ].join(' ')
-        : [
-            'text-ink-950/65 hover:bg-mist-100 hover:text-canopy-900',
-            'dark:text-ink-950/70 dark:hover:bg-mist-100 dark:hover:text-canopy-700',
-          ].join(' ')
-
-  const sizeClasses =
-    size === 'lg'
-      ? 'h-13 px-7 text-base'
-      : 'h-11 px-5 text-sm'
-
   return (
     <button
       disabled={disabled || isLoading}
       className={cn(
-        'relative inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full font-semibold tracking-tight transition-all duration-200 ease-out',
+        'relative inline-flex cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-xl font-semibold transition-[color,background-color,border-color,box-shadow,filter,transform] duration-200 ease-out',
         'disabled:pointer-events-none disabled:opacity-50',
-        'active:scale-[0.98]',
-        variantClasses,
-        sizeClasses,
+        'active:scale-[0.97]',
+        VARIANTS[variant],
+        SIZES[size],
         className,
       )}
       {...props}

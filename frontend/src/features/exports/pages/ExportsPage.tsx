@@ -143,11 +143,11 @@ export function ExportsPage() {
           </div>
 
           <div>
-            <h1 className="font-display text-lg font-bold text-canopy-950">
+            <h1 className="font-display text-lg font-bold text-fg">
               Export catalogue
             </h1>
 
-            <p className="text-sm text-ink-950/50">
+            <p className="text-sm text-fg-subtle">
               Create a filtered snapshot of the validated species catalogue.
             </p>
           </div>
@@ -166,18 +166,18 @@ export function ExportsPage() {
             FILTERS
         ============================================================ */}
         <Card className="overflow-visible">
-          <div className="flex flex-col gap-4 border-b border-mist-200 pb-5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-4 border-b border-line pb-5 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-start gap-3">
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-canopy-700/10 text-canopy-700 dark:bg-canopy-700/15 dark:text-canopy-700">
                 <Filter size={17} />
               </div>
 
               <div>
-                <h2 className="font-display text-sm font-bold text-canopy-950">
+                <h2 className="font-display text-sm font-bold text-fg">
                   Filter species
                 </h2>
 
-                <p className="mt-0.5 text-xs text-ink-950/50">
+                <p className="mt-0.5 text-xs text-fg-subtle">
                   Choose the records you want to include.
                 </p>
               </div>
@@ -208,10 +208,10 @@ export function ExportsPage() {
                 <button
                   type="button"
                   onClick={() => setSitesOpen((open) => !open)}
-                  className={`flex min-h-11 w-full items-center justify-between gap-3 rounded-xl border px-3.5 py-2.5 text-left text-sm text-ink-950 transition dark:bg-paper-50 ${
+                  className={`flex min-h-10 w-full items-center justify-between gap-3 rounded-lg border px-3.5 py-2.5 text-left text-sm text-fg transition dark:bg-paper-50 ${
                     sitesOpen
                       ? 'border-canopy-600 bg-white ring-4 ring-canopy-600/10 dark:border-canopy-600 dark:ring-canopy-600/10'
-                      : 'border-mist-200 bg-white hover:border-mist-300 dark:hover:border-canopy-400/40'
+                      : 'border-line bg-white hover:border-line-strong dark:hover:border-canopy-400/40'
                   }`}
                 >
                   <div className="flex min-w-0 flex-1 flex-wrap gap-1.5">
@@ -247,13 +247,13 @@ export function ExportsPage() {
                         </span>
                       ))
                     ) : (
-                      <span className="text-ink-950/40">
+                      <span className="text-fg-subtle">
                         All sites
                       </span>
                     )}
 
                     {selectedSites.length > 3 && (
-                      <span className="rounded-lg bg-mist-100 px-2.5 py-1 text-xs font-semibold text-ink-950/55">
+                      <span className="rounded-lg bg-mist-100 px-2.5 py-1 text-xs font-semibold text-fg-subtle">
                         +{selectedSites.length - 3} more
                       </span>
                     )}
@@ -261,19 +261,19 @@ export function ExportsPage() {
 
                   <ChevronDown
                     size={17}
-                    className={`shrink-0 text-ink-950/40 transition-transform ${
+                    className={`shrink-0 text-fg-subtle transition-transform ${
                       sitesOpen ? 'rotate-180' : ''
                     }`}
                   />
                 </button>
 
                 {sitesOpen && (
-                  <div className="absolute z-30 mt-2 w-full overflow-hidden rounded-2xl border border-mist-200 bg-white shadow-xl shadow-ink-950/10 dark:bg-paper-0 dark:shadow-black/30">
-                    <div className="border-b border-mist-200 p-3">
+                  <div className="absolute z-30 mt-2 w-full overflow-hidden rounded-xl border border-line bg-white shadow-overlay shadow-ink-950/10 dark:bg-surface dark:shadow-black/30">
+                    <div className="border-b border-line p-3">
                       <div className="relative">
                         <Search
                           size={15}
-                          className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-950/35"
+                          className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-fg-subtle"
                         />
 
                         <input
@@ -284,7 +284,7 @@ export function ExportsPage() {
                           }
                           placeholder="Search sites..."
                           autoFocus
-                          className="h-10 w-full rounded-lg border border-mist-200 bg-mist-50 pl-9 pr-3 text-sm text-ink-950 outline-none transition placeholder:text-ink-950/35 focus:border-canopy-600 focus:bg-white focus:ring-2 focus:ring-canopy-600/10 dark:focus:bg-paper-50"
+                          className="h-10 w-full rounded-xl border border-line-strong bg-surface-muted pl-9 pr-3 text-sm text-fg outline-none transition placeholder:text-fg-subtle focus:border-ring focus:bg-white focus:ring-2 focus:ring-ring/20 dark:focus:bg-paper-50"
                         />
                       </div>
 
@@ -301,7 +301,7 @@ export function ExportsPage() {
                           <button
                             type="button"
                             onClick={clearSites}
-                            className="text-xs font-semibold text-ink-950/45 transition hover:text-ink-950"
+                            className="text-xs font-semibold text-fg-subtle transition hover:text-fg"
                           >
                             Clear
                           </button>
@@ -323,14 +323,14 @@ export function ExportsPage() {
                               className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition ${
                                 selected
                                   ? 'bg-canopy-700/8 dark:bg-canopy-700/12'
-                                  : 'hover:bg-mist-100'
+                                  : 'hover:bg-surface-muted'
                               }`}
                             >
                               <span
                                 className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition ${
                                   selected
                                     ? 'border-canopy-700 bg-canopy-700 text-white'
-                                    : 'border-mist-300 bg-white dark:bg-paper-50'
+                                    : 'border-line-strong bg-white dark:bg-paper-50'
                                 }`}
                               >
                                 {selected && (
@@ -342,7 +342,7 @@ export function ExportsPage() {
                                 className={`text-sm ${
                                   selected
                                     ? 'font-semibold text-canopy-900'
-                                    : 'text-ink-950/75'
+                                    : 'text-fg-muted'
                                 }`}
                               >
                                 {site.name}
@@ -351,13 +351,13 @@ export function ExportsPage() {
                           )
                         })
                       ) : (
-                        <div className="px-3 py-8 text-center text-sm text-ink-950/40">
+                        <div className="px-3 py-8 text-center text-sm text-fg-subtle">
                           No sites found.
                         </div>
                       )}
                     </div>
 
-                    <div className="border-t border-mist-200 bg-mist-50 px-3 py-2.5 text-xs text-ink-950/45">
+                    <div className="border-t border-line bg-surface-muted px-3 py-2.5 text-xs text-fg-subtle">
                       {selectedSites.length === 0
                         ? 'All sites included'
                         : `${selectedSites.length} site${
@@ -513,11 +513,11 @@ export function ExportsPage() {
               </div>
 
               <div>
-                <h2 className="font-display text-sm font-bold text-canopy-950">
+                <h2 className="font-display text-sm font-bold text-fg">
                   Export format
                 </h2>
 
-                <p className="mt-0.5 text-xs text-ink-950/50">
+                <p className="mt-0.5 text-xs text-fg-subtle">
                   Choose the file format for your export.
                 </p>
               </div>
@@ -542,14 +542,14 @@ export function ExportsPage() {
             </div>
 
             {hasFilters && (
-              <div className="mt-4 flex items-center gap-2 rounded-xl bg-mist-100 px-3.5 py-3 text-xs text-ink-950/60">
+              <div className="mt-4 flex items-center gap-2 rounded-xl bg-mist-100 px-3.5 py-3 text-xs text-fg-muted">
                 <Filter
                   size={14}
                   className="shrink-0 text-canopy-700"
                 />
 
                 <span>
-                  <strong className="text-ink-950">
+                  <strong className="text-fg">
                     {activeFilterCount}
                   </strong>{' '}
                   filter{activeFilterCount === 1 ? '' : 's'} active
@@ -560,7 +560,7 @@ export function ExportsPage() {
             <Button
               onClick={() => createMutation.mutate()}
               isLoading={isCreating}
-              className="mt-5 w-full dark:!bg-canopy-700 dark:!text-white dark:hover:!bg-canopy-600"
+              className="mt-5 w-full"
             >
               Generate export
             </Button>
@@ -568,7 +568,7 @@ export function ExportsPage() {
             {error && <Alert className="mt-4">{error}</Alert>}
 
             {job && (
-              <div className="mt-5 rounded-xl border border-canopy-900/10 bg-mist-100/50 p-4 dark:border-canopy-400/15">
+              <div className="mt-5 rounded-xl border border-line bg-surface-muted p-4 dark:border-canopy-400/15">
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex min-w-0 items-center gap-2.5">
                     {job.status === 'done' && (
@@ -581,7 +581,7 @@ export function ExportsPage() {
                     {job.status === 'failed' && (
                       <XCircle
                         size={18}
-                        className="shrink-0 text-red-500"
+                        className="shrink-0 text-danger"
                       />
                     )}
 
@@ -591,7 +591,7 @@ export function ExportsPage() {
                       )}
 
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-medium text-ink-950">
+                      <p className="truncate text-sm font-medium text-fg">
                         Export #{job.id}
                       </p>
 
@@ -628,8 +628,8 @@ export function ExportsPage() {
           {/* ============================================================
               SUMMARY
           ============================================================ */}
-          <Card className="h-fit bg-canopy-950 text-white dark:border-canopy-700/20 dark:bg-[#0a2111]">
-            <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/45">
+          <Card className="h-fit !border-transparent !bg-canopy-950 text-white dark:!border-canopy-700/20 dark:!bg-[#0a2111]">
+            <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/65">
               Export summary
             </p>
 
@@ -682,11 +682,11 @@ function FilterSection({
   return (
     <section>
       <div className="mb-4">
-        <h3 className="text-xs font-bold uppercase tracking-[0.12em] text-ink-950/55">
+        <h3 className="text-xs font-bold uppercase tracking-[0.12em] text-fg-subtle">
           {title}
         </h3>
 
-        <p className="mt-1 text-xs text-ink-950/40">
+        <p className="mt-1 text-xs text-fg-subtle">
           {description}
         </p>
       </div>
@@ -709,7 +709,7 @@ function FieldLabel({ htmlFor, children }: FieldLabelProps) {
   return (
     <label
       htmlFor={htmlFor}
-      className="mb-1.5 block text-xs font-semibold text-ink-950/70"
+      className="mb-1.5 block text-xs font-semibold text-fg-muted"
     >
       {children}
     </label>
@@ -743,11 +743,11 @@ function FilterSelect({
         <select
           value={value}
           onChange={(event) => onChange(event.target.value)}
-          className="h-11 w-full appearance-none rounded-xl border border-mist-200 bg-white px-3.5 pr-10 text-sm text-ink-950 outline-none transition hover:border-mist-300 focus:border-canopy-600 focus:ring-4 focus:ring-canopy-600/10 dark:bg-paper-50 dark:hover:border-canopy-400/40 dark:[color-scheme:dark]"
+          className="h-10 w-full appearance-none rounded-xl border border-line-strong bg-white px-3.5 pr-10 text-sm text-fg outline-none transition hover:border-line-strong focus:border-ring focus:ring-2 focus:ring-ring/20 dark:bg-paper-50 dark:hover:border-canopy-400/40 dark:[color-scheme:dark]"
         >
           <option
             value=""
-            className="bg-white text-ink-950 dark:bg-paper-50 dark:text-ink-950"
+            className="bg-white text-fg dark:bg-paper-50 dark:text-fg"
           >
             {placeholder}
           </option>
@@ -756,7 +756,7 @@ function FilterSelect({
             <option
               key={option}
               value={option}
-              className="bg-white text-ink-950 dark:bg-paper-50 dark:text-ink-950"
+              className="bg-white text-fg dark:bg-paper-50 dark:text-fg"
             >
               {option}
             </option>
@@ -765,7 +765,7 @@ function FilterSelect({
 
         <ChevronDown
           size={16}
-          className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-ink-950/35"
+          className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-fg-subtle"
         />
       </div>
     </div>
@@ -794,14 +794,14 @@ function DateField({
       <div className="relative">
         <CalendarDays
           size={16}
-          className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-950/35"
+          className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-fg-subtle"
         />
 
         <input
           type="date"
           value={value}
           onChange={(event) => onChange(event.target.value)}
-          className="h-11 w-full rounded-xl border border-mist-200 bg-white pl-10 pr-3.5 text-sm text-ink-950 outline-none transition hover:border-mist-300 focus:border-canopy-600 focus:ring-4 focus:ring-canopy-600/10 dark:bg-paper-50 dark:hover:border-canopy-400/40 dark:[color-scheme:dark]"
+          className="h-10 w-full rounded-xl border border-line-strong bg-white pl-10 pr-3.5 text-sm text-fg outline-none transition hover:border-line-strong focus:border-ring focus:ring-2 focus:ring-ring/20 dark:bg-paper-50 dark:hover:border-canopy-400/40 dark:[color-scheme:dark]"
         />
       </div>
     </div>
@@ -834,14 +834,14 @@ function FormatOption({
       className={`flex w-full items-center gap-3 rounded-xl border p-3.5 text-left transition ${
         selected
           ? 'border-canopy-700 bg-canopy-700/8 shadow-sm dark:border-canopy-500 dark:bg-canopy-700/10'
-          : 'border-mist-200 bg-white hover:border-mist-300 hover:bg-mist-50 dark:bg-paper-50 dark:hover:border-canopy-400/40 dark:hover:bg-mist-100'
+          : 'border-line bg-white hover:border-line-strong hover:bg-surface-muted dark:bg-paper-50 dark:hover:border-canopy-400/40 dark:hover:bg-surface-muted'
       }`}
     >
       <div
         className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${
           selected
             ? 'bg-canopy-700 text-white'
-            : 'bg-mist-100 text-ink-950/50'
+            : 'bg-mist-100 text-fg-subtle'
         }`}
       >
         {icon}
@@ -850,13 +850,13 @@ function FormatOption({
       <div className="min-w-0 flex-1">
         <p
           className={`text-sm font-semibold ${
-            selected ? 'text-canopy-900' : 'text-ink-950'
+            selected ? 'text-canopy-900' : 'text-fg'
           }`}
         >
           {title}
         </p>
 
-        <p className="mt-0.5 text-xs text-ink-950/45">
+        <p className="mt-0.5 text-xs text-fg-subtle">
           {description}
         </p>
       </div>
@@ -865,7 +865,7 @@ function FormatOption({
         className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${
           selected
             ? 'border-canopy-700 bg-canopy-700 text-white'
-            : 'border-mist-300 dark:border-mist-200'
+            : 'border-line-strong dark:border-line'
         }`}
       >
         {selected && <Check size={12} strokeWidth={3} />}

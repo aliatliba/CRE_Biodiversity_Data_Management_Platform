@@ -21,14 +21,14 @@ export function LandingFooter() {
             <Button
               variant="ghost"
               size="lg"
-              className="border border-paper-0/25 bg-transparent text-paper-0 hover:border-paper-0/50 hover:bg-paper-0/10 hover:text-paper-0"
+              className="border border-paper-0/30 !bg-transparent !text-paper-0 hover:border-paper-0/60 hover:!bg-paper-0/10 hover:!text-paper-0"
             >
               Sign in to BioData
             </Button>
           </Link>
         </Reveal>
 
-        <div className="flex flex-col items-center justify-between gap-4 pt-8 text-xs text-paper-0/40 sm:flex-row">
+        <div className="flex flex-col items-center justify-between gap-4 pt-8 text-xs text-paper-0/70 sm:flex-row">
           <span>© {new Date().getFullYear()} BioData — Field Biodiversity Registry</span>
           <span className="font-mono">Internal research tool · not for public use</span>
         </div>

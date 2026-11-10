@@ -165,10 +165,10 @@ export function SitesPage() {
       )}
 
       {query.isSuccess && sites.length > 0 && (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="stagger-in grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {sites.map((site, index) => (
-            <Link key={site.id} to={siteUrl(site.id)}>
-              <Card className="flex h-full min-h-[210px] flex-col transition-colors hover:border-canopy-700/30 hover:bg-mist-100/40">
+            <Link key={site.id} to={siteUrl(site.id)} className="rounded-2xl">
+              <Card className="lift flex h-full min-h-[210px] flex-col">
                 {/* Header */}
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex min-w-0 items-start gap-2.5">
@@ -179,7 +179,7 @@ export function SitesPage() {
                       #{index + 1}
                     </span>
 
-                    <h3 className="min-w-0 break-words font-display text-[15px] font-bold leading-snug text-canopy-950">
+                    <h3 className="min-w-0 break-words font-display text-[15px] font-bold leading-snug text-fg">
                       {site.name}
                     </h3>
                   </div>
@@ -193,7 +193,7 @@ export function SitesPage() {
                         setSiteToDelete(site)
                       }}
                       aria-label={`Delete ${site.name}`}
-                      className="shrink-0 rounded-full p-1.5 text-ink-950/30 transition-colors hover:bg-red-50 hover:text-red-600"
+                      className="shrink-0 rounded-lg p-2 text-fg-subtle transition-colors hover:bg-danger/10 hover:text-danger"
                     >
                       <Trash2 size={15} />
                     </button>
@@ -202,9 +202,9 @@ export function SitesPage() {
 
                 {/* Species count and share of all records */}
                 <div className="mt-4 flex items-end justify-between gap-3">
-                  <p className="font-display text-3xl font-bold leading-none tabular-nums text-canopy-950">
+                  <p className="font-display text-3xl font-bold leading-none tabular-nums text-fg">
                     {site.species_count}
-                    <span className="ml-1.5 text-sm font-medium text-ink-950/50">
+                    <span className="ml-1.5 text-sm font-medium text-fg-subtle">
                       species
                     </span>
                   </p>
@@ -228,19 +228,19 @@ export function SitesPage() {
                     <ShieldCheck size={13} />
                     {site.protected_count} protected
                   </span>
-                  <span className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2 py-1 text-red-700">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2 py-1 text-danger">
                     <ShieldAlert size={13} />
                     {site.threatened_count} threatened
                   </span>
-                  <span className="inline-flex items-center gap-1 rounded-full bg-mist-100 px-2 py-1 text-ink-950/65">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-mist-100 px-2 py-1 text-fg-muted">
                     <CheckCircle2 size={13} />
                     {percent(site.complete_count, site.species_count)}% complete
                   </span>
                 </div>
 
                 {/* Description */}
-                <div className="mt-4 flex-1 border-t border-canopy-900/[0.07] pt-3.5">
-                  <p className="line-clamp-2 text-sm leading-relaxed text-ink-950/60">
+                <div className="mt-4 flex-1 border-t border-line pt-3.5">
+                  <p className="line-clamp-2 text-sm leading-relaxed text-fg-muted">
                     {site.description || 'No description provided.'}
                   </p>
                 </div>
@@ -273,7 +273,7 @@ export function SitesPage() {
           <div className="w-full min-w-0">
             <label
               htmlFor="site-description"
-              className="mb-2 block text-sm font-medium text-ink-950/75"
+              className="mb-2 block text-sm font-medium text-fg-muted"
             >
               Description (optional)
             </label>
@@ -286,7 +286,7 @@ export function SitesPage() {
               }
               placeholder="Mixed oak forest, north-facing slope. The site includes a dense woodland area with seasonal streams."
               rows={4}
-              className="w-full resize-none rounded-xl border border-canopy-900/12 bg-paper-0 px-4 py-3 text-[15px] text-ink-950 outline-none transition-all placeholder:text-ink-950/35 focus:border-canopy-600 focus:ring-2 focus:ring-canopy-600/10"
+              className="w-full resize-none rounded-xl border border-line-strong bg-surface px-4 py-3 text-sm text-fg outline-none transition-all placeholder:text-fg-subtle focus:border-ring focus:ring-2 focus:ring-ring/20"
             />
           </div>
           {formError && <Alert>{formError}</Alert>}

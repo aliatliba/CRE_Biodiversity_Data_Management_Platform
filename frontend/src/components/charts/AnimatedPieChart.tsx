@@ -26,7 +26,7 @@ export function AnimatedPieChart({
   const total = data.reduce((sum, item) => sum + item.value, 0)
 
   if (data.length === 0 || total === 0) {
-    return <p className="text-sm text-ink-950/50">No data available.</p>
+    return <p className="text-sm text-fg-subtle">No data available.</p>
   }
 
   let cumulative = 0
@@ -108,7 +108,7 @@ export function AnimatedPieChart({
             {total}
           </span>
 
-          <span className="text-[10px] font-medium uppercase tracking-wider text-ink-950/45">
+          <span className="text-[10px] font-medium uppercase tracking-wider text-fg-subtle">
             Total
           </span>
         </div>
@@ -126,13 +126,13 @@ export function AnimatedPieChart({
             />
 
             <span
-              className="min-w-0 flex-1 truncate text-ink-950/70"
+              className="min-w-0 flex-1 truncate text-fg-muted"
               title={slice.label}
             >
               {slice.label}
             </span>
 
-            <span className="shrink-0 font-semibold tabular-nums text-ink-950/70">
+            <span className="shrink-0 font-semibold tabular-nums text-fg-muted">
               {showValues
                 ? `${slice.value} (${Math.round(slice.percentage * 100)}%)`
                 : `${Math.round(slice.percentage * 100)}%`}

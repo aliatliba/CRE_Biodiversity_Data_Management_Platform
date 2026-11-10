@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { lazy, Suspense, useState, type FormEvent } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import axios from 'axios'
@@ -6,7 +6,10 @@ import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { ROUTES } from '@/lib/constants'
 import { useAuth } from '@/hooks/useAuth'
+import { AuroraBackground } from '@/components/common/AuroraBackground'
 import { ContourField } from '@/features/landing/components/ContourField'
+
+const HeroTerrain = lazy(() => import('@/features/landing/components/HeroTerrain'))
 
 interface LocationState {
   from?: { pathname: string }
@@ -64,9 +67,16 @@ export function LoginPage() {
     <div className="grid min-h-screen grid-cols-1 lg:grid-cols-[1fr_1fr]">
       {/* Brand panel */}
       <div className="relative hidden overflow-hidden bg-canopy-950 lg:flex lg:flex-col lg:justify-between">
-        <div className="absolute inset-0 opacity-40">
-          <ContourField tone="dark" />
-        </div>
+        <Suspense
+          fallback={
+            <div className="absolute inset-0 opacity-40" aria-hidden="true">
+              <ContourField tone="dark" />
+            </div>
+          }
+        >
+          <HeroTerrain />
+        </Suspense>
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-canopy-950/80 via-transparent to-canopy-950" aria-hidden="true" />
         <div className="relative z-10 p-10">
           <Link to={ROUTES.landing} className="inline-flex items-center gap-2.5">
             <svg width="24" height="24" viewBox="0 0 32 32" fill="none" aria-hidden="true">
@@ -85,32 +95,33 @@ export function LoginPage() {
           <p className="font-display max-w-sm text-2xl font-semibold leading-snug text-paper-0">
             "Every site, every specimen, every source — traceable."
           </p>
-          <p className="mt-4 font-mono text-xs uppercase tracking-[0.12em] text-paper-0/50">
+          <p className="mt-4 font-mono text-xs uppercase tracking-[0.12em] text-paper-0/70">
             Field Biodiversity Registry
           </p>
         </motion.div>
       </div>
 
       {/* Form panel */}
-      <div className="flex min-h-screen items-center justify-center bg-paper-0 px-6 sm:px-10">
+      <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-bg px-6 sm:px-10">
+        <AuroraBackground />
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-          className="w-full max-w-sm"
+          className="glass relative w-full max-w-md rounded-3xl p-8 sm:p-10"
         >
           <Link to={ROUTES.landing} className="mb-10 inline-flex items-center gap-2.5 lg:hidden">
             <svg width="22" height="22" viewBox="0 0 32 32" fill="none" aria-hidden="true">
               <path d="M6 26C6 14 14 6 26 6C26 18 18 26 6 26Z" fill="var(--color-canopy-600)" />
               <path d="M6 26C10 22 16 16 24 8" stroke="var(--color-canopy-900)" strokeWidth="1.4" strokeLinecap="round" />
             </svg>
-            <span className="font-display text-[16px] font-extrabold tracking-tight text-canopy-950">BioData</span>
+            <span className="font-display text-[16px] font-extrabold tracking-tight text-fg">BioData</span>
           </Link>
 
-          <h1 className="font-display text-[1.7rem] font-bold tracking-tight text-canopy-950">
+          <h1 className="font-display text-[1.7rem] font-bold tracking-tight text-fg">
             Sign in
           </h1>
-          <p className="mt-2 text-[14.5px] text-ink-950/60">
+          <p className="mt-2 text-[14.5px] text-fg-muted">
             Use the email and temporary password your administrator sent you.
           </p>
 
@@ -137,7 +148,7 @@ export function LoginPage() {
             {formError && (
               <div
                 role="alert"
-                className="rounded-lg border border-red-200 bg-red-50 px-3.5 py-2.5 text-sm font-medium text-red-700"
+                className="rounded-xl border border-danger/30 bg-danger/8 px-3.5 py-2.5 text-sm font-medium text-danger"
               >
                 {formError}
               </div>
@@ -148,7 +159,7 @@ export function LoginPage() {
             </Button>
           </form>
 
-          <p className="mt-8 text-center text-xs text-ink-950/40">
+          <p className="mt-8 text-center text-xs text-fg-subtle">
             First time signing in? You'll be asked to set a new password
             right after this.
           </p>

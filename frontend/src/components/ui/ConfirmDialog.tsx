@@ -33,9 +33,9 @@ export function ConfirmDialog({
           {cancelLabel}
         </Button>
         <Button
+          variant={destructive ? 'danger' : 'primary'}
           onClick={onConfirm}
           isLoading={isLoading}
-          className={destructive ? 'bg-red-600 hover:bg-red-700 dark:bg-red-600 dark:hover:bg-red-700' : undefined}
         >
           {confirmLabel}
         </Button>

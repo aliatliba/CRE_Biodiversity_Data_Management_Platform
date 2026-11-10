@@ -2,6 +2,7 @@
 export const queryKeys = {
   sites: ['sites'] as const,
   site: (id: number) => ['sites', id] as const,
+  siteSpeciesLinks: (id: number) => ['sites', id, 'species-links'] as const,
   dashboard: (siteId?: number) => ['dashboard', siteId ?? 'all'] as const,
   species: (params: object) => ['species', params] as const,
   speciesAll: ['species'] as const,

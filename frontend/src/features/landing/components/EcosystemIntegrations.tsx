@@ -1,4 +1,5 @@
-import { motion } from 'framer-motion'
+import { useRef } from 'react'
+import { motion, useInView, useReducedMotion } from 'framer-motion'
 import { Reveal } from '@/components/common/Reveal'
 
 interface Source {
@@ -25,15 +26,20 @@ function pointOnCircle(angleDeg: number, radius: number) {
 }
 
 export function EcosystemIntegrations() {
+  const diagramRef = useRef<SVGSVGElement>(null)
+  const isInView = useInView(diagramRef, { margin: '-15% 0px' })
+  const shouldReduceMotion = useReducedMotion()
+  const showFlow = isInView && !shouldReduceMotion
+
   return (
-    <section id="ecosystem" className="border-b border-canopy-900/[0.06] bg-paper-0">
+    <section id="ecosystem" className="border-b border-line bg-surface">
       <div className="mx-auto grid w-full max-w-6xl grid-cols-1 items-center gap-10 px-6 py-24 sm:px-8 lg:grid-cols-[1fr_1.1fr]">
         <Reveal>
           <p className="font-mono text-xs uppercase tracking-[0.14em] text-canopy-700">A connected record</p>
-          <h2 className="mt-3 font-display text-3xl font-bold tracking-tight text-canopy-950 sm:text-4xl">
+          <h2 className="mt-3 font-display text-3xl font-bold tracking-tight text-fg sm:text-4xl">
             Every entry is checked against the wider world.
           </h2>
-          <p className="mt-5 max-w-md text-[15px] leading-relaxed text-ink-950/65">
+          <p className="mt-5 max-w-md text-[15px] leading-relaxed text-fg-muted">
             BioData doesn't work in isolation. Names, taxonomy, and
             conservation status are cross-referenced against the same public
             registries researchers already trust.
@@ -41,7 +47,7 @@ export function EcosystemIntegrations() {
         </Reveal>
 
         <Reveal delay={0.1}>
-          <svg viewBox="0 0 500 380" className="mx-auto h-auto w-full max-w-lg overflow-visible" role="img" aria-label="BioData record connected to GBIF, IUCN Red List, iNaturalist, Plants of the World Online, and Wikidata">
+          <svg ref={diagramRef} viewBox="0 0 500 380" className="mx-auto h-auto w-full max-w-lg overflow-visible" role="img" aria-label="BioData record connected to GBIF, IUCN Red List, iNaturalist, Plants of the World Online, and Wikidata">
             {SOURCES.map((source, i) => {
               const p = pointOnCircle(source.angle, RADIUS)
               return (
@@ -88,14 +94,42 @@ export function EcosystemIntegrations() {
                     y={p.y + (source.angle < 0 ? 4 : 34)}
                     textAnchor={anchor}
                     className="font-mono text-[8px]"
-                    fill="var(--color-ink-950)"
-                    fillOpacity={0.45}
+                    fill="var(--color-fg-subtle)"
                   >
                     {source.detail}
                   </text>
                 </motion.g>
               )
             })}
+
+            {/* Data flowing in from each registry to the record. */}
+            {showFlow &&
+              SOURCES.map((source, i) => {
+                const p = pointOnCircle(source.angle, RADIUS)
+                return (
+                  <motion.circle
+                    key={`pulse-${source.id}`}
+                    r={3}
+                    fill="var(--color-lichen-400)"
+                    initial={{ cx: p.x, cy: p.y, opacity: 0 }}
+                    animate={{ cx: [p.x, CENTER.x], cy: [p.y, CENTER.y], opacity: [0, 1, 1, 0] }}
+                    transition={{ duration: 1.8, delay: 1.2 + i * 0.55, repeat: Infinity, repeatDelay: 1.6, ease: 'easeIn' }}
+                  />
+                )
+              })}
+
+            {showFlow && (
+              <motion.circle
+                cx={CENTER.x}
+                cy={CENTER.y}
+                fill="none"
+                stroke="var(--color-canopy-500)"
+                strokeWidth={1.5}
+                initial={{ r: 30, opacity: 0 }}
+                animate={{ r: [30, 52], opacity: [0.55, 0] }}
+                transition={{ duration: 2.2, delay: 1.2, repeat: Infinity, ease: 'easeOut' }}
+              />
+            )}
 
             <motion.g
               initial={{ opacity: 0, scale: 0.8 }}

@@ -41,7 +41,7 @@ export function LandscapeGallery() {
   const { scrollYProgress } = useScroll({ target: ref, offset: ['start end', 'end start'] })
 
   return (
-    <section id="landscapes" ref={ref} className="border-b border-canopy-900/[0.06] bg-canopy-950">
+    <section id="landscapes" ref={ref} className="border-b border-line bg-canopy-950">
       <div className="mx-auto w-full max-w-6xl px-6 pt-20 sm:px-8">
         <p className="font-mono text-xs uppercase tracking-[0.14em] text-lichen-300">Where the record is built</p>
         <h2 className="mt-3 max-w-xl font-display text-3xl font-bold tracking-tight text-paper-0 sm:text-4xl">
@@ -78,7 +78,7 @@ function SceneCard({
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: '-10% 0px' }}
       transition={{ duration: 0.6, delay: index * 0.08, ease: [0.22, 1, 0.36, 1] }}
-      className="group relative h-[70vh] min-h-[380px] overflow-hidden rounded-2xl sm:h-[60vh] lg:h-[72vh]"
+      className="group relative h-[70vh] min-h-[380px] overflow-hidden rounded-xl sm:h-[60vh] lg:h-[72vh]"
     >
       <motion.div
         style={{ y }}
@@ -92,7 +92,7 @@ function SceneCard({
           src={scene.src}
           seed={scene.id}
           alt={`${scene.title}, ${scene.region}`}
-          className="rounded-2xl transition-transform duration-1000 ease-out group-hover:scale-105"
+          className="rounded-xl transition-transform duration-1000 ease-out group-hover:scale-105"
         />
       </motion.div>
       <div className="absolute inset-0 bg-gradient-to-t from-canopy-950 via-canopy-950/10 to-transparent" />

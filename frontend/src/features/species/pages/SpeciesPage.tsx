@@ -97,7 +97,7 @@ export function SpeciesPage() {
 
       <div className="mb-6 flex flex-col gap-4">
         {scopedSite && (
-          <p className="text-sm text-ink-950/55">Showing species recorded at {scopedSite.name}.</p>
+          <p className="text-sm text-fg-subtle">Showing species recorded at {scopedSite.name}.</p>
         )}
 
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">

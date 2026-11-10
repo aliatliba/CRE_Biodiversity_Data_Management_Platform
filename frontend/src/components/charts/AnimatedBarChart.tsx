@@ -36,7 +36,7 @@ export function AnimatedBarChart({
   const max = maxValue ?? Math.max(1, ...data.map((d) => d.value))
 
   if (data.length === 0) {
-    return <p className="text-sm text-ink-950/50">No data available.</p>
+    return <p className="text-sm text-fg-subtle">No data available.</p>
   }
 
   return (
@@ -53,7 +53,7 @@ export function AnimatedBarChart({
           className="flex min-w-0 items-center gap-3"
         >
           <span
-            className="w-24 shrink-0 truncate text-sm font-medium text-ink-950/65"
+            className="w-24 shrink-0 truncate text-sm font-medium text-fg-muted"
             title={item.label}
           >
             {item.label}

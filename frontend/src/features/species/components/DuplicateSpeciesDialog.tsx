@@ -31,9 +31,9 @@ export function DuplicateSpeciesDialog({
       description={`"${species.scientific_name}" has already been logged.`}
     >
       <div className="flex flex-col gap-4">
-        <div className="rounded-xl border border-canopy-900/10 bg-mist-100/50 p-4">
-          <p className="font-display italic font-semibold text-canopy-950">{species.scientific_name}</p>
-          {species.common_name && <p className="text-sm text-ink-950/55">{species.common_name}</p>}
+        <div className="rounded-xl border border-line bg-surface-muted p-4">
+          <p className="font-display italic font-semibold text-fg">{species.scientific_name}</p>
+          {species.common_name && <p className="text-sm text-fg-subtle">{species.common_name}</p>}
           <div className="mt-2 flex flex-wrap gap-2">
             {species.iucn_status && <Badge tone={getIucnTone(species.iucn_status)}>{species.iucn_status}</Badge>}
             <Badge tone={species.national_status === 'Protected' ? 'accent' : 'neutral'}>
@@ -42,7 +42,7 @@ export function DuplicateSpeciesDialog({
           </div>
         </div>
 
-        <p className="text-sm text-ink-950/60">
+        <p className="text-sm text-fg-muted">
           You can link this existing record to your site instead of creating a duplicate entry.
         </p>
 

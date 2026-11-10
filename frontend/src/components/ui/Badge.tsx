@@ -20,12 +20,12 @@ export type Tone =
 
 const toneClasses: Record<Tone, string> = {
   // Existing application tones
-  neutral: 'bg-mist-100 text-ink-950/70',
-  success: 'bg-canopy-500/15 text-canopy-800',
-  warning: 'bg-amber-100 text-amber-800',
-  danger: 'bg-red-100 text-red-700',
-  accent: 'bg-lichen-400/25 text-canopy-900',
-  info: 'bg-violet-100 text-violet-700',
+  neutral: 'bg-surface-muted text-fg-muted ring-1 ring-inset ring-line',
+  success: 'bg-primary-soft text-primary ring-1 ring-inset ring-primary/20',
+  warning: 'bg-accent/12 text-accent-fg ring-1 ring-inset ring-accent/25',
+  danger: 'bg-danger/10 text-danger ring-1 ring-inset ring-danger/25',
+  accent: 'bg-lichen-400/25 text-canopy-900 ring-1 ring-inset ring-lichen-400/40',
+  info: 'bg-sky-500/10 text-sky-800 ring-1 ring-inset ring-sky-600/20 dark:text-sky-300',
 
   // IUCN Red List categories
   'iucn-ex': 'bg-[#000000] text-white',
@@ -51,7 +51,7 @@ export function Badge({
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold',
+        'inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-semibold',
         toneClasses[tone],
         className
       )}
