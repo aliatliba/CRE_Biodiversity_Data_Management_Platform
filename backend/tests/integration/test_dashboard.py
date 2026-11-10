@@ -1,7 +1,7 @@
 def _seed(client, headers):
     s1 = client.post("/api/v1/sites", json={"name": "Alpha", "code": "A"}, headers=headers).json()
     client.post("/api/v1/sites", json={"name": "Empty", "code": "E"}, headers=headers)
-    for name, status in [("Genus one", "CR"), ("Genus two", None), ("Genus three", "LC")]:
+    for name, status in [("Genus one", "CR"), ("Genus two", None), ("Genus three", "NT")]:
         client.post(
             "/api/v1/species",
             json={
@@ -25,8 +25,8 @@ def test_dashboard_stats_grouped(client, admin_headers):
     assert r.status_code == 200
     data = r.json()
     assert data["total_species"] == 3 and data["total_sites"] == 2
-    assert data["iucn_breakdown"] == {"CR": 1, "NE": 1, "LC": 1}  # no "Unknown"
-    assert data["iucn_threatened_species"] == 1
+    assert data["iucn_breakdown"] == {"CR": 1, "NE": 1, "NT": 1}  # no "Unknown"
+    assert data["iucn_threatened_species"] == 2  # CR + NT
     by_name = {s["site_name"]: s for s in data["site_stats"]}
     assert by_name["Alpha"]["species_count"] == 3 and by_name["Alpha"]["complete_count"] == 2
     assert by_name["Empty"]["species_count"] == 0

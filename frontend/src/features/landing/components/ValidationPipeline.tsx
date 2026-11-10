@@ -1,4 +1,6 @@
-import { motion } from 'framer-motion'
+import { useRef, useState } from 'react'
+import { motion, useMotionValueEvent, useReducedMotion, useScroll, useSpring, useTransform } from 'framer-motion'
+import { Check } from 'lucide-react'
 import { Reveal } from '@/components/common/Reveal'
 
 const STAGES = [
@@ -9,63 +11,88 @@ const STAGES = [
   { id: 'validated', label: 'Validated record', detail: 'Added to the registry, source-traced' },
 ]
 
+const LAST = STAGES.length - 1
+
+/**
+ * Scroll-driven: a record travels along the track and each checkpoint lights
+ * up once it has passed. Reduced motion shows every checkpoint as passed.
+ */
 export function ValidationPipeline() {
+  const trackRef = useRef<HTMLDivElement>(null)
+  const shouldReduceMotion = useReducedMotion()
+  const { scrollYProgress } = useScroll({ target: trackRef, offset: ['start 85%', 'end 45%'] })
+  const progress = useSpring(scrollYProgress, { stiffness: 140, damping: 26 })
+  const [scrolledTo, setScrolledTo] = useState(0)
+  const reached = shouldReduceMotion ? STAGES.length : scrolledTo
+
+  useMotionValueEvent(progress, 'change', (value) => {
+    setScrolledTo(Math.min(STAGES.length, Math.floor(value * LAST + 0.02) + (value > 0.01 ? 1 : 0)))
+  })
+
+  const fill = shouldReduceMotion ? 1 : progress
+  // The track spans the centres of the first and last checkpoints.
+  const headX = useTransform(progress, (v) => `${v * 100}%`)
+
   return (
-    <section id="validation" className="bg-paper-0">
+    <section id="validation" className="bg-surface">
       <div className="mx-auto w-full max-w-6xl px-6 py-24 sm:px-8">
         <Reveal className="max-w-lg">
           <p className="font-mono text-xs uppercase tracking-[0.14em] text-canopy-700">Before it hits the record</p>
-          <h2 className="mt-3 font-display text-3xl font-bold tracking-tight text-canopy-950 sm:text-4xl">
+          <h2 className="mt-3 font-display text-3xl font-bold tracking-tight text-fg sm:text-4xl">
             No duplicate entries. No unverified names.
           </h2>
-          <p className="mt-5 max-w-md text-[15px] leading-relaxed text-ink-950/65">
+          <p className="mt-5 max-w-md text-[15px] leading-relaxed text-fg-muted">
             Every observation moves through the same five checkpoints before
             it's added to the registry — the same path, whether it's a common
             species or one flagged as protected.
           </p>
         </Reveal>
 
-        <div className="relative mt-16">
-          <svg className="pointer-events-none absolute left-0 top-6 z-0 hidden h-1 w-full lg:block" viewBox="0 0 1000 4" preserveAspectRatio="none" aria-hidden="true">
-            <motion.line
-              x1="20" y1="2" x2="980" y2="2"
-              stroke="var(--color-canopy-500)"
-              strokeWidth="2"
-              strokeDasharray="6 8"
-              initial={{ pathLength: 0 }}
-              whileInView={{ pathLength: 1 }}
-              viewport={{ once: true, margin: '-20% 0px' }}
-              transition={{ duration: 1.4, ease: [0.22, 1, 0.36, 1] }}
-            />
-          </svg>
+        <div ref={trackRef} className="relative mt-16">
+          {/* Horizontal track (desktop) */}
+          <div className="pointer-events-none absolute left-7 right-[calc(20%-1.75rem-0.8rem)] top-7 hidden h-0.5 lg:block" aria-hidden="true">
+            <div className="absolute inset-0 rounded-full bg-line" />
+            <motion.div className="absolute inset-0 origin-left rounded-full bg-primary" style={{ scaleX: fill }} />
+            {!shouldReduceMotion && (
+              <motion.span
+                className="absolute top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-lichen-400 shadow-[0_0_0_6px_rgba(158,240,26,0.25)]"
+                style={{ left: headX }}
+              />
+            )}
+          </div>
+
+          {/* Vertical track (mobile) */}
+          <div className="pointer-events-none absolute bottom-6 left-6 top-6 w-0.5 lg:hidden" aria-hidden="true">
+            <div className="absolute inset-0 rounded-full bg-line" />
+            <motion.div className="absolute inset-0 origin-top rounded-full bg-primary" style={{ scaleY: fill }} />
+          </div>
 
           <ol className="grid grid-cols-1 gap-8 lg:grid-cols-5 lg:gap-4">
-            {STAGES.map((stage, i) => (
-              <motion.li
-                key={stage.id}
-                initial={{ opacity: 0, y: 16 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, margin: '-15% 0px' }}
-                transition={{ duration: 0.5, delay: i * 0.15, ease: [0.22, 1, 0.36, 1] }}
-                className="relative z-10 flex gap-4 lg:flex-col lg:gap-3"
-              >
-                <motion.span
-                  animate={stage.id === 'validated' ? { scale: [1, 1.12, 1] } : undefined}
-                  transition={stage.id === 'validated' ? { duration: 1.6, repeat: Infinity, repeatDelay: 1.5, ease: 'easeInOut' } : undefined}
-                  className={`relative z-20 flex h-12 w-12 shrink-0 items-center justify-center rounded-full border font-mono text-sm font-semibold lg:h-14 lg:w-14 ${
-                    stage.id === 'validated'
-                      ? 'border-lichen-400 bg-mist-100 text-canopy-900'
-                      : 'border-canopy-800/20 bg-mist-100 text-canopy-800'
-                  }`}
-                >
-                  {i + 1}
-                </motion.span>
-                <div>
-                  <h3 className="font-display text-[15px] font-bold text-canopy-950">{stage.label}</h3>
-                  <p className="mt-1 text-[13px] leading-relaxed text-ink-950/60">{stage.detail}</p>
-                </div>
-              </motion.li>
-            ))}
+            {STAGES.map((stage, i) => {
+              const isReached = i < reached
+              const isFinal = i === LAST && isReached
+              return (
+                <li key={stage.id} className="relative z-10 flex gap-4 lg:flex-col lg:gap-3">
+                  <motion.span
+                    animate={{ scale: isReached && !shouldReduceMotion ? [1, 1.12, 1] : 1 }}
+                    transition={{ duration: 0.45, ease: 'easeOut' }}
+                    className={`relative flex h-12 w-12 shrink-0 items-center justify-center rounded-full border font-mono text-sm font-semibold transition-colors duration-300 lg:h-14 lg:w-14 ${
+                      isFinal
+                        ? 'border-lichen-400 bg-primary text-on-primary shadow-[0_0_0_6px_rgba(158,240,26,0.25)]'
+                        : isReached
+                          ? 'border-primary bg-primary text-on-primary'
+                          : 'border-line-strong bg-surface-muted text-fg-subtle'
+                    }`}
+                  >
+                    {isFinal ? <Check size={20} strokeWidth={2.5} aria-hidden="true" /> : i + 1}
+                  </motion.span>
+                  <div className={`transition-opacity duration-300 ${isReached ? 'opacity-100' : 'opacity-60'}`}>
+                    <h3 className="font-display text-[15px] font-bold text-fg">{stage.label}</h3>
+                    <p className="mt-1 text-[13px] leading-relaxed text-fg-muted">{stage.detail}</p>
+                  </div>
+                </li>
+              )
+            })}
           </ol>
         </div>
       </div>

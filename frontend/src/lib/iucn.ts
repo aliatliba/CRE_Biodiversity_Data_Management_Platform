@@ -42,8 +42,8 @@ const BADGE_TONES: Record<IucnCategory, Tone> = {
   NE: 'iucn-ne',
 }
 
-/** Categories counted as "threatened" across the app. */
-export const THREATENED_STATUSES: readonly IucnCategory[] = ['CR', 'EN', 'VU']
+/** Categories counted as "threatened" across the app (NT included on purpose). */
+export const THREATENED_STATUSES: readonly IucnCategory[] = ['CR', 'EN', 'VU', 'NT']
 
 /** Same list as a comma-separated query value, e.g. for `?iucn_status=`. */
 export const THREATENED_STATUSES_PARAM = THREATENED_STATUSES.join(',')

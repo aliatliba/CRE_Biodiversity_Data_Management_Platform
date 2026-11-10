@@ -11,13 +11,13 @@ export function SearchInput({ className, wrapperClassName, ...props }: SearchInp
     <div className={cn('relative w-full max-w-sm', wrapperClassName)}>
       <Search
         size={16}
-        className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-950/35"
+        className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-fg-subtle"
         aria-hidden="true"
       />
       <input
         type="search"
         className={cn(
-          'h-11 w-full rounded-xl border border-mist-200 bg-paper-0 pl-10 pr-4 text-sm outline-none transition-colors focus:border-canopy-600',
+          'h-10 w-full rounded-xl border border-line-strong bg-surface pl-9 pr-3 text-sm text-fg outline-none transition-colors duration-150 placeholder:text-fg-subtle hover:border-fg-subtle/50 focus:border-ring focus:ring-2 focus:ring-ring/20',
           className,
         )}
         {...props}

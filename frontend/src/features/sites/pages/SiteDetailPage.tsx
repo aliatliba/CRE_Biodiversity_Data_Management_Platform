@@ -1,14 +1,16 @@
 import { useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query'
-import { ArrowLeft, Edit2, Leaf, MapPin, ShieldCheck, Trash2 } from 'lucide-react'
+import { ArrowLeft, Edit2, Leaf, MapPin, Search, ShieldCheck, Trash2 } from 'lucide-react'
 
 import { Alert } from '@/components/ui/Alert'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { Input } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
 import { Pagination } from '@/components/ui/Pagination'
+import { SearchInput } from '@/components/ui/SearchInput'
 import { LoadingSpinner } from '@/components/common/LoadingSpinner'
 import { ErrorState } from '@/components/common/ErrorState'
 import { EmptyState } from '@/components/common/EmptyState'
@@ -16,7 +18,8 @@ import { AnimatedBarChart } from '@/components/charts/AnimatedBarChart'
 import { AnimatedPieChart } from '@/components/charts/AnimatedPieChart'
 import { ChartCard } from '@/components/charts/ChartCard'
 import { useAuth } from '@/hooks/useAuth'
-import { toChartData } from '@/lib/chartData'
+import { useDebouncedValue } from '@/hooks/useDebouncedValue'
+import { toChartData, toCompositionData, toIucnChartData } from '@/lib/chartData'
 import { ROUTES, speciesListUrl } from '@/lib/constants'
 import { getErrorMessage } from '@/lib/errors'
 import { IUCN_COLORS, THREATENED_STATUSES_PARAM } from '@/lib/iucn'
@@ -30,9 +33,9 @@ import { DeleteSiteDialogs } from '../components/DeleteSiteDialogs'
 
 import * as speciesService from '@/features/species/services/speciesService'
 import { SpeciesTable } from '@/features/species/components/SpeciesTable'
+import type { SpeciesListItem } from '@/features/species/types'
 
 const PAGE_SIZE = 15
-const COMPOSITION_LABELS = ['Fauna', 'Flora', 'Micro-organisms', 'Fungi', 'Unclassified']
 
 export function SiteDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -45,11 +48,15 @@ export function SiteDetailPage() {
   const validId = Number.isFinite(siteId)
 
   const [page, setPage] = useState(1)
+  const [search, setSearch] = useState('')
+  const debouncedSearch = useDebouncedValue(search.trim())
   const [isEditOpen, setIsEditOpen] = useState(false)
   const [editForm, setEditForm] = useState({ name: '', code: '', description: '' })
   const [editError, setEditError] = useState<string | null>(null)
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
+  const [speciesToRemove, setSpeciesToRemove] = useState<SpeciesListItem | null>(null)
+  const [removeError, setRemoveError] = useState<string | null>(null)
 
   const siteQuery = useQuery({
     queryKey: queryKeys.site(siteId),
@@ -63,14 +70,31 @@ export function SiteDetailPage() {
     enabled: validId,
   })
 
-  // One species fetch for the table; the page param is part of the key.
-  const speciesParams = { site_id: siteId, page, page_size: PAGE_SIZE }
+  // One species fetch for the table; the page and search params are part of the key.
+  const speciesParams = {
+    site_id: siteId,
+    search: debouncedSearch || undefined,
+    page,
+    page_size: PAGE_SIZE,
+  }
   const speciesQuery = useQuery({
     queryKey: queryKeys.species(speciesParams),
     queryFn: () => speciesService.listSpecies(speciesParams),
     enabled: validId,
     placeholderData: keepPreviousData,
   })
+
+  // Who recorded each link: researchers may only unlink species they recorded.
+  const linksQuery = useQuery({
+    queryKey: queryKeys.siteSpeciesLinks(siteId),
+    queryFn: () => speciesService.listSiteSpeciesLinks(siteId),
+    enabled: validId && !isAdmin,
+  })
+  const recorderBySpecies = new Map(
+    (linksQuery.data ?? []).map((link) => [link.species_id, link.recorded_by]),
+  )
+  const canRemoveSpecies = (sp: SpeciesListItem) =>
+    isAdmin || (user != null && recorderBySpecies.get(sp.id) === user.id)
 
   const site = siteQuery.data
   const stats = statsQuery.data
@@ -111,17 +135,31 @@ export function SiteDetailPage() {
     onError: (err) => setEditError(getErrorMessage(err, 'Could not update site.')),
   })
 
+  const removeMutation = useMutation({
+    mutationFn: (sp: SpeciesListItem) => speciesService.removeSpeciesFromSite(siteId, sp.id),
+    onSuccess: () => {
+      // Removing the last row of a page would leave an empty page behind.
+      if (species.length === 1 && page > 1) setPage(page - 1)
+      void queryClient.invalidateQueries({ queryKey: queryKeys.speciesAll })
+      void queryClient.invalidateQueries({ queryKey: queryKeys.sites })
+      void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard(siteId) })
+      void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard() })
+    },
+    onError: (err) => {
+      setRemoveError(getErrorMessage(err, 'Could not remove this species from the site.'))
+      void speciesQuery.refetch()
+    },
+    onSettled: () => setSpeciesToRemove(null),
+  })
+
   function handleEdit(event: FormEvent) {
     event.preventDefault()
     setEditError(null)
     updateMutation.mutate()
   }
 
-  const compositionData = COMPOSITION_LABELS.map((label) => ({
-    label,
-    value: stats?.biodiversity_composition[label] ?? 0,
-  }))
-  const iucnData = toChartData(stats?.iucn_breakdown)
+  const compositionData = toCompositionData(stats?.biodiversity_composition)
+  const iucnData = toIucnChartData(stats?.iucn_breakdown)
   const statusData = toChartData(stats?.status_breakdown)
   const familyData =
     stats && stats.total_species > 0
@@ -169,11 +207,11 @@ export function SiteDetailPage() {
                 </span>
               </div>
 
-              <h1 className="mt-1 break-words font-display text-2xl font-bold text-canopy-950">
+              <h1 className="mt-1 break-words font-display text-2xl font-bold text-fg">
                 {site.name}
               </h1>
 
-              <p className="mt-3 max-w-2xl text-sm leading-relaxed text-ink-950/65">
+              <p className="mt-3 max-w-2xl text-sm leading-relaxed text-fg-muted">
                 {site.description || 'No description provided.'}
               </p>
             </div>
@@ -191,7 +229,7 @@ export function SiteDetailPage() {
 
                 <Button
                   variant="ghost"
-                  className="gap-2 text-red-600 hover:bg-red-50"
+                  className="gap-2 !text-danger hover:!bg-danger/10"
                   onClick={() => {
                     setDeleteError(null)
                     setIsDeleteOpen(true)
@@ -219,7 +257,7 @@ export function SiteDetailPage() {
 
             <Link
               to={speciesListUrl({ site_id: siteId, national_status: 'Protected' })}
-              className="block rounded-2xl transition-transform duration-200 hover:-translate-y-0.5"
+              className="block rounded-xl transition-transform duration-200 hover:-translate-y-0.5"
             >
               <StatCard
                 label="Protected species"
@@ -231,10 +269,10 @@ export function SiteDetailPage() {
 
             <Link
               to={speciesListUrl({ site_id: siteId, iucn_status: THREATENED_STATUSES_PARAM })}
-              className="block rounded-2xl transition-transform duration-200 hover:-translate-y-0.5"
+              className="block rounded-xl transition-transform duration-200 hover:-translate-y-0.5"
             >
               <StatCard
-                label="IUCN threatened species - VU · EN · CR"
+                label="IUCN threatened species - NT · VU · EN · CR"
                 value={stats.iucn_threatened_species}
                 icon={ShieldCheck}
                 delay={0.1}
@@ -302,27 +340,53 @@ export function SiteDetailPage() {
           <Card>
             <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h2 className="font-display text-sm font-bold text-canopy-950">
+                <h2 className="font-display text-sm font-bold text-fg">
                   Species at this site
                 </h2>
 
-                <p className="mt-1 text-xs text-ink-950/50">
+                <p className="mt-1 text-xs text-fg-subtle">
                   Species records associated with {site.name}
                 </p>
               </div>
 
-              <Link to={ROUTES.addSpecies}>
-                <Button size="md" className="w-full gap-2 sm:w-auto">
-                  <Leaf size={15} />
-                  Log species
-                </Button>
-              </Link>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <SearchInput
+                  value={search}
+                  onChange={(e) => {
+                    setSearch(e.target.value)
+                    setPage(1)
+                  }}
+                  placeholder="Search by scientific or common name…"
+                  aria-label="Search species at this site"
+                  wrapperClassName="sm:w-72"
+                />
+
+                <Link to={ROUTES.addSpecies}>
+                  <Button size="md" className="w-full gap-2 sm:w-auto">
+                    <Leaf size={15} />
+                    Log species
+                  </Button>
+                </Link>
+              </div>
             </div>
+
+            {removeError && <Alert className="mb-4">{removeError}</Alert>}
 
             {speciesQuery.isError ? (
               <ErrorState
                 message={getErrorMessage(speciesQuery.error, 'Could not load species.')}
                 onRetry={() => speciesQuery.refetch()}
+              />
+            ) : species.length === 0 && !speciesQuery.isPending && debouncedSearch ? (
+              <EmptyState
+                icon={<Search size={22} />}
+                title="No matching species"
+                description={`No species at this site match "${debouncedSearch}".`}
+                action={
+                  <Button variant="secondary" onClick={() => setSearch('')}>
+                    Clear search
+                  </Button>
+                }
               />
             ) : species.length === 0 && !speciesQuery.isPending ? (
               <EmptyState
@@ -332,7 +396,14 @@ export function SiteDetailPage() {
               />
             ) : (
               <>
-                <SpeciesTable species={species} />
+                <SpeciesTable
+                  species={species}
+                  canRemove={canRemoveSpecies}
+                  onRemove={(sp) => {
+                    setRemoveError(null)
+                    setSpeciesToRemove(sp)
+                  }}
+                />
 
                 <Pagination
                   className="mt-5"
@@ -404,6 +475,17 @@ export function SiteDetailPage() {
           </Button>
         </form>
       </Modal>
+      <ConfirmDialog
+        isOpen={speciesToRemove !== null}
+        title={`Remove "${speciesToRemove?.scientific_name ?? 'this species'}" from ${site?.name ?? 'this site'}?`}
+        description="Only the link to this site is removed. The species record and its links to other sites are kept."
+        confirmLabel="Remove from site"
+        destructive
+        isLoading={removeMutation.isPending}
+        onConfirm={() => speciesToRemove && removeMutation.mutate(speciesToRemove)}
+        onCancel={() => setSpeciesToRemove(null)}
+      />
+
       <DeleteSiteDialogs
         site={isDeleteOpen && site ? site : null}
         onClose={() => setIsDeleteOpen(false)}

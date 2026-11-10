@@ -7,6 +7,7 @@ import type {
   SpeciesListItem,
   SpeciesLookupDraft,
   SpeciesUpdateInput,
+  SiteSpeciesLink,
   ValidationHistoryEntry,
   BatchSpeciesLookupJobResponse,
 } from '../types'
@@ -71,6 +72,11 @@ export async function createSpecies(payload: SpeciesCreateInput): Promise<Specie
 
 export async function associateSpeciesWithSite(siteId: number, speciesId: number, notes?: string) {
   const { data } = await api.post(`/sites/${siteId}/species`, { species_id: speciesId, notes })
+  return data
+}
+
+export async function listSiteSpeciesLinks(siteId: number): Promise<SiteSpeciesLink[]> {
+  const { data } = await api.get<SiteSpeciesLink[]>(`/sites/${siteId}/species`)
   return data
 }
 

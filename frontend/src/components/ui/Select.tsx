@@ -11,7 +11,7 @@ export function Select({ label, className, id, children, ...props }: SelectProps
     <select
       id={selectId}
       className={cn(
-        'h-11 rounded-xl border border-mist-200 bg-paper-0 px-3.5 text-sm text-ink-950/80 outline-none transition-colors focus:border-canopy-600',
+        'h-10 rounded-xl border border-line-strong bg-surface px-3 text-sm text-fg outline-none transition-colors duration-150 hover:border-fg-subtle/50 focus:border-ring focus:ring-2 focus:ring-ring/20',
         className,
       )}
       {...props}
@@ -26,7 +26,7 @@ export function Select({ label, className, id, children, ...props }: SelectProps
     <div className="flex flex-col gap-1.5">
       <label
         htmlFor={selectId}
-        className="text-xs font-semibold uppercase tracking-[0.08em] text-canopy-900/70"
+        className="text-xs font-medium text-fg-muted"
       >
         {label}
       </label>

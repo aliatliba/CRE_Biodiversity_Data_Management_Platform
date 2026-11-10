@@ -41,7 +41,7 @@ function page(Component: ComponentType) {
   return (
     <Suspense
       fallback={
-        <div className="flex min-h-screen items-center justify-center bg-paper-0">
+        <div className="flex min-h-screen items-center justify-center bg-bg">
           <LoadingSpinner />
         </div>
       }

@@ -14,13 +14,14 @@ export function Input({
   ...props
 }: InputProps) {
   const inputId = id ?? props.name
+  const errorId = error && inputId ? `${inputId}-error` : undefined
 
   return (
     <div className="w-full min-w-0">
       {label && (
         <label
           htmlFor={inputId}
-          className="mb-2 block text-sm font-medium text-ink-950/75"
+          className="mb-1.5 block text-sm font-medium text-fg"
         >
           {label}
         </label>
@@ -28,20 +29,23 @@ export function Input({
 
       <input
         id={inputId}
+        aria-invalid={error ? true : undefined}
+        aria-describedby={errorId}
         className={cn(
-          'h-12 w-full min-w-0 rounded-xl border bg-paper-0 px-4 text-[15px] text-ink-950 outline-none transition-all',
-          'placeholder:text-ink-950/35',
-          'focus:border-canopy-600 focus:ring-2 focus:ring-canopy-600/10',
+          'h-10 w-full min-w-0 rounded-xl border bg-surface px-3.5 text-sm text-fg outline-none transition-colors duration-150',
+          'placeholder:text-fg-subtle',
+          'focus:border-ring focus:ring-2 focus:ring-ring/20',
+          'disabled:cursor-not-allowed disabled:bg-surface-muted disabled:text-fg-muted',
           error
-            ? 'border-red-500/50 focus:border-red-500 focus:ring-red-500/10'
-            : 'border-canopy-900/12',
+            ? 'border-danger focus:border-danger focus:ring-danger/20'
+            : 'border-line-strong hover:border-fg-subtle/50',
           className,
         )}
         {...props}
       />
 
       {error && (
-        <p className="mt-1.5 text-xs font-medium text-red-600">
+        <p id={errorId} className="mt-1.5 text-xs font-medium text-danger">
           {error}
         </p>
       )}

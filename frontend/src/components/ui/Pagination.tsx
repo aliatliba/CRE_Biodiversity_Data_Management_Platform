@@ -49,12 +49,12 @@ export function Pagination({
   return (
     <div
       className={cn(
-        'flex flex-col gap-3 text-sm text-ink-950/55 sm:flex-row sm:items-center sm:justify-between',
+        'flex flex-col gap-3 text-sm text-fg-muted sm:flex-row sm:items-center sm:justify-between',
         className
       )}
     >
       <div className="flex flex-wrap items-center gap-3">
-        <span>
+        <span className="tabular-nums">
           Showing {from}–{to} of {total}
         </span>
         {onPageSizeChange && (
@@ -63,7 +63,7 @@ export function Pagination({
             <select
               value={pageSize}
               onChange={(e) => onPageSizeChange(Number(e.target.value))}
-              className="h-8 rounded-lg border border-mist-200 bg-paper-0 px-2 text-xs outline-none focus:border-canopy-600"
+              className="h-8 rounded-lg border border-line-strong bg-surface px-2 text-xs text-fg outline-none focus:border-ring focus:ring-2 focus:ring-ring/20"
             >
               {[10, 15, 25, 50].map((size) => (
                 <option key={size} value={size}>
@@ -94,18 +94,19 @@ export function Pagination({
         <div className="hidden items-center gap-1 px-1 sm:flex">
           {pageNumbers.map((num, idx) =>
             num === 'ellipsis' ? (
-              <span key={`ellipsis-${idx}`} className="px-1 text-ink-950/35">
+              <span key={`ellipsis-${idx}`} className="px-1 text-fg-subtle">
                 …
               </span>
             ) : (
               <button
                 key={num}
                 onClick={() => onPageChange(num)}
+                aria-current={num === page ? 'page' : undefined}
                 className={cn(
-                  'flex h-8 min-w-8 items-center justify-center rounded-lg px-2 text-xs font-semibold transition-colors',
+                  'flex h-8 min-w-8 items-center justify-center rounded-lg px-2 text-xs font-semibold tabular-nums transition-colors',
                   num === page
-                    ? 'bg-canopy-700 text-white'
-                    : 'text-ink-950/65 hover:bg-mist-100'
+                    ? 'bg-primary text-on-primary'
+                    : 'text-fg-muted hover:bg-surface-muted hover:text-fg'
                 )}
               >
                 {num}
@@ -114,7 +115,7 @@ export function Pagination({
           )}
         </div>
 
-        <span className="px-2 text-xs sm:hidden">
+        <span className="px-2 text-xs tabular-nums sm:hidden">
           {page} / {pages}
         </span>
 
@@ -153,7 +154,7 @@ function NavButton({
       onClick={onClick}
       disabled={disabled}
       aria-label={ariaLabel}
-      className="flex h-8 w-8 items-center justify-center rounded-lg border border-canopy-900/10 text-ink-950/60 transition-colors hover:bg-mist-100 disabled:opacity-30"
+      className="flex h-8 w-8 items-center justify-center rounded-lg border border-line text-fg-muted transition-colors hover:bg-surface-muted hover:text-fg disabled:cursor-not-allowed disabled:opacity-40"
     >
       {children}
     </button>

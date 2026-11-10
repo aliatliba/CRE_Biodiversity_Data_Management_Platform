@@ -97,7 +97,7 @@ export function ProtectedSpeciesPage() {
 
   return (
     <>
-      <p className="mb-6 max-w-xl text-sm text-ink-950/55">
+      <p className="mb-6 max-w-xl text-sm text-fg-subtle">
         Species on this list are automatically marked{' '}
         <span className="font-semibold text-canopy-800">Protected</span> under national status the
         moment they're logged — this reference list drives that check.
@@ -150,37 +150,37 @@ export function ProtectedSpeciesPage() {
 
       {query.isSuccess && entries.length > 0 && (
         <div className={query.isPlaceholderData ? 'opacity-60 transition-opacity' : undefined}>
-          <div className="overflow-hidden rounded-2xl border border-canopy-900/10 bg-paper-0">
+          <div className="overflow-hidden rounded-2xl glass">
             <table className="w-full text-left text-sm">
               <thead>
-                <tr className="border-b border-canopy-900/[0.08] bg-mist-100/50 text-xs font-semibold uppercase tracking-wide text-ink-950/50">
-                  <th className="px-5 py-3">Scientific name</th>
-                  <th className="px-5 py-3">IUCN</th>
-                  <th className="px-5 py-3">Added</th>
-                  {isAdmin && <th className="px-5 py-3" />}
+                <tr className="border-b border-line bg-surface-muted text-xs font-semibold uppercase tracking-wide text-fg-muted">
+                  <th className="px-4 py-2.5">Scientific name</th>
+                  <th className="px-4 py-2.5">IUCN</th>
+                  <th className="px-4 py-2.5">Added</th>
+                  {isAdmin && <th className="px-4 py-2.5" />}
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="stagger-in">
                 {entries.map((entry) => (
-                  <tr key={entry.id} className="border-b border-canopy-900/[0.05] last:border-0">
-                    <td className="px-5 py-3.5 font-medium italic text-canopy-900">{entry.scientific_name}</td>
-                    <td className="px-5 py-3.5">
+                  <tr key={entry.id} className="border-b border-line last:border-0">
+                    <td className="px-4 py-2.5 font-medium italic text-canopy-900">{entry.scientific_name}</td>
+                    <td className="px-4 py-2.5">
                       {entry.iucn_status && (
                         <Badge tone={getIucnTone(entry.iucn_status)}>{entry.iucn_status}</Badge>
                       )}
                     </td>
-                    <td className="px-5 py-3.5 text-ink-950/50">
+                    <td className="px-4 py-2.5 text-fg-subtle">
                       {new Date(entry.created_at).toLocaleDateString()}
                     </td>
                     {isAdmin && (
-                      <td className="px-5 py-3.5 text-right">
+                      <td className="px-4 py-2.5 text-right">
                         <button
                           onClick={() => {
                             setActionError(null)
                             setEntryToRemove(entry)
                           }}
                           aria-label={`Remove ${entry.scientific_name}`}
-                          className="rounded-full p-1.5 text-ink-950/30 transition-colors hover:bg-red-50 hover:text-red-600"
+                          className="rounded-lg p-2 text-fg-subtle transition-colors hover:bg-danger/10 hover:text-danger"
                         >
                           <Trash2 size={15} />
                         </button>

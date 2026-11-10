@@ -51,13 +51,13 @@ function ReadOnlyField({
   const showWarning = isMissing && (critical || warnIfMissing)
 
   const missingStyles = critical
-    ? 'border-red-300 bg-red-50 text-red-700'
+    ? 'border-red-300 bg-red-50 text-danger'
     : 'border-amber-300 bg-amber-50 text-amber-800'
 
   return (
     <div className="flex flex-col gap-1.5">
       <div className="flex items-center justify-between">
-        <span className="text-xs font-semibold uppercase tracking-[0.08em] text-canopy-900/70">
+        <span className="text-xs font-semibold uppercase tracking-[0.08em] text-fg-muted">
           {label}
         </span>
 
@@ -68,7 +68,7 @@ function ReadOnlyField({
         className={`rounded-xl border px-4 py-2.5 text-[15px] ${
           showWarning
             ? `${missingStyles} font-medium`
-            : 'border-mist-200 bg-mist-100/40 text-ink-950/80'
+            : 'border-line bg-surface-muted text-fg-muted'
         }`}
       >
         {showWarning
@@ -105,7 +105,7 @@ export function SpeciesReviewForm({
           Taxonomy
       ───────────────────────────────────────────── */}
       <section>
-        <h3 className="mb-4 font-display text-sm font-bold text-canopy-950">
+        <h3 className="mb-4 font-display text-sm font-bold text-fg">
           Taxonomy
         </h3>
 
@@ -168,7 +168,7 @@ export function SpeciesReviewForm({
           Conservation
       ───────────────────────────────────────────── */}
       <section>
-        <h3 className="mb-4 font-display text-sm font-bold text-canopy-950">
+        <h3 className="mb-4 font-display text-sm font-bold text-fg">
           Conservation status
         </h3>
 
@@ -220,7 +220,7 @@ export function SpeciesReviewForm({
             <p className="font-semibold">
               No IUCN assessment selected
             </p>
-            <p className="mt-1 text-xs leading-5 text-amber-700">
+            <p className="mt-1 text-xs leading-5 text-accent-fg">
               Select an available assessment above before saving.
               The status and population trend will be taken from
               that same assessment.
@@ -233,7 +233,7 @@ export function SpeciesReviewForm({
           Ecological traits
       ───────────────────────────────────────────── */}
       <section>
-        <h3 className="mb-4 font-display text-sm font-bold text-canopy-950">
+        <h3 className="mb-4 font-display text-sm font-bold text-fg">
           Ecological traits
         </h3>
 

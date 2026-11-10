@@ -93,7 +93,9 @@ def _biodiversity_composition(species_query):
     return composition
 
 
-THREATENED_STATUSES = {"CR", "EN", "VU"}
+# NT is not a "threatened" IUCN category strictly speaking, but it is counted here
+# on purpose so near-threatened species are surfaced alongside VU, EN and CR.
+THREATENED_STATUSES = {"CR", "EN", "VU", "NT"}
 
 
 def _extra_stats(db: Session, species_query, site_id: int | None) -> dict:
