@@ -49,6 +49,15 @@ export interface SiteSpeciesLink {
   notes: string | null
 }
 
+/** A site where a species was recorded (GET /species/{id}/sites). */
+export interface SpeciesSite {
+  site_id: number
+  site_name: string
+  site_code: string | null
+  notes: string | null
+  recorded_at: string
+}
+
 export type { Page } from '@/types/common'
 
 export interface SpeciesLookupDraft {

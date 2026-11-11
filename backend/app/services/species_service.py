@@ -595,6 +595,28 @@ def list_species_for_site(db: Session, site_id: int) -> list[SiteSpecies]:
     )
 
 
+def list_sites_for_species(db: Session, species_id: int) -> list[dict]:
+    """Sites where the species was recorded, alphabetical by site name."""
+    get_species(db, species_id)
+    rows = (
+        db.query(SiteSpecies, Site)
+        .join(Site, Site.id == SiteSpecies.site_id)
+        .filter(SiteSpecies.species_id == species_id)
+        .order_by(Site.name)
+        .all()
+    )
+    return [
+        {
+            "site_id": site.id,
+            "site_name": site.name,
+            "site_code": site.code,
+            "notes": link.notes,
+            "recorded_at": link.created_at,
+        }
+        for link, site in rows
+    ]
+
+
 def remove_site_species(db: Session, site_id: int, species_id: int, user) -> None:
     """Unlink a species from a site: admins, or the researcher who recorded the link."""
     association = (
