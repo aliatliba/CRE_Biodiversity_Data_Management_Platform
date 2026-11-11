@@ -377,6 +377,9 @@ export default function AddSpeciesPage() {
           Number(siteId),
           item.existingSpecies.id,
         )
+        void queryClient.invalidateQueries({ queryKey: queryKeys.speciesAll })
+        void queryClient.invalidateQueries({ queryKey: queryKeys.sites })
+        void queryClient.invalidateQueries({ queryKey: ['dashboard'] })
 
         updateItem(itemId, {
           saveStatus: 'saved',

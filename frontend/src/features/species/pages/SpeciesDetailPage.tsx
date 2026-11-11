@@ -28,6 +28,7 @@ import type {
   SpeciesUpdateInput,
 } from '../types'
 import { ValidationHistory } from '../components/ValidationHistory'
+import { SpeciesSites } from '../components/SpeciesSites'
 import { SourceBadge } from '../components/SourceBadge'
 
 const CRITICAL_TAXONOMY_LABELS: Record<string, string> = {
@@ -119,6 +120,12 @@ export function SpeciesDetailPage() {
   const historyQuery = useQuery({
     queryKey: [...queryKeys.speciesDetail(speciesId), 'history'],
     queryFn: () => speciesService.getSpeciesHistory(speciesId),
+    enabled: Number.isFinite(speciesId),
+  })
+
+  const sitesQuery = useQuery({
+    queryKey: [...queryKeys.speciesDetail(speciesId), 'sites'],
+    queryFn: () => speciesService.getSpeciesSites(speciesId),
     enabled: Number.isFinite(speciesId),
   })
 
@@ -413,10 +420,32 @@ export function SpeciesDetailPage() {
             </Card>
           </div>
 
-          <Card className="h-fit">
-            <h2 className="mb-4 font-display text-sm font-bold text-fg">Validation history</h2>
-            <ValidationHistory entries={history} />
-          </Card>
+          <div className="flex h-fit flex-col gap-6">
+            <Card>
+              <div className="mb-4 flex items-center justify-between gap-2">
+                <h2 className="font-display text-sm font-bold text-fg">Recorded at sites</h2>
+                {sitesQuery.data && sitesQuery.data.length > 0 && (
+                  <Badge tone="neutral">{sitesQuery.data.length}</Badge>
+                )}
+              </div>
+              {sitesQuery.isPending ? (
+                <div className="flex justify-center py-4">
+                  <LoadingSpinner className="h-5 w-5" />
+                </div>
+              ) : sitesQuery.isError ? (
+                <p className="text-sm text-danger">
+                  {getErrorMessage(sitesQuery.error, 'Could not load sites.')}
+                </p>
+              ) : (
+                <SpeciesSites sites={sitesQuery.data} />
+              )}
+            </Card>
+
+            <Card>
+              <h2 className="mb-4 font-display text-sm font-bold text-fg">Validation history</h2>
+              <ValidationHistory entries={history} />
+            </Card>
+          </div>
         </div>
       )}
 

@@ -211,6 +211,16 @@ class SiteSpeciesResponse(BaseModel):
     recorded_by: int | None
     notes: str | None
 
+
+class SpeciesSiteResponse(BaseModel):
+    """A site where a species was recorded (GET /species/{id}/sites)."""
+
+    site_id: int
+    site_name: str
+    site_code: str | None
+    notes: str | None
+    recorded_at: datetime
+
 class BulkImportRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     scientific_names: list[Text(255)] = Field(..., min_length=1, max_length=300)
