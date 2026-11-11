@@ -65,3 +65,30 @@ def test_dashboard_site_stats_richest_first(client, admin_headers):
     shares = [row["percentage"] for row in stats["species_richness_by_site"]]
     assert shares == sorted(shares, reverse=True) and round(sum(shares)) == 100
     assert [row["species_share"] for row in stats["site_stats"]] == shares
+
+
+def test_species_sites_lists_linked_sites(client, admin_headers):
+    beta = client.post("/api/v1/sites", json={"name": "Beta", "code": "SB"}, headers=admin_headers).json()
+    alpha = client.post("/api/v1/sites", json={"name": "Alpha", "code": "SA"}, headers=admin_headers).json()
+    client.post("/api/v1/sites", json={"name": "Gamma"}, headers=admin_headers)
+    species = client.post(
+        "/api/v1/species",
+        json={"scientific_name": "Genus ubique", "site_id": beta["id"]},
+        headers=admin_headers,
+    ).json()
+    r = client.post(
+        f"/api/v1/sites/{alpha['id']}/species",
+        json={"species_id": species["id"], "notes": "seen near the spring"},
+        headers=admin_headers,
+    )
+    assert r.status_code == 201, r.text
+
+    sites = client.get(f"/api/v1/species/{species['id']}/sites", headers=admin_headers).json()
+    assert [(s["site_name"], s["site_code"]) for s in sites] == [("Alpha", "SA"), ("Beta", "SB")]
+    assert sites[0]["notes"] == "seen near the spring" and sites[0]["recorded_at"]
+
+    client.delete(f"/api/v1/sites/{alpha['id']}/species/{species['id']}", headers=admin_headers)
+    sites = client.get(f"/api/v1/species/{species['id']}/sites", headers=admin_headers).json()
+    assert [s["site_id"] for s in sites] == [beta["id"]]
+
+    assert client.get("/api/v1/species/999999/sites", headers=admin_headers).status_code == 404

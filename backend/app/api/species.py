@@ -22,6 +22,7 @@ from app.schemas.species import (
     SpeciesListItem,
     SpeciesLookupRequest,
     SpeciesResponse,
+    SpeciesSiteResponse,
     SpeciesUpdate,
     ValidationHistoryResponse,
 )
@@ -265,6 +266,11 @@ def get_species(species_id: int, db: DBSession, user: ActiveUser):
 @router.get("/{species_id}/history", response_model=List[ValidationHistoryResponse])
 def get_species_history(species_id: int, db: DBSession, user: ActiveUser):
     return species_service.get_species_history(db, species_id)
+
+
+@router.get("/{species_id}/sites", response_model=List[SpeciesSiteResponse])
+def get_species_sites(species_id: int, db: DBSession, user: ActiveUser):
+    return species_service.list_sites_for_species(db, species_id)
 
 
 @router.post("", response_model=SpeciesResponse, status_code=201)
