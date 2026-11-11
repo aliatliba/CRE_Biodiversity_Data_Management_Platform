@@ -58,6 +58,7 @@ class GraphicsJob(BaseJob):
     graphic_type: str = ""
     site_id: int | None = None
     site_name: str | None = None
+    class_names: list[str] = field(default_factory=list)
     total_species: int = 0
     processed: int = 0
     files: dict[str, str] = field(default_factory=dict)  # format -> path

@@ -21,6 +21,7 @@ import { usePolling } from '@/hooks/usePolling'
 import { getErrorMessage } from '@/lib/errors'
 import { queryKeys } from '@/lib/queryKeys'
 import * as graphicsService from '../services/graphicsService'
+import { ClassPicker } from '../components/ClassPicker'
 import type { GraphicsFormat, GraphicsJob } from '../types'
 
 const ACTIVE = new Set(['queued', 'running'])
@@ -37,6 +38,7 @@ export function GraphicsPage() {
   const loading = sitesQuery.isPending || typesQuery.isPending
 
   const [selectedSiteId, setSelectedSiteId] = useState('')
+  const [selectedClasses, setSelectedClasses] = useState<string[]>([])
   const [pickedType, setPickedType] = useState('')
   const [job, setJob] = useState<GraphicsJob | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
@@ -56,9 +58,21 @@ export function GraphicsPage() {
 
   const currentType = graphicTypes.find((t) => t.key === selectedType)
   const jobType = graphicTypes.find((t) => t.key === job?.graphic_type)
+  const needsClasses = currentType?.class_filter ?? false
+
+  const classesQuery = useQuery({
+    queryKey: queryKeys.siteClasses(Number(selectedSiteId)),
+    queryFn: () => graphicsService.listSiteClasses(Number(selectedSiteId)),
+    enabled: needsClasses && selectedSiteId !== '',
+  })
 
   const createMutation = useMutation({
-    mutationFn: () => graphicsService.generateGraphics(Number(selectedSiteId), selectedType),
+    mutationFn: () =>
+      graphicsService.generateGraphics(
+        Number(selectedSiteId),
+        selectedType,
+        needsClasses ? selectedClasses : undefined,
+      ),
     onSuccess: setJob,
     onError: (err) => setActionError(getErrorMessage(err, 'Could not start graphics generation.')),
   })
@@ -116,6 +130,10 @@ export function GraphicsPage() {
   function handleGenerate() {
     if (!selectedSiteId || !selectedType) {
       setActionError('Please select a research site and a graphic type.')
+      return
+    }
+    if (needsClasses && selectedClasses.length === 0) {
+      setActionError('Please select at least one class.')
       return
     }
     resetResult()
@@ -226,6 +244,7 @@ export function GraphicsPage() {
                     value={selectedSiteId}
                     onChange={(event) => {
                       setSelectedSiteId(event.target.value)
+                      setSelectedClasses([])
                       resetResult()
                     }}
                     disabled={generating}
@@ -239,12 +258,40 @@ export function GraphicsPage() {
                     ))}
                   </Select>
                 </div>
+
+                {/* CLASSES (class-filtered graphics only) */}
+                {needsClasses && (
+                  <div className="mt-5">
+                    <ClassPicker
+                      siteSelected={selectedSiteId !== ''}
+                      classes={classesQuery.data ?? []}
+                      isLoading={classesQuery.isPending}
+                      error={
+                        classesQuery.isError
+                          ? getErrorMessage(classesQuery.error, 'Could not load classes.')
+                          : null
+                      }
+                      selected={selectedClasses}
+                      onChange={(next) => {
+                        setSelectedClasses(next)
+                        resetResult()
+                      }}
+                      disabled={generating}
+                    />
+                  </div>
+                )}
               </>
             )}
 
             <Button
               onClick={handleGenerate}
-              disabled={!selectedSiteId || !selectedType || generating || loading}
+              disabled={
+                !selectedSiteId ||
+                !selectedType ||
+                (needsClasses && selectedClasses.length === 0) ||
+                generating ||
+                loading
+              }
               isLoading={generating}
               className="mt-5 w-full gap-2"
             >
@@ -305,6 +352,7 @@ export function GraphicsPage() {
                         {job.total_species > 0
                           ? `${job.total_species} species`
                           : 'Preparing data…'}
+                        {job.class_names.length > 0 && ` · ${job.class_names.join(', ')}`}
                       </p>
                     </div>
 

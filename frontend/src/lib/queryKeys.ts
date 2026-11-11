@@ -14,4 +14,5 @@ export const queryKeys = {
   exportOptions: ['export-options'] as const,
   exportJobs: ['export-jobs'] as const,
   graphicTypes: ['graphic-types'] as const,
+  siteClasses: (siteId: number) => ['sites', siteId, 'classes'] as const,
 }

@@ -91,3 +91,70 @@ def test_graphics_queue_is_capped(client, admin_headers, admin_user, monkeypatch
     )
     assert again.status_code == 429
     graphics_job_store.get(first.json()["job_id"]).status = "completed"
+
+
+def _site_with_classes(client, headers):
+    site = client.post("/api/v1/sites", json={"name": "Classes", "code": "CL"}, headers=headers)
+    site = site.json()
+    for name, class_name, family in [
+        ("Genus avis", "Aves", "Laridae"),
+        ("Genus avicula", "aves ", "Accipitridae"),  # same class, other spelling
+        ("Genus lacerta", "Reptilia", "Lacertidae"),
+        ("Genus mus", "Mammalia", "Muridae"),
+        ("Genus nullus", None, "Nullidae"),
+    ]:
+        r = client.post(
+            "/api/v1/species",
+            json={
+                "scientific_name": name,
+                "class_name": class_name,
+                "family": family,
+                "site_id": site["id"],
+            },
+            headers=headers,
+        )
+        assert r.status_code == 201, r.text
+    return site
+
+
+def test_site_classes_are_listed_with_counts(client, admin_headers):
+    site = _site_with_classes(client, admin_headers)
+    r = client.get(f"/api/v1/graphics/sites/{site['id']}/classes", headers=admin_headers)
+    assert r.status_code == 200
+    assert {c["class_name"].lower(): c["species_count"] for c in r.json()} == {
+        "aves": 2, "mammalia": 1, "reptilia": 1,
+    }
+    assert client.get("/api/v1/graphics/sites/999999/classes", headers=admin_headers).status_code == 404
+
+
+def test_family_richness_exports_only_the_selected_classes(client, admin_headers, db_session, tmp_path):
+    from openpyxl import load_workbook
+
+    site = _site_with_classes(client, admin_headers)
+    excel = tmp_path / "input.xlsx"
+    _, total = graphics_service.build_site_excel(
+        db_session, site["id"], get_spec("family_richness"), excel, ["AVES", "Reptilia"]
+    )
+    rows = list(load_workbook(excel)["Species"].iter_rows(values_only=True))
+    assert rows[0][0] == "Class"
+    assert total == 3
+    assert sorted(r[2] for r in rows[1:]) == ["Accipitridae", "Lacertidae", "Laridae"]
+
+
+def test_class_names_are_required_only_where_supported(client, admin_headers, monkeypatch):
+    site = _site_with_classes(client, admin_headers)
+    monkeypatch.setattr(graphics_api, "spawn", lambda coro: coro.close())
+    url = "/api/v1/graphics/jobs"
+
+    r = client.post(url, json={"site_id": site["id"], "graphic_type": "family_richness"},
+                    headers=admin_headers)
+    assert r.status_code == 400
+    r = client.post(url, json={"site_id": site["id"], "graphic_type": "iucn",
+                               "class_names": ["Aves"]}, headers=admin_headers)
+    assert r.status_code == 400
+
+    r = client.post(url, json={"site_id": site["id"], "graphic_type": "family_richness",
+                               "class_names": ["Aves", "aves", "Reptilia"]}, headers=admin_headers)
+    assert r.status_code == 202, r.text
+    assert r.json()["class_names"] == ["Aves", "Reptilia"]
+    graphics_job_store.get(r.json()["job_id"]).status = "completed"
