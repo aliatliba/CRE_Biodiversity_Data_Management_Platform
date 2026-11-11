@@ -7,6 +7,13 @@ export interface GraphicType {
   label: string
   description: string
   formats: GraphicsFormat[]
+  /** The user must pick one or more taxonomic classes for this graphic. */
+  class_filter: boolean
+}
+
+export interface SiteClass {
+  class_name: string
+  species_count: number
 }
 
 export interface GraphicsJob {
@@ -15,6 +22,7 @@ export interface GraphicsJob {
   graphic_type: string
   site_id: number | null
   site_name: string | null
+  class_names: string[]
   total_species: number
   processed: number
   started_at: string | null

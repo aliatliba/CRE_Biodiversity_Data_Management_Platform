@@ -1,5 +1,5 @@
 # ============================================================
-# RICHESSE AVIFAUNISTIQUE PAR FAMILLE + SILHOUETTES PHYLOPIC
+# RICHESSE SPECIFIQUE PAR FAMILLE + SILHOUETTES PHYLOPIC
 # VERSION SERVEUR / DOCKER
 #
 # Rscript richesse_familles.R <input_excel> <output_dir>
@@ -8,7 +8,9 @@
 #          Class, Order, Family, Genus, Scientific name
 # Sorties: richesse_familles.png / .pdf
 #
-# - Filtre la classe Aves (si la colonne Class est renseignée)
+# - Les classes sont choisies par l'utilisateur : le serveur
+#   n'exporte que les espèces de ces classes. Le script ne filtre
+#   plus lui-même ; la colonne Class sert au titre du graphique.
 # - 1 barre = 1 famille, hauteur = nombre d'espèces distinctes
 # - Classement décroissant
 # - Silhouette PhyloPic au-dessus de chaque barre :
@@ -123,17 +125,10 @@ taxa <- df |>
 
 rm(df)  # libère la mémoire du tableau brut
 
-# Filtre strict Aves (ignoré si la colonne Class est vide partout)
-if (any(!is.na(taxa$Classe))) {
-  n_avant <- nrow(taxa)
-  taxa <- taxa |> dplyr::filter(tolower(Classe) == "aves")
-  cat("Lignes Aves :", nrow(taxa), "/", n_avant, "\n")
-  if (nrow(taxa) == 0) {
-    stop("ERREUR - Aucune espèce de la classe Aves pour ce site.")
-  }
-} else {
-  cat("Colonne Class vide : filtre Aves ignoré.\n")
-}
+# Classes présentes (déjà filtrées par le serveur selon le choix de
+# l'utilisateur) : utilisées pour le titre et le sous-titre.
+classes <- sort(unique(taxa$Classe[!is.na(taxa$Classe)]))
+cat("Classes :", if (length(classes) > 0) paste(classes, collapse = ", ") else "(non renseignées)", "\n")
 
 taxa <- taxa |>
   dplyr::filter(!is.na(Famille), !is.na(Espece)) |>
@@ -158,6 +153,8 @@ nb_especes  <- dplyr::n_distinct(taxa$Espece)
 nb_ordres   <- dplyr::n_distinct(taxa$Ordre[!is.na(taxa$Ordre)])
 nb_familles <- dplyr::n_distinct(taxa$Famille)
 nb_genres   <- dplyr::n_distinct(taxa$Genre[!is.na(taxa$Genre)])
+
+nb_classes  <- length(classes)
 
 cat("Especes  :", nb_especes, "\n")
 cat("Ordres   :", nb_ordres, "\n")
@@ -460,11 +457,23 @@ if (nrow(silhouettes_ok) > 0) {
 }
 
 stats_lignes <- c(
+  if (nb_classes > 1) paste0(nb_classes, " Classes"),
   if (nb_ordres > 0) paste0(nb_ordres, " Ordres"),
   paste0(nb_familles, " Familles"),
   paste0(nb_genres, " Genres")
 )
 texte_stats <- paste(stats_lignes, collapse = "\n\n")
+
+# Titre : "avifaunistique" quand seule la classe Aves est représentée
+titre <- if (identical(tolower(classes), "aves")) {
+  "Richesse avifaunistique"
+} else {
+  "Richesse spécifique par famille"
+}
+sous_titre <- if (nb_classes > 0) {
+  paste0(if (nb_classes > 1) "Classes : " else "Classe : ",
+         paste(classes, collapse = ", "))
+} else NULL
 
 p <- p +
   ggplot2::annotate(
@@ -478,14 +487,17 @@ p <- p +
     breaks = scales::pretty_breaks(n = 8),
     expand = ggplot2::expansion(mult = c(0, 0))
   ) +
-  ggplot2::labs(title = "Richesse avifaunistique", x = NULL, y = NULL) +
+  ggplot2::labs(title = titre, subtitle = sous_titre, x = NULL, y = NULL) +
   ggplot2::theme_minimal(base_size = 12) +
   ggplot2::theme(
     plot.background  = ggplot2::element_rect(fill = "white", colour = NA),
     panel.background = ggplot2::element_rect(fill = "white", colour = NA),
     plot.title = ggplot2::element_text(colour = ROUGE_TITRE, size = 22,
                                        face = "bold", hjust = 0.5,
-                                       margin = ggplot2::margin(b = 18)),
+                                       margin = ggplot2::margin(b = 6)),
+    plot.subtitle = ggplot2::element_text(colour = GRIS_TEXTE, size = 13,
+                                          face = "italic", hjust = 0.5,
+                                          margin = ggplot2::margin(b = 18)),
     panel.grid.major.x = ggplot2::element_blank(),
     panel.grid.minor   = ggplot2::element_blank(),
     panel.grid.major.y = ggplot2::element_line(colour = GRIS_GRILLE,

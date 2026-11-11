@@ -18,6 +18,7 @@ from app.schemas.graphics import (
     GraphicsGenerateRequest,
     GraphicsJobResponse,
     GraphicTypeResponse,
+    SiteClassResponse,
 )
 from app.scripts.graphics_registry import GRAPHIC_SPECS, GraphicSpec, get_spec
 from app.services import graphics_service, site_service
@@ -27,14 +28,16 @@ router = APIRouter()
 GRAPHICS_JOB_KIND = "graphics"
 
 
-async def _execute_graphics_job(job: GraphicsJob, site_id: int, spec: GraphicSpec) -> None:
+async def _execute_graphics_job(
+    job: GraphicsJob, site_id: int, spec: GraphicSpec, class_names: list[str] | None = None
+) -> None:
     # R is memory hungry, but concurrency is already limited by graphics_service._R_SLOT.
     async def work(db: Session) -> None:
         with TemporaryDirectory(prefix=f"graphics_{job.id}_") as tmp:
             input_excel = Path(tmp) / "input.xlsx"
 
             site_name, total = await asyncio.to_thread(
-                graphics_service.build_site_excel, db, site_id, spec, input_excel
+                graphics_service.build_site_excel, db, site_id, spec, input_excel, class_names
             )
             # The database is not needed while R runs (up to spec.timeout seconds, plus
             # the wait for the R slot): give the pooled connection back now.
@@ -43,9 +46,10 @@ async def _execute_graphics_job(job: GraphicsJob, site_id: int, spec: GraphicSpe
             job.total_species = total
 
             if total == 0:
+                in_classes = f" in {', '.join(class_names)}" if class_names else ""
                 raise UserFacingError(
                     f"This research site has no validated species "
-                    f"records usable for “{spec.label}”."
+                    f"records{in_classes} usable for “{spec.label}”."
                 )
 
             output_dir = (
@@ -64,10 +68,20 @@ async def _execute_graphics_job(job: GraphicsJob, site_id: int, spec: GraphicSpe
 def list_graphic_types(user: ActiveUser):
     return [
         GraphicTypeResponse(
-            key=s.key, label=s.label, description=s.description, formats=list(s.formats)
+            key=s.key,
+            label=s.label,
+            description=s.description,
+            formats=list(s.formats),
+            class_filter=s.class_filter,
         )
         for s in GRAPHIC_SPECS.values()
     ]
+
+
+@router.get("/sites/{site_id}/classes", response_model=list[SiteClassResponse])
+def list_site_classes(site_id: int, db: DBSession, user: ActiveUser):
+    site_service.get_site(db, site_id)
+    return graphics_service.list_site_classes(db, site_id)
 
 
 @router.post("/jobs", response_model=GraphicsJobResponse, status_code=202)
@@ -76,6 +90,16 @@ async def generate_graphics(data: GraphicsGenerateRequest, db: DBSession, user: 
         spec = get_spec(data.graphic_type)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    # Same class twice (any case) counts once; keep the first spelling.
+    unique: dict[str, str] = {}
+    for name in data.class_names or []:
+        unique.setdefault(name.lower(), name)
+    class_names = list(unique.values())
+    if spec.class_filter and not class_names:
+        raise HTTPException(status_code=400, detail="Select at least one class for this graphic.")
+    if class_names and not spec.class_filter:
+        raise HTTPException(status_code=400, detail="This graphic does not take classes.")
 
     await asyncio.to_thread(site_service.get_site, db, data.site_id)
 
@@ -93,9 +117,13 @@ async def generate_graphics(data: GraphicsGenerateRequest, db: DBSession, user: 
         get_settings().graphics_retention_hours,
     )
     job = graphics_job_store.create_for_user(
-        user.id, GRAPHICS_JOB_KIND, graphic_type=spec.key, site_id=data.site_id
+        user.id,
+        GRAPHICS_JOB_KIND,
+        graphic_type=spec.key,
+        site_id=data.site_id,
+        class_names=class_names,
     )
-    spawn(_execute_graphics_job(job, data.site_id, spec))
+    spawn(_execute_graphics_job(job, data.site_id, spec, class_names or None))
     return graphics_service.graphics_job_response(job)
 
 
