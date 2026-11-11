@@ -25,6 +25,9 @@ class GraphicSpec:
     formats: tuple[str, ...] = ("png", "tiff", "pdf")
     only_validated: bool = True
     required_attrs: tuple[str, ...] = ()  # rows missing any of these are skipped
+    # The user picks one or more taxonomic classes; only species of those classes
+    # are exported to the R script.
+    class_filter: bool = False
     timeout: int = 900
 
 
@@ -68,12 +71,14 @@ GRAPHIC_SPECS: dict[str, GraphicSpec] = {
             key="family_richness",
             label="Species richness by family",
             description=(
-                "Bar chart of the number of species per family, with "
-                "PhyloPic silhouettes (needs internet access on the server)."
+                "Bar chart of the number of species per family, for the classes "
+                "you select, with PhyloPic silhouettes (needs internet access on "
+                "the server)."
             ),
             script=SCRIPTS_DIR / "richesse_familles.R",
             output_basename="richesse_familles",
             columns={
+                "Class": "class_name",
                 "Order": "order_name",
                 "Family": "family",
                 "Genus": "genus",
@@ -81,6 +86,7 @@ GRAPHIC_SPECS: dict[str, GraphicSpec] = {
             },
             formats=("png", "pdf"),
             required_attrs=("family",),
+            class_filter=True,
         ),
         GraphicSpec(
             key="conservation_network",

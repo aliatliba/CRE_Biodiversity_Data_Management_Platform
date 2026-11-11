@@ -9,6 +9,7 @@ import subprocess
 import threading
 from pathlib import Path
 
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
@@ -54,13 +55,49 @@ def _safe_filename(value: str) -> str:
     return cleaned.strip("_") or "site"
 
 
+def list_site_classes(db: Session, site_id: int) -> list[dict]:
+    """Taxonomic classes of the site's validated species, with species counts.
+
+    Feeds the class picker of class-filtered graphics. Names that differ only by
+    case or surrounding spaces are merged (the most common spelling is shown).
+    """
+    from app.models.site_species import SiteSpecies
+    from app.models.species import Species
+
+    name = func.trim(Species.class_name)
+    rows = (
+        db.query(name, func.count(Species.id))
+        .join(SiteSpecies, SiteSpecies.species_id == Species.id)
+        .filter(
+            SiteSpecies.site_id == site_id,
+            Species.status == "validated",
+            Species.class_name.isnot(None),
+            name != "",
+        )
+        .group_by(name)
+        .order_by(func.count(Species.id).desc())
+        .all()
+    )
+    merged: dict[str, dict] = {}
+    for class_name, count in rows:
+        entry = merged.setdefault(
+            class_name.lower(), {"class_name": class_name, "species_count": 0}
+        )
+        entry["species_count"] += count
+    return sorted(merged.values(), key=lambda e: e["class_name"].lower())
+
+
 def build_site_excel(
     db: Session,
     site_id: int,
     spec: GraphicSpec,
     output_path: Path,
+    class_names: list[str] | None = None,
 ) -> tuple[str, int]:
-    """Export the site's species to the Excel layout the R script expects."""
+    """Export the site's species to the Excel layout the R script expects.
+
+    With ``class_names``, only species of those classes (case-insensitive) are kept.
+    """
     from openpyxl import Workbook
 
     from app.models.site import Site
@@ -78,6 +115,10 @@ def build_site_excel(
     )
     if spec.only_validated:
         query = query.filter(Species.status == "validated")
+    if class_names:
+        query = query.filter(
+            func.lower(func.trim(Species.class_name)).in_([c.lower() for c in class_names])
+        )
 
     rows = query.order_by(Species.scientific_name).all()
 
@@ -305,6 +346,7 @@ def graphics_job_response(job: GraphicsJob) -> dict:
         "graphic_type": job.graphic_type,
         "site_id": job.site_id,
         "site_name": job.site_name,
+        "class_names": job.class_names,
         "total_species": job.total_species,
         "processed": job.processed,
         "started_at": job.started_at,

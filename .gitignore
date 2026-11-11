@@ -45,6 +45,7 @@ venv/
 # Generated output (backend only; the frontend features/exports and graphics folders are source code)
 /backend/exports/
 /backend/graphics/
+/backend/app/graphics/
 
 # Build / test
 *.tsbuildinfo

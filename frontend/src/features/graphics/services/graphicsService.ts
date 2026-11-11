@@ -1,8 +1,8 @@
 import { api } from '@/services/api'
 import { downloadBlob } from '@/lib/download'
-import type { GraphicsFormat, GraphicsJob, GraphicType } from '../types'
+import type { GraphicsFormat, GraphicsJob, GraphicType, SiteClass } from '../types'
 
-export type { GraphicsJob, GraphicType, GraphicsFormat }
+export type { GraphicsJob, GraphicType, GraphicsFormat, SiteClass }
 
 /** List the graphics the backend can generate. */
 export async function listGraphicTypes(): Promise<GraphicType[]> {
@@ -10,14 +10,22 @@ export async function listGraphicTypes(): Promise<GraphicType[]> {
   return response.data
 }
 
+/** Taxonomic classes of a site's validated species, for class-filtered graphics. */
+export async function listSiteClasses(siteId: number): Promise<SiteClass[]> {
+  const response = await api.get<SiteClass[]>(`/graphics/sites/${siteId}/classes`)
+  return response.data
+}
+
 /** Start a graphics generation job. */
 export async function generateGraphics(
   siteId: number,
   graphicType: string,
+  classNames?: string[],
 ): Promise<GraphicsJob> {
   const response = await api.post<GraphicsJob>('/graphics/jobs', {
     site_id: siteId,
     graphic_type: graphicType,
+    ...(classNames?.length ? { class_names: classNames } : {}),
   })
   return response.data
 }
