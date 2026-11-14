@@ -5,6 +5,7 @@ import { ROUTES } from '@/lib/constants'
 
 const LINKS = [
   { href: '#landscapes', label: 'Landscapes' },
+  { href: '#map', label: 'Sites' },
   { href: '#species', label: 'Species' },
   { href: '#validation', label: 'Validation' },
   { href: '#ecosystem', label: 'Ecosystem' },

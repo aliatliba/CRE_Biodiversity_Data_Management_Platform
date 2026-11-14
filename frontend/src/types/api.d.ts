@@ -429,6 +429,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/species/{species_id}/sites": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Species Sites */
+        get: operations["get_species_sites_api_v1_species__species_id__sites_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/exports": {
         parameters: {
             query?: never;
@@ -540,6 +557,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/protected-species/groups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Taxon Groups */
+        get: operations["list_taxon_groups_api_v1_protected_species_groups_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/protected-species/{entry_id}": {
         parameters: {
             query?: never;
@@ -566,6 +600,23 @@ export interface paths {
         };
         /** List Graphic Types */
         get: operations["list_graphic_types_api_v1_graphics_types_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/graphics/sites/{site_id}/classes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Site Classes */
+        get: operations["list_site_classes_api_v1_graphics_sites__site_id__classes_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -875,6 +926,11 @@ export interface components {
             description: string;
             /** Formats */
             formats: string[];
+            /**
+             * Class Filter
+             * @default false
+             */
+            class_filter: boolean;
         };
         /** GraphicsGenerateRequest */
         GraphicsGenerateRequest: {
@@ -885,6 +941,8 @@ export interface components {
              * @default dendrogram
              */
             graphic_type: string;
+            /** Class Names */
+            class_names?: string[] | null;
         };
         /** GraphicsJobResponse */
         GraphicsJobResponse: {
@@ -898,6 +956,11 @@ export interface components {
             site_id?: number | null;
             /** Site Name */
             site_name?: string | null;
+            /**
+             * Class Names
+             * @default []
+             */
+            class_names: string[];
             /**
              * Total Species
              * @default 0
@@ -979,6 +1042,10 @@ export interface components {
             scientific_name: string;
             /** Source Reference */
             source_reference?: string | null;
+            /** Common Name Fr */
+            common_name_fr?: string | null;
+            /** Taxon Group */
+            taxon_group?: string | null;
         };
         /** ProtectedSpeciesListItem */
         ProtectedSpeciesListItem: {
@@ -988,6 +1055,22 @@ export interface components {
             scientific_name: string;
             /** Source Reference */
             source_reference: string | null;
+            /** Decree */
+            decree?: string | null;
+            /** Kingdom */
+            kingdom?: string | null;
+            /** Taxon Group */
+            taxon_group?: string | null;
+            /** Family */
+            family?: string | null;
+            /** Common Name Fr */
+            common_name_fr?: string | null;
+            /** Common Name Ar */
+            common_name_ar?: string | null;
+            /** Verification Status */
+            verification_status?: string | null;
+            /** Verification Note */
+            verification_note?: string | null;
             /** Added By */
             added_by: number | null;
             /**
@@ -995,6 +1078,18 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+            /**
+             * Printed Names
+             * @default []
+             */
+            printed_names: string[];
+            /**
+             * Synonyms
+             * @default []
+             */
+            synonyms: string[];
+            /** Recorded Species Id */
+            recorded_species_id?: number | null;
             /** Iucn Status */
             iucn_status?: string | null;
         };
@@ -1006,6 +1101,22 @@ export interface components {
             scientific_name: string;
             /** Source Reference */
             source_reference: string | null;
+            /** Decree */
+            decree?: string | null;
+            /** Kingdom */
+            kingdom?: string | null;
+            /** Taxon Group */
+            taxon_group?: string | null;
+            /** Family */
+            family?: string | null;
+            /** Common Name Fr */
+            common_name_fr?: string | null;
+            /** Common Name Ar */
+            common_name_ar?: string | null;
+            /** Verification Status */
+            verification_status?: string | null;
+            /** Verification Note */
+            verification_note?: string | null;
             /** Added By */
             added_by: number | null;
             /**
@@ -1027,6 +1138,13 @@ export interface components {
             name: string;
             /** Description */
             description?: string | null;
+        };
+        /** SiteClassResponse */
+        SiteClassResponse: {
+            /** Class Name */
+            class_name: string;
+            /** Species Count */
+            species_count: number;
         };
         /** SiteCreate */
         SiteCreate: {
@@ -1124,13 +1242,9 @@ export interface components {
             /** Common Name */
             common_name?: string | null;
             /** Raw Taxonomy Extra */
-            raw_taxonomy_extra?: {
-                [key: string]: unknown;
-            } | null;
+            raw_taxonomy_extra?: Record<string, never> | null;
             /** Field Sources */
-            field_sources?: {
-                [key: string]: unknown;
-            } | null;
+            field_sources?: Record<string, never> | null;
             /** Iucn Status */
             iucn_status?: string | null;
             /** Iucn Trend */
@@ -1164,9 +1278,7 @@ export interface components {
             conservation: components["schemas"]["ConservationStatus"];
             traits: components["schemas"]["EcologicalTraits"];
             /** Field Sources */
-            field_sources: {
-                [key: string]: unknown;
-            };
+            field_sources: Record<string, never>;
             /**
              * National Status
              * @default Non Protected
@@ -1223,13 +1335,9 @@ export interface components {
             /** Common Name */
             common_name: string | null;
             /** Raw Taxonomy Extra */
-            raw_taxonomy_extra: {
-                [key: string]: unknown;
-            } | null;
+            raw_taxonomy_extra: Record<string, never> | null;
             /** Field Sources */
-            field_sources: {
-                [key: string]: unknown;
-            } | null;
+            field_sources: Record<string, never> | null;
             /** Iucn Status */
             iucn_status: string | null;
             /** Iucn Trend */
@@ -1263,6 +1371,25 @@ export interface components {
              * Format: date-time
              */
             updated_at: string;
+        };
+        /**
+         * SpeciesSiteResponse
+         * @description A site where a species was recorded (GET /species/{id}/sites).
+         */
+        SpeciesSiteResponse: {
+            /** Site Id */
+            site_id: number;
+            /** Site Name */
+            site_name: string;
+            /** Site Code */
+            site_code: string | null;
+            /** Notes */
+            notes: string | null;
+            /**
+             * Recorded At
+             * Format: date-time
+             */
+            recorded_at: string;
         };
         /** SpeciesUpdate */
         SpeciesUpdate: {
@@ -1304,6 +1431,13 @@ export interface components {
              */
             updated_at: string;
         };
+        /** TaxonGroupCount */
+        TaxonGroupCount: {
+            /** Taxon Group */
+            taxon_group: string;
+            /** Count */
+            count: number;
+        };
         /** Taxonomy */
         Taxonomy: {
             /** Kingdom */
@@ -1321,9 +1455,7 @@ export interface components {
             /** Common Name */
             common_name?: string | null;
             /** Raw Extra */
-            raw_extra?: {
-                [key: string]: unknown;
-            } | null;
+            raw_extra?: Record<string, never> | null;
         };
         /** TokenResponse */
         TokenResponse: {
@@ -1422,10 +1554,6 @@ export interface components {
             msg: string;
             /** Error Type */
             type: string;
-            /** Input */
-            input?: unknown;
-            /** Context */
-            ctx?: Record<string, never>;
         };
         /** ValidationHistoryResponse */
         ValidationHistoryResponse: {
@@ -1436,9 +1564,7 @@ export interface components {
             /** Action */
             action: string;
             /** Changed Fields */
-            changed_fields: {
-                [key: string]: unknown;
-            };
+            changed_fields: Record<string, never>;
             /** Validated By */
             validated_by: number | null;
             /**
@@ -2488,6 +2614,37 @@ export interface operations {
             };
         };
     };
+    get_species_sites_api_v1_species__species_id__sites_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                species_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SpeciesSiteResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_my_exports_api_v1_exports_get: {
         parameters: {
             query?: never;
@@ -2660,6 +2817,7 @@ export interface operations {
         parameters: {
             query?: {
                 search?: string | null;
+                taxon_group?: string | null;
                 page?: number;
                 page_size?: number;
             };
@@ -2722,6 +2880,26 @@ export interface operations {
             };
         };
     };
+    list_taxon_groups_api_v1_protected_species_groups_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaxonGroupCount"][];
+                };
+            };
+        };
+    };
     remove_protected_species_api_v1_protected_species__entry_id__delete: {
         parameters: {
             query?: never;
@@ -2769,6 +2947,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["GraphicTypeResponse"][];
+                };
+            };
+        };
+    };
+    list_site_classes_api_v1_graphics_sites__site_id__classes_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                site_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SiteClassResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

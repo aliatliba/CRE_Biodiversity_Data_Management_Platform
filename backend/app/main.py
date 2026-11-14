@@ -1,7 +1,5 @@
-import json
 import secrets
 from contextlib import asynccontextmanager
-from pathlib import Path
 
 import structlog
 from fastapi import FastAPI
@@ -26,17 +24,11 @@ from app.core.limiter import limiter
 from app.core.logging import configure_logging
 from app.core.security import get_password_hash
 from app.integrations.base import close_http_client, init_http_client
-from app.models.protected_species import ProtectedSpeciesList
 from app.models.role import Role
-from app.models.species import Species
 from app.models.user import User
+from app.services import protected_species_service
 
 logger = structlog.get_logger()
-
-PROTECTED_SPECIES_SEED_FILE = (
-    Path(__file__).resolve().parent / "data" / "protected_species_dz.json"
-)
-
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -148,50 +140,14 @@ def seed_admin(db, admin_role: Role) -> User:
 
 
 def seed_protected_species(db, admin_user: User) -> None:
-    """Populate protected_species_list with Algeria's nationally protected
-    animal and plant species, sourced from:
+    """Keep the protected list in line with Algeria's 2012 decrees (verified names in
+    app/data/protected_species_dz.json):
       - Décret exécutif n° 12-235 du 24 mai 2012 (JO n° 35 du 10 juin 2012)
         - protected non-domestic animal species
       - Décret exécutif n° 12-03 du 4 janvier 2012 (JO n° 03 du 18 janvier 2012)
         - protected non-cultivated plant species
 
-    Mirrors the admin-account seeding above: runs on every startup, but only
-    inserts species that are not already present (matched case-insensitively
-    on scientific_name, which is a CITEXT column).
+    Runs on every startup; writes only when the file and the database differ.
     """
-    if not PROTECTED_SPECIES_SEED_FILE.exists():
-        return
-
-    with open(PROTECTED_SPECIES_SEED_FILE, encoding="utf-8") as f:
-        species_data = json.load(f)
-
-    existing_names = {
-        name.lower()
-        for (name,) in db.query(ProtectedSpeciesList.scientific_name).all()
-    }
-
-    new_rows = []
-    for item in species_data:
-        scientific_name = (item.get("scientific_name") or "").strip()
-        if not scientific_name:
-            continue
-        if scientific_name.lower() in existing_names:
-            continue
-        existing_names.add(scientific_name.lower())
-        new_rows.append(
-            ProtectedSpeciesList(
-                scientific_name=scientific_name,
-                source_reference=item.get("source_reference"),
-                added_by=admin_user.id,
-            )
-        )
-
-    if new_rows:
-        db.bulk_save_objects(new_rows)
-        db.flush()
-        # Species recorded before their name was on the list must pick up the status.
-        db.query(Species).filter(
-            Species.scientific_name.in_([r.scientific_name for r in new_rows]),
-            Species.national_status != "Protected",
-        ).update({Species.national_status: "Protected"}, synchronize_session=False)
-        db.commit()
+    if protected_species_service.sync_decree_list(db, admin_user.id):
+        logger.info("protected_species_list_synced")

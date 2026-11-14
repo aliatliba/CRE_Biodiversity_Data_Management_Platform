@@ -15,7 +15,8 @@
 # - Classement décroissant
 # - Silhouette PhyloPic au-dessus de chaque barre :
 #     1) silhouette de la famille
-#     2) sinon silhouette d'une espèce de la famille (secours)
+#     2) sinon silhouette d'un genre de la famille (les plus riches
+#        d'abord), puis d'une espèce de la famille (secours)
 # - API PhyloPic v2 via httr2 (requêtes parallèles, sans rphylopic).
 #   Les silhouettes sont réduites à SIL_MAX_PX pixels avant mise en
 #   cache : ggimage convertit chaque image en matrice de couleurs au
@@ -46,8 +47,11 @@ for (pkg in packages) {
 GRAPHICS_DPI <- suppressWarnings(as.numeric(Sys.getenv("GRAPHICS_DPI", "300")))
 if (is.na(GRAPHICS_DPI) || GRAPHICS_DPI < 72) GRAPHICS_DPI <- 300
 
-# TRUE : si la famille n'a pas de silhouette, essayer une espèce de la famille
-UTILISER_ESPECE_SECOURS <- TRUE
+# TRUE : si la famille n'a pas de silhouette, essayer ses genres puis
+# une de ses espèces
+UTILISER_SECOURS <- TRUE
+# nombre de genres essayés par famille (les plus riches en espèces)
+NB_GENRES_SECOURS <- 3
 
 # Journal mémoire (visible dans les logs du serveur)
 log_mem <- function(tag) {
@@ -143,7 +147,12 @@ richesse <- taxa |>
   dplyr::group_by(Famille) |>
   dplyr::summarise(
     Richesse   = dplyr::n_distinct(Espece),
-    # espèce utilisée seulement si la famille n'a pas de silhouette
+    # genres et espèce utilisés seulement si la famille n'a pas de
+    # silhouette ; genres classés par nombre d'espèces (puis par nom)
+    Genres_rep = list(utils::head(
+      names(sort(table(Genre[!is.na(Genre)]), decreasing = TRUE)),
+      NB_GENRES_SECOURS
+    )),
     Espece_rep = sort(unique(Espece))[1],
     .groups = "drop"
   ) |>
@@ -166,8 +175,9 @@ rm(taxa)
 # ---------- 5. SILHOUETTES PHYLOPIC (API v2) ----------------
 # Cache disque persistant + requêtes HTTP en parallèle.
 #  - <famille>.png  : silhouette déjà téléchargée (de la famille, ou
-#                     à défaut d'une espèce de la famille)
-#  - <famille>.none : PhyloPic n'a rien trouvé (re-testé après 30 jours)
+#                     à défaut d'un genre ou d'une espèce de la famille)
+#  - <famille>.none : PhyloPic n'a rien trouvé, ni pour la famille ni
+#                     pour ses genres et espèce (re-testé après 30 jours)
 # Les erreurs réseau ne sont jamais mises en cache : elles seront
 # réessayées au prochain lancement.
 
@@ -237,16 +247,22 @@ api_req <- function(path, ...) {
     httr2::req_error(is_error = function(resp) FALSE)  # pas d'exception sur 4xx/5xx
 }
 
-# exécute les requêtes en parallèle ; NULL = échec (réseau ou statut != 200)
+# exécute les requêtes en parallèle. Pour chaque requête :
+#  - le JSON si statut 200
+#  - list() (réponse vide) si 404 : PhyloPic répond 404 quand aucun
+#    noeud ne porte ce nom, c'est un "rien trouvé", pas une panne
+#  - NULL pour tout autre échec (réseau, 5xx, 429...) : à réessayer
 perform_json <- function(reqs) {
   if (length(reqs) == 0) return(list())
   resps <- httr2::req_perform_parallel(
     reqs, on_error = "continue", max_active = MAX_ACTIVE, progress = FALSE
   )
   lapply(resps, function(r) {
-    if (inherits(r, "httr2_response") && httr2::resp_status(r) == 200) {
-      tryCatch(httr2::resp_body_json(r), error = function(e) NULL)
-    } else NULL
+    if (!inherits(r, "httr2_response")) return(NULL)
+    code <- httr2::resp_status(r)
+    if (code == 404) return(list())
+    if (code != 200) return(NULL)
+    tryCatch(httr2::resp_body_json(r), error = function(e) NULL)
   })
 }
 
@@ -278,7 +294,7 @@ shrink_png <- function(path) {
   }, error = function(e) FALSE)
 }
 
-# Cherche une image PhyloPic pour chaque nom (famille ou espèce).
+# Cherche une image PhyloPic pour chaque nom (famille, genre ou espèce).
 # Retourne, pour chaque nom :
 #   status "ok"    + href de l'image
 #   status "none"  : PhyloPic n'a rien (définitif)
@@ -373,16 +389,34 @@ if (length(todo) > 0 && !is.null(phylopic_build)) {
   href   <- r1$href
   status <- r1$status
 
-  # --- Passe 2 : espèce représentative (secours) --------------
-  if (UTILISER_ESPECE_SECOURS) {
+  # --- Passe 2 : genres puis espèce de la famille (secours) ----
+  # Tous les noms candidats sont cherchés en une seule passe
+  # parallèle ; chaque famille prend le premier qui a une image.
+  if (UTILISER_SECOURS) {
     fb <- which(status == "none")
     if (length(fb) > 0) {
-      esp <- richesse$Espece_rep[match(todo[fb], families)]
-      esp <- first_words(esp, 2)                 # binomial : "Genre espece"
-      r2  <- find_images(esp)
-      href[fb]   <- r2$href
-      status[fb] <- r2$status
-      cat("Secours par espèce :", sum(r2$status == "ok"), "/", length(fb), "\n")
+      rows <- match(todo[fb], families)
+      cand <- lapply(rows, function(r) {
+        esp <- first_words(richesse$Espece_rep[r], 2)  # binomial : "Genre espece"
+        x <- c(richesse$Genres_rep[[r]], esp)
+        x <- x[!is.na(x) & nzchar(x)]
+        x[!duplicated(tolower(x))]
+      })
+      terms <- unique(unlist(cand))
+      r2 <- find_images(terms)
+      for (k in seq_along(fb)) {
+        pos <- match(cand[[k]], terms)
+        st  <- r2$status[pos]
+        j   <- which(st == "ok")[1]
+        if (!is.na(j)) {
+          href[fb[k]]   <- r2$href[pos[j]]
+          status[fb[k]] <- "ok"
+          cat("  ", todo[fb[k]], "-> silhouette de", cand[[k]][j], "\n")
+        } else if (any(st == "error")) {
+          status[fb[k]] <- "error"   # panne réseau : ne pas marquer .none
+        }
+      }
+      cat("Secours genre/espèce :", sum(status[fb] == "ok"), "/", length(fb), "\n")
     }
   }
 
@@ -420,6 +454,7 @@ invisible(gc())
 
 richesse$Silhouette <- ifelse(file.exists(png_path(families)),
                               png_path(families), NA_character_)
+richesse$Genres_rep <- NULL   # colonne-liste inutile pour le rendu
 
 cat("Silhouettes utilisées :", sum(!is.na(richesse$Silhouette)),
     "/", nrow(richesse),
