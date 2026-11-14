@@ -1,9 +1,14 @@
 import { api } from '@/services/api'
 import type { Page } from '@/types/common'
-import type { ProtectedSpeciesCreateInput, ProtectedSpeciesEntry } from '../types'
+import type {
+  ProtectedSpeciesCreateInput,
+  ProtectedSpeciesEntry,
+  TaxonGroupCount,
+} from '../types'
 
 export interface ProtectedSpeciesListParams {
   search?: string
+  taxon_group?: string
   page: number
   page_size: number
 }
@@ -12,6 +17,11 @@ export async function listProtectedSpecies(
   params: ProtectedSpeciesListParams,
 ): Promise<Page<ProtectedSpeciesEntry>> {
   const { data } = await api.get<Page<ProtectedSpeciesEntry>>('/protected-species', { params })
+  return data
+}
+
+export async function listTaxonGroups(): Promise<TaxonGroupCount[]> {
+  const { data } = await api.get<TaxonGroupCount[]>('/protected-species/groups')
   return data
 }
 

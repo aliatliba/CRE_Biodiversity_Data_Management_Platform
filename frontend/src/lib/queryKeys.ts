@@ -7,8 +7,13 @@ export const queryKeys = {
   species: (params: object) => ['species', params] as const,
   speciesAll: ['species'] as const,
   speciesDetail: (id: number) => ['species', 'detail', id] as const,
-  protectedSpecies: (params: { search?: string; page: number; page_size: number }) =>
-    ['protected-species', params] as const,
+  protectedSpecies: (params: {
+    search?: string
+    taxon_group?: string
+    page: number
+    page_size: number
+  }) => ['protected-species', params] as const,
+  protectedSpeciesGroups: ['protected-species', 'groups'] as const,
   users: ['users'] as const,
   roles: ['roles'] as const,
   exportOptions: ['export-options'] as const,

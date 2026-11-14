@@ -22,7 +22,6 @@ from app.integrations.iucn_client import IucnClient
 from app.integrations.mapper import normalize_provider_result
 from app.integrations.powo_client import PowoClient
 from app.integrations.wikidata_client import WikidataClient
-from app.models.protected_species import ProtectedSpeciesList
 from app.models.site import Site
 from app.models.site_species import SiteSpecies
 from app.models.species import Species, escape_like, name_search_filter
@@ -33,6 +32,7 @@ from app.schemas.species import (
     SpeciesResponse,
     SpeciesUpdate,
 )
+from app.services import protected_species_service
 
 PERMITTED_EDIT_FIELDS = {
     # Taxonomy
@@ -311,14 +311,11 @@ def ensure_site_association(
 
 def compute_national_status(db: Session, scientific_name: str, *other_names: str | None) -> str:
     """"Protected" if ``scientific_name`` or any of ``other_names`` (e.g. the synonym
-    the user typed) is on the protected list. Names are CITEXT: case-insensitive."""
-    names = [n for n in (scientific_name, *other_names) if n]
-    protected = (
-        db.query(ProtectedSpeciesList.id)
-        .filter(ProtectedSpeciesList.scientific_name.in_(names))
-        .first()
-    )
-    return "Protected" if protected else "Non Protected"
+    the user typed) is a name of a protected-list entry (accepted name, synonym or
+    spelling variant). Names are CITEXT: case-insensitive."""
+    if protected_species_service.is_protected_name(db, [scientific_name, *other_names]):
+        return protected_species_service.PROTECTED
+    return protected_species_service.NOT_PROTECTED
 
 
 def create_species(db: Session, data: SpeciesCreate, user_id: int) -> Species:
