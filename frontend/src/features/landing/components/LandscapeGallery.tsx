@@ -3,36 +3,36 @@ import { motion, useScroll, useTransform, type MotionValue } from 'framer-motion
 import { EditorialImage } from './EditorialImage'
 
 /**
- * Purely atmospheric — no record data or counts. Images are loaded from
- * public Unsplash URLs and can be replaced without changing the layout.
+ * Purely atmospheric — no record data or counts. Images live in
+ * public/assets/landing, cropped to the card shape (900×1200 WebP).
  */
 const SCENES = [
   {
     id: 'cedar',
     title: 'Cedar forest',
     region: 'Djurdjura ',
-    src: '/assets/landing/djurdjura.jpeg',
+    src: '/assets/landing/djurdjura.webp',
   },
 
   {
     id: 'steppe',
     title: 'Desert oasis lake',
     region: 'Ouargla',
-    src: '/assets/landing/ouargla.jpg',
+    src: '/assets/landing/ouargla.webp',
   },
 
     {
     id: 'wetland',
     title: 'Coastal wetlands',
     region: 'El Kala',
-    src: '/assets/landing/tonga.jpg',
+    src: '/assets/landing/tonga.webp',
   },
 
   {
     id: 'sahara',
     title: 'Saharan plateau',
     region: "Tassili n'Ajjer",
-    src: '/assets/landing/tassili.webp',
+    src: '/assets/landing/tassili-card.webp',
   },
 ]
 
@@ -49,13 +49,13 @@ export function LandscapeGallery() {
         </h2>
       </div>
 
-      <div className="mt-12 grid grid-cols-1 gap-2 px-2 sm:grid-cols-2 sm:px-2 lg:grid-cols-4">
+      <div className="mx-auto mt-12 grid w-full max-w-[1400px] grid-cols-1 gap-3 px-3 sm:grid-cols-2 lg:grid-cols-4">
         {SCENES.map((scene, i) => (
           <SceneCard key={scene.id} scene={scene} index={i} scrollYProgress={scrollYProgress} />
         ))}
       </div>
 
-      <div className="h-16" />
+      <div className="h-20 lg:h-28" />
     </section>
   )
 }
@@ -78,7 +78,7 @@ function SceneCard({
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: '-10% 0px' }}
       transition={{ duration: 0.6, delay: index * 0.08, ease: [0.22, 1, 0.36, 1] }}
-      className="group relative h-[70vh] min-h-[380px] overflow-hidden rounded-xl sm:h-[60vh] lg:h-[72vh]"
+      className={`group relative h-[420px] overflow-hidden rounded-2xl ring-1 ring-paper-0/10 sm:h-[460px] lg:h-[520px] ${index % 2 === 1 ? 'lg:mt-12' : ''}`}
     >
       <motion.div
         style={{ y }}
@@ -92,11 +92,11 @@ function SceneCard({
           src={scene.src}
           seed={scene.id}
           alt={`${scene.title}, ${scene.region}`}
-          className="rounded-xl transition-transform duration-1000 ease-out group-hover:scale-105"
+          className="transition-transform duration-1000 ease-out group-hover:scale-105"
         />
       </motion.div>
       <div className="absolute inset-0 bg-gradient-to-t from-canopy-950 via-canopy-950/10 to-transparent" />
-      <div className="absolute inset-x-0 bottom-0 p-5">
+      <div className="absolute inset-x-0 bottom-0 p-5 transition-transform duration-500 ease-out group-hover:-translate-y-1">
         <p className="font-display text-lg font-bold text-paper-0">{scene.title}</p>
         <p className="mt-0.5 font-mono text-[11px] uppercase tracking-[0.1em] text-paper-0/60">{scene.region}</p>
       </div>

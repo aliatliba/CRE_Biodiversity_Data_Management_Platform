@@ -12,10 +12,12 @@ import {
   WebGLRenderer,
 } from 'three'
 import { ContourField } from './ContourField'
+import { createLeaves } from './heroLeaves'
 
 /**
  * Hero background: a point-cloud relief (Atlas ridges behind, softer dunes in
- * front) with topographic contour bands and a few glowing survey beacons.
+ * front) with topographic contour bands, a few glowing survey beacons, and
+ * leaves drifting down in front of it (heroLeaves.ts).
  * Purely decorative — positions are not real site coordinates.
  *
  * Loaded lazily so three.js only ships with the landing page. The height field
@@ -246,6 +248,9 @@ export default function HeroTerrain() {
     })
     scene.add(new Points(headGeometry, headMaterial))
 
+    const leaves = createLeaves(isSmall ? 14 : 28, isSmall ? 5 : 12)
+    scene.add(leaves.mesh)
+
     // Pointer drifts the camera a little; eased every frame.
     const pointer = { x: 0, y: 0 }
     const eased = { x: 0, y: 0 }
@@ -279,6 +284,9 @@ export default function HeroTerrain() {
       last = now
       eased.x += (pointer.x - eased.x) * 0.04
       eased.y += (pointer.y - eased.y) * 0.04
+      leaves.uniforms.uTime.value = uniforms.uTime.value
+      // The pointer acts as a light wind on the leaves.
+      leaves.uniforms.uWind.value = eased.x
       placeCamera()
       renderer.render(scene, camera)
       frame = requestAnimationFrame(tick)
@@ -296,6 +304,7 @@ export default function HeroTerrain() {
       cancelAnimationFrame(frame)
     }
 
+    if (reduceMotion) leaves.uniforms.uTime.value = 6
     placeCamera()
     const resizeObserver = new ResizeObserver(resize)
     resizeObserver.observe(container)
@@ -331,6 +340,7 @@ export default function HeroTerrain() {
       stemMaterial.dispose()
       headGeometry.dispose()
       headMaterial.dispose()
+      leaves.dispose()
       renderer.dispose()
       renderer.domElement.remove()
     }
