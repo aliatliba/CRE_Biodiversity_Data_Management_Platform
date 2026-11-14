@@ -20,7 +20,15 @@ interface EditorialImageProps {
 
 export function EditorialImage({ src, alt, className = '', seed = 'default' }: EditorialImageProps) {
   if (src) {
-    return <img src={src} alt={alt} className={`h-full w-full object-cover ${className}`} loading="lazy" />
+    return (
+      <img
+        src={src}
+        alt={alt}
+        className={`h-full w-full object-cover ${className}`}
+        loading="lazy"
+        decoding="async"
+      />
+    )
   }
 
   const hue = Array.from(seed).reduce((acc, c) => acc + c.charCodeAt(0), 0) % 360
