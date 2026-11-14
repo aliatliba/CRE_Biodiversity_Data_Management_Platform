@@ -6,6 +6,7 @@ from app.schemas.protected_species import (
     ProtectedSpeciesCreate,
     ProtectedSpeciesListItem,
     ProtectedSpeciesResponse,
+    TaxonGroupCount,
 )
 from app.services import protected_species_service
 
@@ -17,15 +18,21 @@ def list_protected_species(
     db: DBSession,
     user: CurrentUser,
     search: str | None = Query(None, max_length=255),
+    taxon_group: str | None = Query(None, max_length=50),
     page: int = Query(1, ge=1),
     page_size: int = Query(25, ge=1, le=100),
 ):
     """Any active user can view the list — it's reference data used while
     logging species, not something only admins need to see."""
     items, total = protected_species_service.list_protected_species(
-        db, search, page=page, page_size=page_size
+        db, search, taxon_group, page=page, page_size=page_size
     )
     return paginate(items, total, PaginationParams(page=page, page_size=page_size))
+
+
+@router.get("/groups", response_model=list[TaxonGroupCount])
+def list_taxon_groups(db: DBSession, user: CurrentUser):
+    return protected_species_service.list_taxon_groups(db)
 
 
 @router.post("", response_model=ProtectedSpeciesResponse, status_code=201)

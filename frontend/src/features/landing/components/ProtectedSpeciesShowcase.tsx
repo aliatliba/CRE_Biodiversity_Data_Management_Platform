@@ -11,10 +11,10 @@ import { TiltCard } from './TiltCard'
  *   Images are served from frontend/public/assets/landing.
  */
 const SPECIES = [
-  { id: 'quercus-afares', name: 'Quercus afares', common: 'Afares oak', src: '/assets/landing/quercus.jpeg' },
-  { id: 'gazella-cuvieri', name: 'Gazella cuvieri', common: "Cuvier's gazelle", src: '/assets/landing/Gazelle-cuvier-copie-600x600.jpg' },
-  { id: 'cedrus-atlantica', name: 'Cedrus atlantica', common: 'Atlas cedar', src: '/assets/landing/Cedrus-atlantica-Glauca-20050005-A-scaled.jpg' },
-  { id: 'testudo-graeca', name: 'Testudo graeca', common: 'Greek tortoise', src: '/assets/landing/tortue.webp' },
+  { id: 'quercus-afares', name: 'Quercus afares', common: 'Afares oak', src: '/assets/landing/quercus.webp' },
+  { id: 'gazella-cuvieri', name: 'Gazella cuvieri', common: "Cuvier's gazelle", src: '/assets/landing/gazelle.webp' },
+  { id: 'cedrus-atlantica', name: 'Cedrus atlantica', common: 'Atlas cedar', src: '/assets/landing/cedrus.webp' },
+  { id: 'testudo-graeca', name: 'Testudo graeca', common: 'Greek tortoise', src: '/assets/landing/tortue-card.webp' },
 ]
 
 export function ProtectedSpeciesShowcase() {

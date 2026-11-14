@@ -9,16 +9,17 @@ interface Source {
   angle: number // degrees, 0 = top, clockwise
 }
 
+// Evenly spaced around the record; details kept short so labels fit the frame.
 const SOURCES: Source[] = [
-  { id: 'gbif', label: 'GBIF', detail: 'Global occurrence data', angle: -60 },
-  { id: 'iucn', label: 'IUCN Red List', detail: 'Conservation status', angle: -20 },
-  { id: 'inat', label: 'iNaturalist', detail: 'Community observations', angle: 20 },
-  { id: 'powo', label: 'Plants of the World', detail: 'Accepted plant names', angle: 60 },
-  { id: 'wikidata', label: 'Wikidata', detail: 'Cross-referenced identifiers', angle: 100 },
+  { id: 'gbif', label: 'GBIF', detail: 'Occurrence data', angle: 0 },
+  { id: 'iucn', label: 'IUCN Red List', detail: 'Conservation status', angle: 72 },
+  { id: 'powo', label: 'Plants of the World', detail: 'Accepted plant names', angle: 144 },
+  { id: 'inat', label: 'iNaturalist', detail: 'Community sightings', angle: 216 },
+  { id: 'wikidata', label: 'Wikidata', detail: 'Linked identifiers', angle: 288 },
 ]
 
-const RADIUS = 150
-const CENTER = { x: 250, y: 190 }
+const RADIUS = 128
+const CENTER = { x: 250, y: 200 }
 
 function pointOnCircle(angleDeg: number, radius: number) {
   const angle = (angleDeg - 90) * (Math.PI / 180)
@@ -47,7 +48,7 @@ export function EcosystemIntegrations() {
         </Reveal>
 
         <Reveal delay={0.1}>
-          <svg ref={diagramRef} viewBox="0 0 500 380" className="mx-auto h-auto w-full max-w-lg overflow-visible" role="img" aria-label="BioData record connected to GBIF, IUCN Red List, iNaturalist, Plants of the World Online, and Wikidata">
+          <svg ref={diagramRef} viewBox="0 0 500 400" className="mx-auto h-auto w-full max-w-lg overflow-visible" role="img" aria-label="BioData record connected to GBIF, IUCN Red List, iNaturalist, Plants of the World Online, and Wikidata">
             {SOURCES.map((source, i) => {
               const p = pointOnCircle(source.angle, RADIUS)
               return (
@@ -71,6 +72,8 @@ export function EcosystemIntegrations() {
             {SOURCES.map((source, i) => {
               const p = pointOnCircle(source.angle, RADIUS)
               const anchor = p.x < CENTER.x - 10 ? 'end' : p.x > CENTER.x + 10 ? 'start' : 'middle'
+              const labelX = p.x + (anchor === 'end' ? -12 : anchor === 'start' ? 12 : 0)
+              const above = p.y < CENTER.y
               return (
                 <motion.g
                   key={source.id}
@@ -79,21 +82,22 @@ export function EcosystemIntegrations() {
                   viewport={{ once: true }}
                   transition={{ duration: 0.4, delay: 0.15 * i + 0.5, ease: 'backOut' }}
                 >
+                  <circle cx={p.x} cy={p.y} r={9} fill="var(--color-canopy-500)" opacity={0.15} />
                   <circle cx={p.x} cy={p.y} r={5} fill="var(--color-canopy-500)" />
                   <text
-                    x={p.x + (anchor === 'end' ? -10 : anchor === 'start' ? 10 : 0)}
-                    y={p.y + (source.angle < 0 ? -10 : 20)}
+                    x={labelX}
+                    y={p.y + (above ? -27 : 24)}
                     textAnchor={anchor}
-                    className="font-display text-[12px] font-bold"
-                    fill="var(--color-canopy-950)"
+                    className="font-display text-[14px] font-bold"
+                    fill="var(--color-fg)"
                   >
                     {source.label}
                   </text>
                   <text
-                    x={p.x + (anchor === 'end' ? -10 : anchor === 'start' ? 10 : 0)}
-                    y={p.y + (source.angle < 0 ? 4 : 34)}
+                    x={labelX}
+                    y={p.y + (above ? -13 : 40)}
                     textAnchor={anchor}
-                    className="font-mono text-[8px]"
+                    className="font-mono text-[10.5px]"
                     fill="var(--color-fg-subtle)"
                   >
                     {source.detail}
@@ -125,8 +129,8 @@ export function EcosystemIntegrations() {
                 fill="none"
                 stroke="var(--color-canopy-500)"
                 strokeWidth={1.5}
-                initial={{ r: 30, opacity: 0 }}
-                animate={{ r: [30, 52], opacity: [0.55, 0] }}
+                initial={{ r: 36, opacity: 0 }}
+                animate={{ r: [36, 62], opacity: [0.55, 0] }}
                 transition={{ duration: 2.2, delay: 1.2, repeat: Infinity, ease: 'easeOut' }}
               />
             )}
@@ -137,11 +141,11 @@ export function EcosystemIntegrations() {
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: 0.9, ease: 'backOut' }}
             >
-              <circle cx={CENTER.x} cy={CENTER.y} r={30} fill="var(--color-canopy-950)" />
-              <text x={CENTER.x} y={CENTER.y - 3} textAnchor="middle" className="font-display text-[11px] font-bold" fill="var(--color-paper-0)">
+              <circle cx={CENTER.x} cy={CENTER.y} r={36} fill="var(--color-canopy-950)" />
+              <text x={CENTER.x} y={CENTER.y - 2} textAnchor="middle" className="font-display text-[13px] font-bold" fill="var(--color-paper-0)">
                 BioData
               </text>
-              <text x={CENTER.x} y={CENTER.y + 11} textAnchor="middle" className="font-mono text-[8px]" fill="var(--color-lichen-300)">
+              <text x={CENTER.x} y={CENTER.y + 13} textAnchor="middle" className="font-mono text-[9.5px]" fill="var(--color-lichen-300)">
                 record
               </text>
             </motion.g>
