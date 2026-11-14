@@ -1,5 +1,5 @@
 from app.models.export import Export
-from app.models.protected_species import ProtectedSpeciesList
+from app.models.protected_species import ProtectedSpeciesList, ProtectedSpeciesName
 from app.models.refresh_token import RefreshToken
 from app.models.role import Role
 from app.models.site import Site
@@ -11,6 +11,7 @@ from app.models.validation_history import SpeciesValidationHistory
 __all__ = [
     "Export",
     "ProtectedSpeciesList",
+    "ProtectedSpeciesName",
     "RefreshToken",
     "Role",
     "Site",
