@@ -15,6 +15,10 @@ accepted name. Each JSON entry is one taxon:
 - ``printed_names``: the names as printed in the Journal officiel, for display.
 
 Decree entries that resolve to the same taxon (sheet "Duplicates") become one entry.
+
+Species protected by other official texts are added by hand in
+tools/protected_species_supplement.json (same fields, names already checked); they
+are merged in and must not share a name with the decree entries.
 """
 from __future__ import annotations
 
@@ -26,6 +30,14 @@ from pathlib import Path
 from openpyxl import load_workbook
 
 OUTPUT = Path(__file__).resolve().parents[1] / "app" / "data" / "protected_species_dz.json"
+SUPPLEMENT = Path(__file__).resolve().parent / "protected_species_supplement.json"
+
+# Source recorded for the supplement entries (the user gave no specific text).
+SUPPLEMENT_SOURCE = {
+    "decree": "JO",
+    "source_reference": "Journal officiel de la République algérienne démocratique et populaire",
+    "common_name_ar": None,
+}
 
 DECREES = {
     "Plants": {
@@ -172,6 +184,12 @@ def build_entries(workbook) -> list[dict]:
                     entry["names"].append(n)
             if printed and printed not in entry["printed_names"]:
                 entry["printed_names"].append(printed)
+
+    for item in json.loads(SUPPLEMENT.read_text(encoding="utf-8")) if SUPPLEMENT.exists() else []:
+        key = item["scientific_name"].lower()
+        if key in entries:
+            raise ValueError(f"Supplement taxon {item['scientific_name']!r} is already listed")
+        entries[key] = {**SUPPLEMENT_SOURCE, **item}
 
     # A name must point to a single taxon, or matching a species would be ambiguous.
     owner: dict[str, str] = {}
