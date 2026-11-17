@@ -92,13 +92,15 @@ def test_decree_seed_file_is_consistent():
 
     seed = json.load(open(DECREE_SEED_FILE, encoding="utf-8"))
     assert len(seed) > 900
+    names = {item["scientific_name"] for item in seed}
+    assert {"Vulpes zerda", "Gazella cuvieri", "Hyaena hyaena"} <= names  # supplement merged
     keys = [item["scientific_name"].lower() for item in seed]
     assert len(keys) == len(set(keys))
     match_names = [n.lower() for item in seed for n in item["names"]]
     assert len(match_names) == len(set(match_names))  # one taxon per name
     for item in seed:
         assert item["scientific_name"] in item["names"]
-        assert item["decree"] in ("12-03", "12-235")
+        assert item["decree"] in ("12-03", "12-235", "JO")
         assert "?" not in item["scientific_name"]
 
 
