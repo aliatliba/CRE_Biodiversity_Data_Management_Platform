@@ -12,7 +12,10 @@ export interface ProtectedSpeciesEntry {
   /** Current accepted name, without author. */
   scientific_name: string
   source_reference: string | null
-  /** "12-03" (plants) or "12-235" (animals); null for entries added by an administrator. */
+  /**
+   * Official source: "12-03" (plants decree), "12-235" (animals decree) or "JO" (other
+   * Journal officiel texts); null for entries added by an administrator.
+   */
   decree: string | null
   kingdom: string | null
   taxon_group: string | null

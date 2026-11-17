@@ -11,9 +11,9 @@ const HeroTerrain = lazy(() => import('./HeroTerrain'))
 
 const headlineWords = ['A', 'living', 'registry', 'for', "Algeria's", 'biodiversity.']
 
-/** Public reference figures (the 2012 decrees and the databases queried), not registry data. */
+/** Public reference figures (the official protected lists and the databases queried), not registry data. */
 const FACTS = [
-  { value: 917, label: 'protected taxa', more: 'on the national list' },
+  { value: 940, label: 'protected taxa', more: 'on the national list' },
   { value: 5, label: 'reference databases', more: 'behind every check' },
   { value: 2, label: 'decrees verified', more: 'name by name' },
 ]

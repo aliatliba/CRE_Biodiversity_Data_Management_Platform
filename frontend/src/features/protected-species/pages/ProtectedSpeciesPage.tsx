@@ -124,7 +124,8 @@ export function ProtectedSpeciesPage() {
     <>
       <p className="mb-6 max-w-2xl text-sm text-fg-subtle">
         Taxa protected in Algeria by executive decrees n° 12-03 (plants and lichens) and n° 12-235
-        (animals) of 2012, with every printed name checked against current nomenclature. A species
+        (animals) of 2012, and endangered species listed in other texts of the Journal officiel, with
+        every printed name checked against current nomenclature. A species
         logged under the current name or any older name of an entry is automatically marked{' '}
         <span className="font-semibold text-canopy-800">Protected</span>.
       </p>
