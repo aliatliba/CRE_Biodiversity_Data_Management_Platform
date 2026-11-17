@@ -11,7 +11,8 @@ from app.models.protected_species import ProtectedSpeciesList, ProtectedSpeciesN
 from app.models.species import Species, escape_like
 from app.schemas.protected_species import ProtectedSpeciesCreate
 
-# Algeria's 2012 decrees, verified name by name (built by tools/build_protected_species.py)
+# Algeria's 2012 decrees, verified name by name, plus species protected by other
+# official texts (built by tools/build_protected_species.py)
 DECREE_SEED_FILE = Path(__file__).resolve().parents[1] / "data" / "protected_species_dz.json"
 
 PROTECTED = "Protected"
@@ -225,7 +226,7 @@ def remove_protected_species(db: Session, entry_id: int) -> None:
         raise NotFoundError("Entry not found")
     if entry.decree:
         raise BadRequestError(
-            f"This species is protected by decree n° {entry.decree} and cannot be removed."
+            "This species is on an official protected list and cannot be removed."
         )
     names = [n.name for n in entry.names if n.kind == "match"]
     db.delete(entry)
