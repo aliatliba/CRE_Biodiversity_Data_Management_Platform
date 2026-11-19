@@ -30,6 +30,7 @@ import { StatCard } from '@/components/common/StatCard'
 
 import * as siteService from '../services/siteService'
 import { DeleteSiteDialogs } from '../components/DeleteSiteDialogs'
+import { SiteDesignationsSection } from '../components/SiteDesignationsSection'
 
 import * as speciesService from '@/features/species/services/speciesService'
 import { SpeciesTable } from '@/features/species/components/SpeciesTable'
@@ -241,6 +242,8 @@ export function SiteDetailPage() {
               </div>
             )}
           </Card>
+
+          <SiteDesignationsSection site={site} isAdmin={isAdmin} />
 
           {/* -------------------------------------------------
               SUMMARY STAT CARDS
