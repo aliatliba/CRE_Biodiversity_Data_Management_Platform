@@ -1,9 +1,10 @@
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, computed_field
 
 from app.schemas.common import ScientificName, Text
+from app.services import cites_service
 
 Rank = Text(100)
 LongText = Text(10_000)
@@ -159,10 +160,17 @@ class SpeciesListItem(BaseModel):
     id: int
     scientific_name: str
     common_name: str | None
+    class_name: str | None
     family: str | None
     kingdom: str | None
     iucn_status: str | None
     national_status: str
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def cites(self) -> bool:
+        """Listed in the CITES appendices (app/data/cites_species.json)."""
+        return cites_service.is_cites(self.scientific_name)
 
 
 class BatchSpeciesLookupItem(BaseModel):

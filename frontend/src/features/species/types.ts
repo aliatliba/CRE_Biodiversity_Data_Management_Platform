@@ -37,8 +37,18 @@ export interface Species {
 /** Slim row returned by GET /species (the table view). */
 export type SpeciesListItem = Pick<
   Species,
-  'id' | 'scientific_name' | 'common_name' | 'family' | 'kingdom' | 'iucn_status' | 'national_status'
->
+  | 'id'
+  | 'scientific_name'
+  | 'common_name'
+  | 'class_name'
+  | 'family'
+  | 'kingdom'
+  | 'iucn_status'
+  | 'national_status'
+> & {
+  /** Listed in the CITES appendices. */
+  cites: boolean
+}
 
 /** A species-to-site link (GET /sites/{id}/species). */
 export interface SiteSpeciesLink {
@@ -151,6 +161,8 @@ export interface SpeciesFilters {
   national_status: string
   site_id: string
   iucn_status: string
+  /** '' (all), 'true' (CITES-listed only) or 'false' (not listed). */
+  cites: string
 }
 
 export const EMPTY_SPECIES_FILTERS: SpeciesFilters = {
@@ -163,6 +175,7 @@ export const EMPTY_SPECIES_FILTERS: SpeciesFilters = {
   national_status: '',
   site_id: '',
   iucn_status: '',
+  cites: '',
 
 }
 
