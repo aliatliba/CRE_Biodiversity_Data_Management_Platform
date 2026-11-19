@@ -1,12 +1,18 @@
+import structlog
 from sqlalchemy import func
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.core.exceptions import ConflictError, NotFoundError
+from app.core import designations as designation_catalog
+from app.core.exceptions import BadRequestError, ConflictError, NotFoundError
 from app.models.site import Site
+from app.models.site_designation import SiteDesignation
 from app.models.site_species import SiteSpecies
 from app.models.species import Species, escape_like
 from app.schemas.site import SiteCreate, SiteUpdate
 from app.services.dashboard_service import THREATENED_STATUSES, _taxonomy_complete_filter
+
+logger = structlog.get_logger()
 
 
 def create_site(db: Session, data: SiteCreate, user_id: int) -> Site:
@@ -60,6 +66,7 @@ def list_sites(db: Session, search: str | None = None) -> list[dict]:
             "code": site.code,
             "description": site.description,
             "created_by": site.created_by,
+            "designations": site.designations,
             "species_count": count,
             "species_share": round(count / total_records * 100, 1) if total_records else 0.0,
             "protected_count": protected,
@@ -93,3 +100,44 @@ def delete_site(db: Session, site_id: int, force: bool = False) -> None:
     except Exception:
         db.rollback()
         raise
+
+
+def _require_designation(designation_id: str) -> None:
+    if designation_id not in designation_catalog.BY_ID:
+        raise BadRequestError(f"Unknown designation: {designation_id}")
+
+
+def add_designation(db: Session, site_id: int, designation_id: str, user_id: int) -> tuple[Site, bool]:
+    """Give the site a designation. Idempotent: returns (site, created), where
+    created is False when the site already had it."""
+    _require_designation(designation_id)
+    site = get_site(db, site_id)
+    if any(link.designation_id == designation_id for link in site.designation_links):
+        return site, False
+    try:
+        site.designation_links.append(
+            SiteDesignation(designation_id=designation_id, created_by=user_id)
+        )
+        db.commit()
+    except IntegrityError:
+        # Added at the same moment by another request: same outcome.
+        db.rollback()
+        db.refresh(site)
+        return site, False
+    db.refresh(site)
+    logger.info("site_designation_added", site_id=site_id, designation_id=designation_id, user_id=user_id)
+    return site, True
+
+
+def remove_designation(db: Session, site_id: int, designation_id: str, user_id: int) -> None:
+    """Remove a designation from the site; nothing to do when the site does not have it."""
+    _require_designation(designation_id)
+    get_site(db, site_id)
+    removed = (
+        db.query(SiteDesignation)
+        .filter(SiteDesignation.site_id == site_id, SiteDesignation.designation_id == designation_id)
+        .delete(synchronize_session=False)
+    )
+    db.commit()
+    if removed:
+        logger.info("site_designation_removed", site_id=site_id, designation_id=designation_id, user_id=user_id)

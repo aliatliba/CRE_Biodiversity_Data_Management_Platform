@@ -32,6 +32,22 @@ class SiteUpdate(BaseModel):
         return self
 
 
+class DesignationResponse(BaseModel):
+    """A catalog entry (app.core.designations)."""
+    id: str
+    name_en: str
+    name_fr: str
+    short_name: str
+    icon: str
+    official_url: str | None
+    sort_order: int
+
+
+class SiteDesignationCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    designation_id: Text(50, min_length=1)
+
+
 class SiteResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
@@ -39,6 +55,8 @@ class SiteResponse(BaseModel):
     code: str | None
     description: str | None
     created_by: int | None
+    # Sorted by the catalog order.
+    designations: list[DesignationResponse] = []
 
 
 class SiteListItem(SiteResponse):
