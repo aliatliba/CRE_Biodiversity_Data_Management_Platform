@@ -19,6 +19,7 @@ import { getErrorMessage } from '@/lib/errors'
 import { siteUrl } from '@/lib/constants'
 import { queryKeys } from '@/lib/queryKeys'
 import * as siteService from '../services/siteService'
+import { DesignationTiles } from '../components/DesignationTiles'
 import { DeleteSiteDialogs } from '../components/DeleteSiteDialogs'
 import type { Site, SiteListItem } from '../types'
 
@@ -199,6 +200,8 @@ export function SitesPage() {
                     </button>
                   )}
                 </div>
+
+                <DesignationTiles designations={site.designations} className="mt-3" />
 
                 {/* Species count and share of all records */}
                 <div className="mt-4 flex items-end justify-between gap-3">
