@@ -56,7 +56,8 @@ def test_species_list_is_slim(client, admin_headers):
     _seed(client, admin_headers)
     item = client.get("/api/v1/species", headers=admin_headers).json()["items"][0]
     assert set(item) == {
-        "id", "scientific_name", "common_name", "family", "kingdom", "iucn_status", "national_status"
+        "id", "scientific_name", "common_name", "class_name", "family", "kingdom",
+        "iucn_status", "national_status", "cites",
     }
     q = client.get("/api/v1/species?search=THREE", headers=admin_headers).json()
     assert [i["scientific_name"] for i in q["items"]] == ["Genus three"]

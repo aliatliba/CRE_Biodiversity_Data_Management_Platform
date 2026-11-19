@@ -32,7 +32,7 @@ from app.schemas.species import (
     SpeciesResponse,
     SpeciesUpdate,
 )
-from app.services import protected_species_service
+from app.services import cites_service, protected_species_service
 
 PERMITTED_EDIT_FIELDS = {
     # Taxonomy
@@ -449,6 +449,7 @@ def _apply_species_filters(
     national_status: str | None = None,
     site_id: int | None = None,
     iucn_status: str | None = None,
+    cites: bool | None = None,
 ):
     if site_id is not None:
         query = query.join(SiteSpecies, SiteSpecies.species_id == Species.id).filter(
@@ -474,6 +475,9 @@ def _apply_species_filters(
         statuses = [s.strip() for s in iucn_status.split(",") if s.strip()]
         if statuses:
             query = query.filter(Species.iucn_status.in_(statuses))
+    if cites is not None:
+        condition = cites_service.cites_condition()
+        query = query.filter(condition if cites else ~condition)
     return query
 
 
@@ -489,6 +493,7 @@ def list_species(
     national_status: str | None = None,
     iucn_status: str | None = None,
     site_id: int | None = None,
+    cites: bool | None = None,
     page: int = 1,
     page_size: int = 20,
 
@@ -499,6 +504,7 @@ def list_species(
             Species.id,
             Species.scientific_name,
             Species.common_name,
+            Species.class_name,
             Species.family,
             Species.kingdom,
             Species.iucn_status,
@@ -517,6 +523,7 @@ def list_species(
         national_status=national_status,
         site_id=site_id,
         iucn_status=iucn_status,
+        cites=cites,
     )
     total = query.count()
     items = (

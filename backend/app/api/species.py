@@ -229,6 +229,9 @@ def list_species(
     genus: str | None = Query(None, max_length=100),
     national_status: str | None = Query(None, max_length=50),
     site_id: int | None = Query(None),
+    cites: bool | None = Query(
+        None, description="true: only CITES-listed species; false: only species not listed."
+    ),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     iucn_status: str | None = Query(
@@ -252,6 +255,7 @@ def list_species(
         national_status=national_status,
         site_id=site_id,
         iucn_status=iucn_status,
+        cites=cites,
         page=page,
         page_size=page_size,
     )

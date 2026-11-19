@@ -24,7 +24,7 @@ import { SpeciesSearch } from '../components/SpeciesSearch'
 const DEFAULT_PAGE_SIZE = 15
 
 /** Filters that live in the URL (shareable / linkable from the dashboard and site pages). */
-const URL_FILTER_KEYS = ['site_id', 'national_status', 'iucn_status', 'search'] as const
+const URL_FILTER_KEYS = ['site_id', 'national_status', 'iucn_status', 'cites', 'search'] as const
 
 function filtersFromParams(params: URLSearchParams): SpeciesFilters {
   const filters = { ...EMPTY_SPECIES_FILTERS }
@@ -45,6 +45,7 @@ function toListParams(filters: SpeciesFilters, page: number, pageSize: number) {
     national_status: filters.national_status || undefined,
     iucn_status: filters.iucn_status || undefined,
     site_id: filters.site_id ? Number(filters.site_id) : undefined,
+    cites: filters.cites ? filters.cites === 'true' : undefined,
   }
 }
 
