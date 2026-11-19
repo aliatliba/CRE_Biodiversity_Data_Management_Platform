@@ -3,6 +3,7 @@ from app.models.protected_species import ProtectedSpeciesList, ProtectedSpeciesN
 from app.models.refresh_token import RefreshToken
 from app.models.role import Role
 from app.models.site import Site
+from app.models.site_designation import SiteDesignation
 from app.models.site_species import SiteSpecies
 from app.models.species import Species
 from app.models.user import User
@@ -15,6 +16,7 @@ __all__ = [
     "RefreshToken",
     "Role",
     "Site",
+    "SiteDesignation",
     "SiteSpecies",
     "Species",
     "SpeciesValidationHistory",

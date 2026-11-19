@@ -257,6 +257,67 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/sites/{site_id}/designations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Add Site Designation
+         * @description Admin only. Returns the site's designations; 201 when added, 200 when the
+         *     site already had it (idempotent).
+         */
+        post: operations["add_site_designation_api_v1_sites__site_id__designations_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sites/{site_id}/designations/{designation_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Remove Site Designation
+         * @description Admin only. Idempotent: 204 whether or not the site had the designation.
+         */
+        delete: operations["remove_site_designation_api_v1_sites__site_id__designations__designation_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/designations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Designations
+         * @description The designation catalog, in display order.
+         */
+        get: operations["list_designations_api_v1_designations_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/species/check": {
         parameters: {
             query?: never;
@@ -846,6 +907,26 @@ export interface components {
              */
             national_status: string;
         };
+        /**
+         * DesignationResponse
+         * @description A catalog entry (app.core.designations).
+         */
+        DesignationResponse: {
+            /** Id */
+            id: string;
+            /** Name En */
+            name_en: string;
+            /** Name Fr */
+            name_fr: string;
+            /** Short Name */
+            short_name: string;
+            /** Icon */
+            icon: string;
+            /** Official Url */
+            official_url: string | null;
+            /** Sort Order */
+            sort_order: number;
+        };
         /** EcologicalTraits */
         EcologicalTraits: {
             /** Guild */
@@ -1155,6 +1236,11 @@ export interface components {
             /** Description */
             description?: string | null;
         };
+        /** SiteDesignationCreate */
+        SiteDesignationCreate: {
+            /** Designation Id */
+            designation_id: string;
+        };
         /**
          * SiteListItem
          * @description GET /sites row: the site plus its species counters.
@@ -1170,6 +1256,11 @@ export interface components {
             description: string | null;
             /** Created By */
             created_by: number | null;
+            /**
+             * Designations
+             * @default []
+             */
+            designations: components["schemas"]["DesignationResponse"][];
             /** Species Count */
             species_count: number;
             /** Species Share */
@@ -1193,6 +1284,11 @@ export interface components {
             description: string | null;
             /** Created By */
             created_by: number | null;
+            /**
+             * Designations
+             * @default []
+             */
+            designations: components["schemas"]["DesignationResponse"][];
         };
         /** SiteSpeciesCreate */
         SiteSpeciesCreate: {
@@ -2221,6 +2317,98 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_site_designation_api_v1_sites__site_id__designations_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                site_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SiteDesignationCreate"];
+            };
+        };
+        responses: {
+            /** @description The site already had this designation */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DesignationResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    remove_site_designation_api_v1_sites__site_id__designations__designation_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                site_id: number;
+                designation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_designations_api_v1_designations_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DesignationResponse"][];
                 };
             };
         };
