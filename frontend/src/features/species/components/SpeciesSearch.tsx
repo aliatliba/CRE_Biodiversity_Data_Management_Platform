@@ -117,7 +117,7 @@ export function SpeciesSearch({ filters, onChange, sites }: SpeciesSearchProps) 
 
   return (
     <div className="flex w-full flex-col gap-3">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
         <SearchInput
           value={filters.search}
           onChange={(e) => setField('search', e.target.value)}
@@ -146,6 +146,16 @@ export function SpeciesSearch({ filters, onChange, sites }: SpeciesSearchProps) 
           <option value="">All national statuses</option>
           <option value="Protected">Protected</option>
           <option value="Non Protected">Non Protected</option>
+        </Select>
+
+        <Select
+          aria-label="CITES"
+          value={filters.cites}
+          onChange={(e) => setField('cites', e.target.value)}
+        >
+          <option value="">All CITES statuses</option>
+          <option value="true">CITES listed</option>
+          <option value="false">Not CITES listed</option>
         </Select>
 
         <IucnStatusMultiSelect
