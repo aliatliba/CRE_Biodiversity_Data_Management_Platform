@@ -24,6 +24,7 @@ export interface ListParams {
   national_status?: string
   iucn_status?: string
   site_id?: number
+  cites?: boolean
   page?: number
   page_size?: number
 }

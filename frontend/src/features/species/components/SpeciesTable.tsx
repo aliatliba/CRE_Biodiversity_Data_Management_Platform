@@ -19,14 +19,10 @@ export function SpeciesTable({ species, onRemove, canRemove }: SpeciesTableProps
           <thead>
             <tr className="border-b border-line bg-surface-muted text-xs font-semibold uppercase tracking-wide text-fg-muted">
               <th className="px-4 py-2.5">Scientific name</th>
-              <th className="hidden px-4 py-2.5 md:table-cell">
-                Family
-              </th>
-              <th className="hidden px-4 py-2.5 lg:table-cell">
-                Kingdom
-              </th>
+              <th className="hidden px-4 py-2.5 md:table-cell">Class</th>
               <th className="px-4 py-2.5">IUCN</th>
               <th className="px-4 py-2.5">National status</th>
+              <th className="px-4 py-2.5">CITES</th>
               {onRemove && (
                 <th className="px-4 py-2.5 text-right">
                   <span className="sr-only">Actions</span>
@@ -51,13 +47,7 @@ export function SpeciesTable({ species, onRemove, canRemove }: SpeciesTableProps
                 </td>
 
                 <td className="hidden px-4 py-2.5 text-fg-muted md:table-cell">
-                  {sp.family ?? (
-                    <span className="text-danger">Missing</span>
-                  )}
-                </td>
-
-                <td className="hidden px-4 py-2.5 text-fg-muted lg:table-cell">
-                  {sp.kingdom ?? (
+                  {sp.class_name ?? (
                     <span className="text-danger">Missing</span>
                   )}
                 </td>
@@ -82,6 +72,18 @@ export function SpeciesTable({ species, onRemove, canRemove }: SpeciesTableProps
                   >
                     {sp.national_status}
                   </Badge>
+                </td>
+
+                <td className="px-4 py-2.5">
+                  {sp.cites ? (
+                    <Badge tone="info" title="Listed in the CITES appendices">
+                      CITES
+                    </Badge>
+                  ) : (
+                    <span className="text-fg-subtle" aria-label="Not CITES-listed">
+                      —
+                    </span>
+                  )}
                 </td>
 
                 {onRemove && (

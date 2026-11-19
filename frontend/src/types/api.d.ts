@@ -1300,6 +1300,8 @@ export interface components {
             scientific_name: string;
             /** Common Name */
             common_name: string | null;
+            /** Class Name */
+            class_name: string | null;
             /** Family */
             family: string | null;
             /** Kingdom */
@@ -1308,6 +1310,11 @@ export interface components {
             iucn_status: string | null;
             /** National Status */
             national_status: string;
+            /**
+             * Cites
+             * @description Listed in the CITES appendices (app/data/cites_species.json).
+             */
+            readonly cites: boolean;
         };
         /** SpeciesLookupRequest */
         SpeciesLookupRequest: {
@@ -2422,6 +2429,8 @@ export interface operations {
                 genus?: string | null;
                 national_status?: string | null;
                 site_id?: number | null;
+                /** @description true: only CITES-listed species; false: only species not listed. */
+                cites?: boolean | null;
                 page?: number;
                 page_size?: number;
                 /** @description One or more IUCN statuses. Accepts a single value (e.g. 'CR') or a comma-separated list (e.g. 'CR,EN,VU'), matched as an OR. */
