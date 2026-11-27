@@ -28,7 +28,8 @@ from app.main import app  # noqa: E402
 from app.models.role import Role  # noqa: E402
 from app.models.user import User  # noqa: E402
 
-engine = create_engine(TEST_DATABASE_URL)
+# Through Settings, so the URL gets the same driver as the app's (see Settings).
+engine = create_engine(get_settings().database_url)
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 

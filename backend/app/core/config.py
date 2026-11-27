@@ -1,6 +1,6 @@
 from functools import lru_cache
 
-from pydantic import model_validator
+from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Placeholder secrets that must never sign tokens outside development / tests.
@@ -63,6 +63,17 @@ class Settings(BaseSettings):
     # by the per-species delay) and provider-result cache lifetime.
     lookup_batch_concurrency: int = 3
     provider_cache_ttl_seconds: int = 86400
+
+    @field_validator("database_url")
+    @classmethod
+    def _use_psycopg2(cls, value: str) -> str:
+        """Plain postgresql:// (and Heroku-style postgres://) URLs, as hosting
+        dashboards and CI give them, use psycopg2: SQLAlchemy 2.1 would otherwise
+        pick psycopg 3, which is not installed."""
+        for prefix in ("postgresql://", "postgres://"):
+            if value.startswith(prefix):
+                return "postgresql+psycopg2://" + value[len(prefix):]
+        return value
 
     @model_validator(mode="after")
     def _refuse_weak_secret(self) -> "Settings":

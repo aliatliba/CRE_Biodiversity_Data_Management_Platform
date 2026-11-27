@@ -48,3 +48,12 @@ def test_refresh_token_carries_jti():
 def test_expired_token_is_rejected():
     expired = datetime.now(timezone.utc) - timedelta(seconds=1)
     assert decode_token(create_refresh_token(7, "old", expired)) is None
+
+
+def test_plain_postgres_urls_use_psycopg2():
+    from app.core.config import Settings
+
+    for url in ("postgresql://u:p@h:5432/db", "postgres://u:p@h:5432/db"):
+        assert Settings(database_url=url).database_url == "postgresql+psycopg2://u:p@h:5432/db"
+    explicit = "postgresql+psycopg2://u:p@h:5432/db"
+    assert Settings(database_url=explicit).database_url == explicit
