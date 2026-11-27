@@ -59,6 +59,10 @@ class Settings(BaseSettings):
     exports_retention_hours: int = 24
     graphics_retention_hours: int = 24
 
+    # Site landscape photos (stored in the database). The frontend resizes photos
+    # before upload, so real uploads are far below this.
+    site_photo_max_bytes: int = 5 * 1024 * 1024
+
     # Batch species lookup: species processed in parallel (providers stay throttled
     # by the per-species delay) and provider-result cache lifetime.
     lookup_batch_concurrency: int = 3

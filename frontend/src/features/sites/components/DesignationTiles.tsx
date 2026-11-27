@@ -1,5 +1,6 @@
+import type { MouseEvent } from 'react'
 import { cn } from '@/lib/utils'
-import type { Designation } from '../types'
+import { designationLink, type Designation } from '../types'
 
 const MAX_TILES = 5
 
@@ -23,10 +24,17 @@ interface DesignationTilesProps {
   className?: string
 }
 
+function openInNewTab(event: MouseEvent, href: string) {
+  // The row sits inside the card's link: do not also open the site.
+  event.preventDefault()
+  event.stopPropagation()
+  window.open(href, '_blank', 'noopener,noreferrer')
+}
+
 /**
  * Row of designation logos for a site card. Renders nothing when the site has
- * none. The tiles are part of the card link (clicking one opens the site), so they
- * are not separately focusable; screen readers get each logo's name from its alt text.
+ * none. A logo with a website (the site's own page, else the designation's official
+ * site) opens it in a new tab; one without is part of the card link.
  */
 export function DesignationTiles({ designations, className }: DesignationTilesProps) {
   if (!designations?.length) return null
@@ -36,14 +44,9 @@ export function DesignationTiles({ designations, className }: DesignationTilesPr
 
   return (
     <ul className={cn('flex flex-wrap gap-2', className)} aria-label="Designations">
-      {shown.map((d) => (
-        <li
-          key={d.id}
-          className={cn(
-            TILE_CLASS,
-            'group/tile relative h-8 w-8 p-0.5 transition-[transform,box-shadow] duration-150 hover:-translate-y-0.5 hover:shadow-[0_4px_10px_-4px_rgba(5,39,7,0.25)] sm:h-10 sm:w-10',
-          )}
-        >
+      {shown.map((d) => {
+        const href = designationLink(d)
+        const logo = (
           <img
             src={d.icon}
             alt={d.name_en}
@@ -53,9 +56,32 @@ export function DesignationTiles({ designations, className }: DesignationTilesPr
             decoding="async"
             className="h-full w-full object-contain"
           />
-          <Tooltip text={d.name_en} />
-        </li>
-      ))}
+        )
+        return (
+          <li
+            key={d.id}
+            className={cn(
+              TILE_CLASS,
+              'group/tile relative h-8 w-8 transition-[transform,box-shadow] duration-150 hover:-translate-y-0.5 hover:shadow-[0_4px_10px_-4px_rgba(5,39,7,0.25)] sm:h-10 sm:w-10',
+              !href && 'p-0.5',
+            )}
+          >
+            {href ? (
+              <button
+                type="button"
+                onClick={(e) => openInNewTab(e, href)}
+                aria-label={`${d.name_en}: open website`}
+                className="h-full w-full cursor-pointer rounded-[10px] p-0.5"
+              >
+                {logo}
+              </button>
+            ) : (
+              logo
+            )}
+            <Tooltip text={href ? `${d.name_en} · open website` : d.name_en} />
+          </li>
+        )
+      })}
       {rest.length > 0 && (
         <li
           className={cn(

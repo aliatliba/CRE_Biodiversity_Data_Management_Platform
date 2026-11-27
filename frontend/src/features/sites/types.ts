@@ -8,6 +8,13 @@ export interface Designation {
   icon: string
   official_url: string | null
   sort_order: number
+  /** On a site: that site's own page for the designation, set by an admin. */
+  url?: string | null
+}
+
+/** Where a designation's logo leads: the site's own page, else the designation's website. */
+export function designationLink(d: Designation): string | null {
+  return d.url || d.official_url || null
 }
 
 export interface Site {
@@ -18,6 +25,8 @@ export interface Site {
   created_by: number | null
   /** Sorted by the catalog order. */
   designations: Designation[]
+  /** ISO date of the last photo change; null when the site has no photo. */
+  photo_updated_at: string | null
 }
 
 /** A row of GET /sites: the site with its species counters. */
@@ -43,3 +52,9 @@ export interface SiteUpdateInput {
   code?: string
   description?: string
 }
+
+/** What saving a site form does to its photo. */
+export type PhotoChange =
+  | { kind: 'keep' }
+  | { kind: 'set'; photo: Blob }
+  | { kind: 'remove' }

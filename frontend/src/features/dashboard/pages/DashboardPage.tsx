@@ -16,6 +16,7 @@ import { ChartCard } from '@/components/charts/ChartCard'
 import { toChartData, toCompositionData, toIucnChartData } from '@/lib/chartData'
 import { getErrorMessage } from '@/lib/errors'
 import { IUCN_COLORS, THREATENED_STATUSES_PARAM } from '@/lib/iucn'
+import { formatPercent } from '@/lib/percent'
 import { queryKeys } from '@/lib/queryKeys'
 import { ROUTES, siteUrl, speciesListUrl } from '@/lib/constants'
 import * as dashboardService from '../services/dashboardService'
@@ -202,20 +203,25 @@ export function DashboardPage() {
                             className="px-4 py-2.5"
                             title={`${site.species_count} species`}
                           >
-                            <div className="flex items-center gap-3">
-                              <span className="w-12 shrink-0 font-semibold tabular-nums text-fg">
-                                {site.species_share.toFixed(1)}%
-                              </span>
-                              <div
-                                className="h-1.5 w-24 overflow-hidden rounded-full bg-canopy-900/[0.08]"
-                                aria-hidden
-                              >
+                            {formatPercent(site.species_share, 1) ? (
+                              <div className="flex items-center gap-3">
+                                <span className="w-12 shrink-0 font-semibold tabular-nums text-fg">
+                                  {formatPercent(site.species_share, 1)}
+                                </span>
                                 <div
-                                  className="h-full rounded-full bg-canopy-600"
-                                  style={{ width: `${site.species_share}%` }}
-                                />
+                                  className="h-1.5 w-24 overflow-hidden rounded-full bg-canopy-900/[0.08]"
+                                  aria-hidden
+                                >
+                                  <div
+                                    className="h-full rounded-full bg-canopy-600"
+                                    style={{ width: `${site.species_share}%` }}
+                                  />
+                                </div>
                               </div>
-                            </div>
+                            ) : (
+                              // 0%: no figure, no empty bar.
+                              <span className="text-fg-subtle" aria-label="No species">—</span>
+                            )}
                           </td>
 
                           <td className="px-4 py-2.5 tabular-nums">

@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion'
+import { formatPercent } from '@/lib/percent'
 
 const COLORS = 
   ['#117036', '#f59e0b',  '#6366f1','#ef4444','#40916c',  '#ec4899', '#14b8a6']
@@ -16,13 +17,18 @@ interface AnimatedPieChartProps {
   colorMap?: Record<string, string>
 }
 
+/** Legend share; slices are never empty here, so never "0%". */
+const formatShare = (fraction: number) => formatPercent(fraction * 100) ?? ''
+
 export function AnimatedPieChart({
-  data,
+  data: allData,
   size = 160,
   delay = 0,
   showValues = false,
   colorMap,
 }: AnimatedPieChartProps) {
+  // Empty categories (0%) are left out of both the ring and the legend.
+  const data = allData.filter((item) => item.value > 0)
   const total = data.reduce((sum, item) => sum + item.value, 0)
 
   if (data.length === 0 || total === 0) {
@@ -134,8 +140,8 @@ export function AnimatedPieChart({
 
             <span className="shrink-0 font-semibold tabular-nums text-fg-muted">
               {showValues
-                ? `${slice.value} (${Math.round(slice.percentage * 100)}%)`
-                : `${Math.round(slice.percentage * 100)}%`}
+                ? `${slice.value} (${formatShare(slice.percentage)})`
+                : formatShare(slice.percentage)}
             </span>
           </div>
         ))}

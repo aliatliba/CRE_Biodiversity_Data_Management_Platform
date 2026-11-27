@@ -19,6 +19,8 @@ class SiteDesignation(Base):
         BigInteger, ForeignKey("sites.id", ondelete="CASCADE"), nullable=False, index=True
     )
     designation_id = Column(String(50), nullable=False)
+    # This site's page for the designation, set by an admin (http/https only).
+    url = Column(String(2048), nullable=True)
     created_at = Column(
         DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc)
     )

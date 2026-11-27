@@ -9,10 +9,11 @@ vi.mock('../services/siteService', () => ({
   listDesignations: () => Promise.resolve(makeDesignations(5)),
   addSiteDesignation: vi.fn(),
   removeSiteDesignation: vi.fn(),
+  setSiteDesignationUrl: vi.fn(),
 }))
 
 function site(count: number): Site {
-  return { id: 1, name: 'Tonga', code: null, description: null, created_by: null, designations: makeDesignations(count) }
+  return { id: 1, name: 'Tonga', code: null, description: null, created_by: null, designations: makeDesignations(count), photo_updated_at: null }
 }
 
 function renderSection(count: number, isAdmin: boolean) {
@@ -31,6 +32,7 @@ describe('SiteDesignationsSection (site page)', () => {
     expect(screen.getAllByRole('img')).toHaveLength(2)
     expect(screen.queryByRole('button', { name: /add designation/i })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /remove/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /website link/i })).not.toBeInTheDocument()
   })
 
   it('is hidden for non-admins when the site has no designation', () => {
@@ -43,6 +45,7 @@ describe('SiteDesignationsSection (site page)', () => {
     expect(screen.getByRole('button', { name: /add designation/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Remove Designation 0' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Remove Designation 1' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Add website link for Designation 0' })).toBeInTheDocument()
   })
 
   it('shows admins an empty state with an add button', () => {
