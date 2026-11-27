@@ -16,12 +16,17 @@ import { useAuth } from '@/hooks/useAuth'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import { useSitesQuery } from '@/hooks/useSitesQuery'
 import { getErrorMessage } from '@/lib/errors'
+import { formatPercent } from '@/lib/percent'
 import { siteUrl } from '@/lib/constants'
 import { queryKeys } from '@/lib/queryKeys'
 import * as siteService from '../services/siteService'
 import { DesignationTiles } from '../components/DesignationTiles'
 import { DeleteSiteDialogs } from '../components/DeleteSiteDialogs'
-import type { Site, SiteListItem } from '../types'
+import { SitePhotoBanner } from '../components/SitePhotoBanner'
+import { SitePhotoPicker } from '../components/SitePhotoPicker'
+import { SHOW_PHOTO_ON_SITE_CARDS } from '../config'
+import { savePhotoChange } from '../hooks/useSitePhoto'
+import type { PhotoChange, Site, SiteListItem } from '../types'
 
 /** Older APIs sent sites without counters: default them so the page still renders. */
 function withCounters(sites: SiteListItem[]): SiteListItem[] {
@@ -44,7 +49,7 @@ function bySpeciesCount(a: SiteListItem, b: SiteListItem): number {
 }
 
 function percent(part: number, whole: number): number {
-  return whole > 0 ? Math.round((part / whole) * 100) : 0
+  return whole > 0 ? (part / whole) * 100 : 0
 }
 
 /** Headline numbers for the whole network of sites (never filtered by the search). */
@@ -77,7 +82,10 @@ export function SitesPage() {
 
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [form, setForm] = useState({ name: '', code: '', description: '' })
+  const [photoChange, setPhotoChange] = useState<PhotoChange>({ kind: 'keep' })
   const [formError, setFormError] = useState<string | null>(null)
+  // The site was created but its photo upload failed (the form is closed by then).
+  const [photoNotice, setPhotoNotice] = useState<string | null>(null)
   const [siteToDelete, setSiteToDelete] = useState<Site | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
 
@@ -91,17 +99,34 @@ export function SitesPage() {
   const sites = withCounters(query.data ?? []).sort(bySpeciesCount)
   // KPIs always describe every site, whatever the search box says.
   const allSitesQuery = useSitesQuery()
+  // Placeholders keep the cards of a row aligned, but only when there is a photo to align with.
+  const showPhotoBanners = SHOW_PHOTO_ON_SITE_CARDS && sites.some((s) => s.photo_updated_at != null)
 
   const createMutation = useMutation({
-    mutationFn: () =>
-      siteService.createSite({
+    mutationFn: async () => {
+      const site = await siteService.createSite({
         name: form.name.trim(),
         code: form.code.trim() || undefined,
         description: form.description.trim() || undefined,
-      }),
-    onSuccess: () => {
+      })
+      // The site exists from here on: a failed upload must not keep the form open,
+      // or submitting again would try to create the site a second time.
+      try {
+        await savePhotoChange(queryClient, site.id, photoChange)
+        return { site, photoError: null }
+      } catch (err) {
+        return { site, photoError: getErrorMessage(err, 'Could not upload the photo.') }
+      }
+    },
+    onSuccess: ({ site, photoError }) => {
       setIsModalOpen(false)
       setForm({ name: '', code: '', description: '' })
+      setPhotoChange({ kind: 'keep' })
+      if (photoError) {
+        setPhotoNotice(
+          `"${site.name}" was created, but its photo could not be uploaded (${photoError}). Open the site and use Edit to add it.`,
+        )
+      }
       void queryClient.invalidateQueries({ queryKey: queryKeys.sites })
     },
     onError: (err) => setFormError(getErrorMessage(err, 'Could not create site.')),
@@ -110,6 +135,7 @@ export function SitesPage() {
   function handleCreate(event: FormEvent) {
     event.preventDefault()
     setFormError(null)
+    setPhotoNotice(null)
     if (!form.name.trim()) {
       setFormError('Site name is required.')
       return
@@ -143,6 +169,7 @@ export function SitesPage() {
       )}
 
       {deleteError && <Alert className="mb-4">{deleteError}</Alert>}
+      {photoNotice && <Alert tone="warning" className="mb-4">{photoNotice}</Alert>}
 
       {query.isPending && (
         <div className="flex justify-center py-20">
@@ -167,9 +194,21 @@ export function SitesPage() {
 
       {query.isSuccess && sites.length > 0 && (
         <div className="stagger-in grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {sites.map((site, index) => (
+          {sites.map((site, index) => {
+            // 0% statistics are left out of the card (formatPercent returns null).
+            const share = formatPercent(site.species_share, 1)
+            const complete = formatPercent(percent(site.complete_count, site.species_count))
+            return (
             <Link key={site.id} to={siteUrl(site.id)} className="rounded-2xl">
               <Card className="lift flex h-full min-h-[210px] flex-col">
+                {showPhotoBanners && (
+                  <SitePhotoBanner
+                    site={site}
+                    placeholder
+                    className="-mx-4 -mt-4 mb-4 h-36 rounded-t-2xl lg:-mx-5 lg:-mt-5"
+                  />
+                )}
+
                 {/* Header */}
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex min-w-0 items-start gap-2.5">
@@ -211,19 +250,23 @@ export function SitesPage() {
                       species
                     </span>
                   </p>
-                  <span className="text-sm font-semibold tabular-nums text-canopy-700">
-                    {site.species_share.toFixed(1)}%
-                  </span>
+                  {share && (
+                    <span className="text-sm font-semibold tabular-nums text-canopy-700">
+                      {share}
+                    </span>
+                  )}
                 </div>
-                <div
-                  className="mt-2 h-1.5 overflow-hidden rounded-full bg-canopy-900/[0.08]"
-                  aria-label={`${site.species_share.toFixed(1)}% of all species records`}
-                >
+                {share && (
                   <div
-                    className="h-full rounded-full bg-canopy-600"
-                    style={{ width: `${site.species_share}%` }}
-                  />
-                </div>
+                    className="mt-2 h-1.5 overflow-hidden rounded-full bg-canopy-900/[0.08]"
+                    aria-label={`${share} of all species records`}
+                  >
+                    <div
+                      className="h-full rounded-full bg-canopy-600"
+                      style={{ width: `${site.species_share}%` }}
+                    />
+                  </div>
+                )}
 
                 {/* Conservation and data quality */}
                 <div className="mt-3 flex flex-wrap gap-2 text-xs font-medium">
@@ -235,10 +278,12 @@ export function SitesPage() {
                     <ShieldAlert size={13} />
                     {site.threatened_count} threatened
                   </span>
-                  <span className="inline-flex items-center gap-1 rounded-full bg-mist-100 px-2 py-1 text-fg-muted">
-                    <CheckCircle2 size={13} />
-                    {percent(site.complete_count, site.species_count)}% complete
-                  </span>
+                  {complete && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-mist-100 px-2 py-1 text-fg-muted">
+                      <CheckCircle2 size={13} />
+                      {complete} complete
+                    </span>
+                  )}
                 </div>
 
                 {/* Description */}
@@ -249,7 +294,8 @@ export function SitesPage() {
                 </div>
               </Card>
             </Link>
-          ))}
+            )
+          })}
         </div>
       )}
 
@@ -292,6 +338,11 @@ export function SitesPage() {
               className="w-full resize-none rounded-xl border border-line-strong bg-surface px-4 py-3 text-sm text-fg outline-none transition-all placeholder:text-fg-subtle focus:border-ring focus:ring-2 focus:ring-ring/20"
             />
           </div>
+          <SitePhotoPicker
+            change={photoChange}
+            onChange={setPhotoChange}
+            disabled={createMutation.isPending}
+          />
           {formError && <Alert>{formError}</Alert>}
           <Button type="submit" isLoading={createMutation.isPending} className="mt-1 w-full">
             Create site

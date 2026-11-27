@@ -21,4 +21,7 @@ export const queryKeys = {
   graphicTypes: ['graphic-types'] as const,
   siteClasses: (siteId: number) => ['sites', siteId, 'classes'] as const,
   designations: ['designations'] as const,
+  // Outside ['sites'] on purpose: a given version never changes, so refreshing the
+  // sites must not refetch the image bytes.
+  sitePhoto: (siteId: number, version: string) => ['site-photo', siteId, version] as const,
 }

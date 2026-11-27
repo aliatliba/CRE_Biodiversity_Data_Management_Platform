@@ -27,12 +27,14 @@ interface AnimatedBarChartProps {
 }
 
 export function AnimatedBarChart({
-  data,
+  data: allData,
   delay = 0,
   colors = COLORS,
   maxValue,
   valueSuffix = '',
 }: AnimatedBarChartProps) {
+  // Empty bars (0) are left out.
+  const data = allData.filter((item) => item.value > 0)
   const max = maxValue ?? Math.max(1, ...data.map((d) => d.value))
 
   if (data.length === 0) {

@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query'
-import { ArrowLeft, Edit2, Leaf, MapPin, Search, ShieldCheck, Trash2 } from 'lucide-react'
+import { ArrowLeft, Edit2, ImagePlus, Leaf, MapPin, Search, ShieldCheck, Trash2 } from 'lucide-react'
 
 import { Alert } from '@/components/ui/Alert'
 import { Card } from '@/components/ui/Card'
@@ -31,6 +31,10 @@ import { StatCard } from '@/components/common/StatCard'
 import * as siteService from '../services/siteService'
 import { DeleteSiteDialogs } from '../components/DeleteSiteDialogs'
 import { SiteDesignationsSection } from '../components/SiteDesignationsSection'
+import { SitePhotoBanner } from '../components/SitePhotoBanner'
+import { SitePhotoPicker } from '../components/SitePhotoPicker'
+import { savePhotoChange } from '../hooks/useSitePhoto'
+import type { PhotoChange } from '../types'
 
 import * as speciesService from '@/features/species/services/speciesService'
 import { SpeciesTable } from '@/features/species/components/SpeciesTable'
@@ -53,6 +57,7 @@ export function SiteDetailPage() {
   const debouncedSearch = useDebouncedValue(search.trim())
   const [isEditOpen, setIsEditOpen] = useState(false)
   const [editForm, setEditForm] = useState({ name: '', code: '', description: '' })
+  const [photoChange, setPhotoChange] = useState<PhotoChange>({ kind: 'keep' })
   const [editError, setEditError] = useState<string | null>(null)
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
@@ -117,23 +122,37 @@ export function SiteDetailPage() {
       code: site.code ?? '',
       description: site.description ?? '',
     })
+    setPhotoChange({ kind: 'keep' })
     setEditError(null)
     setIsEditOpen(true)
   }
 
   const updateMutation = useMutation({
-    mutationFn: () =>
-      siteService.updateSite(siteId, {
+    mutationFn: async () => {
+      await siteService.updateSite(siteId, {
         name: editForm.name.trim(),
         code: editForm.code.trim() || undefined,
         description: editForm.description.trim() || undefined,
-      }),
+      })
+      try {
+        await savePhotoChange(queryClient, siteId, photoChange)
+      } catch (err) {
+        // Saving again is safe: the details update is idempotent.
+        throw new Error(
+          `Details saved, but the photo could not be ${photoChange.kind === 'remove' ? 'removed' : 'uploaded'}: ${getErrorMessage(err, 'unknown error')}`,
+        )
+      }
+    },
     onSuccess: () => {
       setIsEditOpen(false)
+      setPhotoChange({ kind: 'keep' })
+    },
+    onError: (err) => setEditError(getErrorMessage(err, 'Could not update site.')),
+    // Also after a failure: the details may have been saved before the photo failed.
+    onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.sites })
       void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard(siteId) })
     },
-    onError: (err) => setEditError(getErrorMessage(err, 'Could not update site.')),
   })
 
   const removeMutation = useMutation({
@@ -199,48 +218,59 @@ export function SiteDetailPage() {
               SITE HEADER
           ------------------------------------------------- */}
 
-          <Card className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-            <div className="min-w-0">
-              <div className="flex items-center gap-2 text-canopy-700">
-                <MapPin size={18} />
-                <span className="text-xs font-semibold uppercase tracking-wide">
-                  Survey site
-                </span>
+          <Card className="overflow-hidden !p-0">
+            <SitePhotoBanner site={site} className="h-48 sm:h-64 lg:h-80" />
+
+            <div className="flex flex-col gap-4 p-4 sm:flex-row sm:items-start sm:justify-between lg:p-5">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 text-canopy-700">
+                  <MapPin size={18} />
+                  <span className="text-xs font-semibold uppercase tracking-wide">
+                    Survey site
+                  </span>
+                </div>
+
+                <h1 className="mt-1 break-words font-display text-2xl font-bold text-fg">
+                  {site.name}
+                </h1>
+
+                <p className="mt-3 max-w-2xl text-sm leading-relaxed text-fg-muted">
+                  {site.description || 'No description provided.'}
+                </p>
               </div>
 
-              <h1 className="mt-1 break-words font-display text-2xl font-bold text-fg">
-                {site.name}
-              </h1>
+              {isAdmin && (
+                <div className="flex shrink-0 flex-wrap gap-2">
+                  {site.photo_updated_at == null && (
+                    <Button variant="secondary" className="gap-2" onClick={openEdit}>
+                      <ImagePlus size={15} />
+                      Add photo
+                    </Button>
+                  )}
 
-              <p className="mt-3 max-w-2xl text-sm leading-relaxed text-fg-muted">
-                {site.description || 'No description provided.'}
-              </p>
+                  <Button
+                    variant="secondary"
+                    className="gap-2"
+                    onClick={openEdit}
+                  >
+                    <Edit2 size={15} />
+                    Edit
+                  </Button>
+
+                  <Button
+                    variant="ghost"
+                    className="gap-2 !text-danger hover:!bg-danger/10"
+                    onClick={() => {
+                      setDeleteError(null)
+                      setIsDeleteOpen(true)
+                    }}
+                  >
+                    <Trash2 size={15} />
+                    Delete
+                  </Button>
+                </div>
+              )}
             </div>
-
-            {isAdmin && (
-              <div className="flex shrink-0 gap-2">
-                <Button
-                  variant="secondary"
-                  className="gap-2"
-                  onClick={openEdit}
-                >
-                  <Edit2 size={15} />
-                  Edit
-                </Button>
-
-                <Button
-                  variant="ghost"
-                  className="gap-2 !text-danger hover:!bg-danger/10"
-                  onClick={() => {
-                    setDeleteError(null)
-                    setIsDeleteOpen(true)
-                  }}
-                >
-                  <Trash2 size={15} />
-                  Delete
-                </Button>
-              </div>
-            )}
           </Card>
 
           <SiteDesignationsSection site={site} isAdmin={isAdmin} />
@@ -430,7 +460,7 @@ export function SiteDetailPage() {
         isOpen={isEditOpen}
         onClose={() => setIsEditOpen(false)}
         title="Edit survey site"
-        description="Update site name, code, or description."
+        description="Update the site's name, code, description or photo."
       >
         <form onSubmit={handleEdit} className="flex flex-col gap-4">
           <Input
@@ -465,6 +495,13 @@ export function SiteDetailPage() {
                 description: e.target.value,
               }))
             }
+          />
+
+          <SitePhotoPicker
+            site={site}
+            change={photoChange}
+            onChange={setPhotoChange}
+            disabled={updateMutation.isPending}
           />
 
           {editError && <Alert>{editError}</Alert>}

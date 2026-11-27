@@ -24,6 +24,9 @@ class Site(Base):
         default=lambda: datetime.now(timezone.utc),
         onupdate=lambda: datetime.now(timezone.utc),
     )
+    # NULL: no photo. Otherwise when the photo (site_photos) last changed; clients
+    # use it to version the photo URL.
+    photo_updated_at = Column(DateTime(timezone=True), nullable=True)
 
     creator = relationship("User")
     # Loaded with one extra query for all sites of a result (selectin): no N+1 on lists.
@@ -37,8 +40,10 @@ class Site(Base):
 
     @property
     def designations(self) -> list[dict]:
-        """The site's designations as catalog entries, in catalog order."""
-        return resolve(link.designation_id for link in self.designation_links)
+        """The site's designations as catalog entries, in catalog order, each with
+        this site's own ``url`` (None when the admin has not set one)."""
+        urls = {link.designation_id: link.url for link in self.designation_links}
+        return [{**entry, "url": urls.get(entry["id"])} for entry in resolve(urls)]
 
     __table_args__ = (
         Index("ix_sites_name_trgm", "name", postgresql_using="gin", postgresql_ops={"name": "gin_trgm_ops"}),

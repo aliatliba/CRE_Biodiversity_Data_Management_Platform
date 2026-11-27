@@ -1,12 +1,14 @@
 from typing import List
 
-from fastapi import APIRouter, Query, Response
+from fastapi import APIRouter, File, Query, Response, UploadFile
 
+from app.core.config import get_settings
 from app.core.dependencies import ActiveUser, AdminUser, DBSession
 from app.schemas.site import (
     DesignationResponse,
     SiteCreate,
     SiteDesignationCreate,
+    SiteDesignationUpdate,
     SiteListItem,
     SiteResponse,
     SiteUpdate,
@@ -90,9 +92,25 @@ def add_site_designation(
 ):
     """Admin only. Returns the site's designations; 201 when added, 200 when the
     site already had it (idempotent)."""
-    site, created = site_service.add_designation(db, site_id, data.designation_id, admin.id)
+    site, created = site_service.add_designation(
+        db, site_id, data.designation_id, admin.id, url=data.url
+    )
     if not created:
         response.status_code = 200
+    return site.designations
+
+
+@router.patch("/{site_id}/designations/{designation_id}", response_model=List[DesignationResponse])
+def update_site_designation(
+    site_id: int,
+    designation_id: str,
+    data: SiteDesignationUpdate,
+    db: DBSession,
+    admin: AdminUser,
+):
+    """Admin only. Sets the site's website link for the designation (null removes
+    it); 404 when the site does not have the designation. Returns its designations."""
+    site = site_service.set_designation_url(db, site_id, designation_id, data.url, admin.id)
     return site.designations
 
 
@@ -102,4 +120,46 @@ def remove_site_designation(
 ):
     """Admin only. Idempotent: 204 whether or not the site had the designation."""
     site_service.remove_designation(db, site_id, designation_id, admin.id)
+    return Response(status_code=204)
+
+
+@router.put("/{site_id}/photo", response_model=SiteResponse)
+def upload_site_photo(
+    site_id: int,
+    db: DBSession,
+    admin: AdminUser,
+    file: UploadFile = File(..., description="JPEG, PNG or WebP image"),
+):
+    """Admin only. Adds or replaces the site's landscape photo; returns the site."""
+    # One byte over the limit is enough to know it is too large.
+    data = file.file.read(get_settings().site_photo_max_bytes + 1)
+    return site_service.set_photo(db, site_id, data, admin.id)
+
+
+@router.get(
+    "/{site_id}/photo",
+    response_class=Response,
+    responses={200: {"content": {"image/jpeg": {}, "image/png": {}, "image/webp": {}}}},
+)
+def get_site_photo(
+    site_id: int,
+    db: DBSession,
+    user: ActiveUser,
+    v: str | None = Query(None, max_length=64, description="Site.photo_updated_at, for caching"),
+):
+    """The site's photo. With ``v`` the response may be cached for good: a new photo
+    gets a new ``photo_updated_at``, hence a new URL."""
+    photo = site_service.get_photo(db, site_id)
+    cache = "private, max-age=31536000, immutable" if v else "private, no-cache"
+    return Response(
+        content=photo.data,
+        media_type=photo.content_type,
+        headers={"Cache-Control": cache, "X-Content-Type-Options": "nosniff"},
+    )
+
+
+@router.delete("/{site_id}/photo", status_code=204)
+def remove_site_photo(site_id: int, db: DBSession, admin: AdminUser):
+    """Admin only. Idempotent: 204 whether or not the site had a photo."""
+    site_service.remove_photo(db, site_id, admin.id)
     return Response(status_code=204)
